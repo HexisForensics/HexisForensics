@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 256">
+  <polygon points="128,16 225,72 225,184 128,240 31,184 31,72" fill="#0f1b2d" stroke="#3f8dfd" stroke-width="12" stroke-linejoin="round"/>
+  <rect x="86" y="76" width="22" height="104" rx="3" fill="#ffffff"/>
+  <rect x="156" y="76" width="22" height="104" rx="3" fill="#ffffff"/>
+  <rect x="86" y="117" width="92" height="22" rx="3" fill="#19c3a6"/>
+  <text x="268" y="118" font-family="Segoe UI, Arial, sans-serif" font-size="78" font-weight="700" fill="#0f1b2d" letter-spacing="2">HEXIS</text>
+  <text x="268" y="190" font-family="Segoe UI, Arial, sans-serif" font-size="78" font-weight="300" fill="#3f8dfd" letter-spacing="2">FORENSICS</text>
+</svg>

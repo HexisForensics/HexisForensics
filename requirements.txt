@@ -1,0 +1,9 @@
+PySide6>=6.6
+reportlab>=4.0
+cryptography>=42
+# iPhone. No Python 3.14 o 'pylzss' (dependência do pymobiledevice3) não compila;
+# instale com: py -m pip install pymobiledevice3 ipsw_parser pyimg4 --no-deps
+# e depois as demais dependências que o 'pip check' apontar.
+pymobiledevice3>=11.43
+pyiosbackup>=0.2
+packaging        # exigido pelo pymobiledevice3 (instalado com --no-deps)

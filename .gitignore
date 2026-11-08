@@ -1,0 +1,48 @@
+# Artefatos de execução do Python — nunca devem ser versionados.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+
+# Perfis de marca sao codigo de configuracao e DEVEM ser versionados
+# (branding/default/ e branding/active.json). Apenas perfis especificos de
+# cliente, se houver, podem ser ignorados caso a caso.
+
+# Binários do ADB (o usuário copia localmente; não fazem parte do código-fonte)
+binario/*
+!binario/.gitkeep
+
+# Resultados de extrações — dados de perícia não devem ir para o controle de versão
+extracoes/*
+!extracoes/.gitkeep
+
+# Arquivos de IDE / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Saida do empacotamento (py empacotar.py)
+build/
+dist/
+*.spec
+
+# Pasta de trabalho da compilação do aplicativo agente
+agente_android/build/
+
+# Apostila: capturas e PDF são gerados (ferramentas/apostila/*.py)
+ferramentas/apostila/capturas/
+ferramentas/apostila/saida/
+
+# Termos de uso do instalador: gerados por empacotar.py a partir de core/termos.py
+instalador/TERMOS_DE_USO.txt
+
+# Material do curso (pago): nunca vai para o repositorio
+curso/

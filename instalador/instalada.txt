@@ -1,0 +1,6 @@
+Esta copia do Hexis Forensics foi instalada pelo instalador.
+
+A presenca deste arquivo faz a suite gravar os casos em
+%USERPROFILE%\HexisForensics-Casos, fora da pasta do programa:
+evidencia nao mora em pasta de aplicativo, que a atualizacao substitui
+e a desinstalacao remove.

@@ -1,0 +1,16 @@
+{
+  "nome_exibicao": "Hexis Forensics",
+  "modo": "dark",
+  "cores": {
+    "fundo": "#1b1e23",
+    "fundo_alt": "#22262d",
+    "fundo_entrada": "#12151a",
+    "texto": "#e2e6ea",
+    "texto_secundario": "#9aa4af",
+    "destaque": "#3f8dfd",
+    "borda": "#333a42",
+    "texto_sobre_destaque": "#0b0d10"
+  },
+  "logo": "../../assets/marca/logo_escuro.png",
+  "icone": "../../assets/marca/icone.ico"
+}

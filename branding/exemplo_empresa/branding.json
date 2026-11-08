@@ -1,0 +1,16 @@
+{
+  "nome_exibicao": "Exemplo Perícia Digital",
+  "modo": "dark",
+  "cores": {
+    "fundo": "#141a1f",
+    "fundo_alt": "#1c252c",
+    "fundo_entrada": "#0d1114",
+    "texto": "#e7ede8",
+    "texto_secundario": "#8ea08f",
+    "destaque": "#2fb673",
+    "borda": "#2c3a36",
+    "texto_sobre_destaque": "#07130d"
+  },
+  "logo": null,
+  "icone": null
+}

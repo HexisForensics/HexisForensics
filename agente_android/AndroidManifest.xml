@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Agente de coleta do Hexis Forensics.
+
+  Um aplicativo mínimo, instalado pelo ADB só durante a aquisição e removido
+  ao final. Existe porque, em aparelho de fábrica, o shell do ADB não tem
+  permissão para ler SMS e chamadas, e a partir do Android 12 o backup do
+  sistema, que era a via alternativa, deixou de existir. Um aplicativo com
+  as permissões de leitura concedidas é a porta que resta sem root.
+
+  Ele só LÊ: pede três permissões de leitura e nenhuma de escrita, de rede
+  ou de armazenamento. Sem INTERNET, não tem como enviar nada a lugar algum.
+  Grava o que leu na própria área privada, de onde a estação recolhe.
+
+  `debuggable` é deliberado: é o que permite à estação ler essa área
+  privada pelo ADB (`run-as`), em qualquer versão do Android.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="br.forensicextractor.agente">
+
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+
+    <application
+        android:label="Hexis Forensics - Agente"
+        android:debuggable="true"
+        android:allowBackup="false"
+        android:hasCode="true">
+        <activity
+            android:name=".Coletar"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
+    </application>
+</manifest>
