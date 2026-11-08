@@ -4,13 +4,18 @@
 Android · iPhone · pendrives e discos · orientada pela ABNT NBR ISO/IEC 27037</p>
 
 <p align="center">
-  <a href="https://github.com/testeforensicextractor-lang/ForensicExtractor/releases/latest">
+  <a href="https://github.com/testeforensicextractor-lang/HexisForensics/releases/latest">
     <img src="https://img.shields.io/badge/%E2%AC%87%20Baixar%20para%20Windows-instalador%20%2B%20apostila-1f6feb?style=for-the-badge" alt="Baixar para Windows">
   </a>
 </p>
 
 <p align="center">Na página de download estão o <b>instalador</b>, o seu <b>hash SHA-256</b> e a <b>apostila do usuário</b> (PDF).<br>
 Não é preciso conta no GitHub.</p>
+
+<p align="center">
+  📘 <a href="docs/Apostila_Hexis_Forensics.pdf">Apostila do Usuário</a> ·
+  ⚡ <a href="docs/Guia_de_Extracao_Rapida.pdf">Guia de Extração Rápida</a>
+</p>
 
 ---
 
@@ -46,7 +51,7 @@ cada dado foi obtido e entregar documentos que se sustentam sozinhos.
 
 ## Como instalar
 
-1. Baixe o instalador na [página de download](https://github.com/testeforensicextractor-lang/ForensicExtractor/releases/latest).
+1. Baixe o instalador na [página de download](https://github.com/testeforensicextractor-lang/HexisForensics/releases/latest).
 2. **Confira o hash.** Na pasta do arquivo, abra o Terminal e digite
    `Get-FileHash .\HexisForensics-Setup-1.0.0.exe`. O valor tem de ser
    idêntico ao publicado na página de download.
