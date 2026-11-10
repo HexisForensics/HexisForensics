@@ -65,20 +65,26 @@ def pasta_das_extracoes() -> Path:
     """
     Onde os casos são gravados.
 
-    Instalada: `<perfil do usuário>/HexisForensics-Casos`. Fica na
-    raiz do perfil, e não em "Documentos", de propósito: em muitas máquinas
-    "Documentos" é sincronizado com a nuvem, e um serviço de sincronização
-    mexendo em pasta de evidência (ou trocando arquivo por atalho de nuvem)
-    é exatamente o que uma aquisição não pode sofrer.
+    Fora do desenvolvimento (instalada OU rodando do ZIP baixado):
+    `<perfil do usuário>/HexisForensics-Casos`. Fica na raiz do perfil, e não
+    em "Documentos", de propósito: em muitas máquinas "Documentos" é
+    sincronizado com a nuvem, e um serviço de sincronização mexendo em pasta
+    de evidência (ou trocando arquivo por atalho de nuvem) é exatamente o que
+    uma aquisição não pode sofrer. Fica também FORA da pasta do programa: quem
+    roda do código-fonte e atualiza baixando o ZIP novo apaga a pasta antiga —
+    e a evidência não pode morar onde a atualização a alcança.
+
+    Só o desenvolvimento (clone com `.git`) grava ao lado do repositório, em
+    `extracoes/`, por conveniência — ali o examinador real não opera.
     """
-    if instalada():
-        perfil = Path(os.environ.get("USERPROFILE") or str(Path.home()))
-        # Nome anterior da suíte (Forensic Extractor, até 01/11/2026): os
-        # casos já gravados continuam onde estão, sem cópia nem movimento.
-        anterior = perfil / "ForensicExtractor-Casos"
-        atual = perfil / "HexisForensics-Casos"
-        return anterior if anterior.is_dir() and _vazia_ou_ausente(atual) else atual
-    return raiz_da_instalacao() / "extracoes"
+    if modo_desenvolvimento():
+        return raiz_da_instalacao() / "extracoes"
+    perfil = Path(os.environ.get("USERPROFILE") or str(Path.home()))
+    # Nome anterior da suíte (Forensic Extractor, até 01/11/2026): os casos já
+    # gravados continuam onde estão, sem cópia nem movimento.
+    anterior = perfil / "ForensicExtractor-Casos"
+    atual = perfil / "HexisForensics-Casos"
+    return anterior if anterior.is_dir() and _vazia_ou_ausente(atual) else atual
 
 
 def _vazia_ou_ausente(pasta: Path) -> bool:

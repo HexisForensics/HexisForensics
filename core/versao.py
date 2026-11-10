@@ -30,8 +30,14 @@ def descrever_ambiente() -> dict:
     Coletado na abertura do caso e gravado junto do resultado — é o que
     permite a um terceiro reproduzir as condições do exame.
     """
+    # Import local: `instalacao` não importa `versao`, mas manter a referência
+    # aqui dentro deixa claro que é só para carimbar a origem no ambiente.
+    from core.instalacao import empacotada
     return {
         "ferramenta": identificacao_ferramenta(),
+        # Instalador (executável empacotado) ou código-fonte (py main.py). A
+        # defesa pode perguntar como a estação rodou; o carimbo responde.
+        "origem": "instalador" if empacotada() else "código-fonte",
         "python": sys.version.split()[0],
         "sistema": f"{platform.system()} {platform.release()}",
         "arquitetura": platform.machine(),

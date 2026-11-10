@@ -542,19 +542,28 @@ def conteudo() -> list:
               "instalador do Windows da versão <b>3.13</b>). <b>Não use o 3.14</b>: uma das "
               "bibliotecas do iPhone ainda não tem versão pronta para ele. Na primeira tela "
               "do instalador do Python, marque <b>Add python.exe to PATH</b>.",
-              "Na página do projeto no GitHub, clique em <b>Code → Download ZIP</b> e extraia "
-              "a pasta (ou use <b>git clone</b>, se tiver o Git instalado).",
-              "Abra a pasta extraída, clique com o botão direito num espaço vazio e escolha "
+              "Baixe o código pela <b>página de versões (Releases)</b> do projeto: "
+              "<b>github.com/HexisForensics/HexisForensics/releases</b>. Na versão mais "
+              "recente, baixe o <b>Fonte (ZIP)</b>. <b>Não</b> use o <b>Code → Download ZIP</b> "
+              "da página principal — aquele traz a versão em desenvolvimento, sem versão "
+              "marcada.",
+              "<b>Confira o hash do ZIP</b>, como no instalador: na pasta do arquivo, "
+              "<b>Abrir no Terminal</b> e "
+              "<b>Get-FileHash .\\HexisForensics-1.0.0-fonte.zip</b>. O valor tem de ser "
+              "idêntico ao publicado na Release.",
+              "Extraia a pasta. Abra-a, clique com o botão direito num espaço vazio e escolha "
               "<b>Abrir no Terminal</b>.",
               "Digite <b>py -m pip install -r requirements.txt</b> e tecle Enter. Aguarde a "
               "instalação das bibliotecas (demora na primeira vez).",
               "Digite <b>py main.py</b> e tecle Enter. A ferramenta abre na tela de entrada, "
               "igual à versão instalada.",
           ]),
-          caixa("nota", "Rodando do código-fonte, os casos ficam na subpasta <b>extracoes</b>, "
-                "ao lado do programa — não na pasta do usuário. O <b>adb.exe</b> já vem junto "
-                "no repositório, então a extração de Android funciona sem passo extra; para o "
-                "iPhone, continua valendo o aplicativo Dispositivos Apple (Requisitos)."),
+          caixa("nota", "Rodando do código-fonte, os casos ficam em <b>HexisForensics-Casos</b>, "
+                "na sua pasta de usuário do Windows — a mesma da versão instalada, e <b>fora</b> "
+                "da pasta do programa, para que atualizar (baixar o ZIP novo) nunca alcance as "
+                "aquisições. O <b>adb.exe</b> já vem no ZIP, então a extração de Android "
+                "funciona sem passo extra; para o iPhone, continua valendo o aplicativo "
+                "Dispositivos Apple (Requisitos)."),
           secao("Primeiro acesso: o seu perfil de examinador"),
           p("A ferramenta abre na <b>tela de entrada</b>. Cada examinador tem perfil e senha "
             "próprios: é isso que identifica quem fez cada extração e quem assina cada laudo."),
@@ -1113,8 +1122,9 @@ def conteudo() -> list:
               "interno e, ainda assim, indicou “Concluído”; o WhatsApp Business no local antigo "
               "não é procurado. Em aparelho assim, confira a reconciliação de cada módulo ou use "
               "outra ferramenta.",
-              "<b>Android 12 em diante</b> não tem mais o backup do sistema: SMS e chamadas vêm "
-              "pelo aplicativo agente, que é de seleção expressa.",
+              "<b>Android 12 em diante</b> não tem mais o backup do sistema: SMS e chamadas são "
+              "lidos diretamente; quando o sistema recusa essa leitura, entram pelo aplicativo "
+              "agente, que é de seleção expressa.",
               "<b>IMEI</b>: do Android 10 em diante, o sistema não o entrega sem privilégio "
               "elevado. A ferramenta registra cada via tentada e declara que não obteve.",
               "<b>WhatsApp no Android</b>: só se decifra o backup protegido pela chave de 64 "
@@ -1150,7 +1160,8 @@ def conteudo() -> list:
          "É o aviso para programa sem assinatura digital paga. Confira o hash do instalador, "
          "clique em <b>Mais informações</b> e em <b>Executar assim mesmo</b> (capítulo 2). Se "
          "não houver o botão, o Controle Inteligente de Aplicativos está ligado e exige "
-         "assinatura digital: instale em outro computador (capítulo 2)."),
+         "assinatura digital: instale em outro computador, peça ao setor de TI que libere o "
+         "programa, ou rode do código-fonte (capítulo 2)."),
         ("A ferramenta não encontra o iPhone",
          "Confira se o aplicativo Dispositivos Apple (ou o iTunes) está instalado, "
          "<b>desconecte e conecte o cabo de novo</b>, desbloqueie a tela e toque em "

@@ -78,8 +78,11 @@ passos a mais, mas não depende de assinatura digital.
    escolha a versão **3.13** — **não** a 3.14, que ainda não tem uma das
    bibliotecas do iPhone). Na primeira tela do instalador do Python, marque
    **Add python.exe to PATH**.
-2. Baixe o código: botão verde **Code → Download ZIP** no topo desta página, e
-   extraia a pasta. (Ou `git clone`, se tiver o Git.)
+2. Baixe o **Fonte (ZIP)** da versão marcada, na
+   [página de versões](https://github.com/HexisForensics/HexisForensics/releases)
+   — **não** o “Code → Download ZIP” da página principal, que traz a versão em
+   desenvolvimento. Confira o hash do ZIP (`Get-FileHash .\HexisForensics-1.0.0-fonte.zip`),
+   idêntico ao publicado na Release, e extraia a pasta.
 3. Abra a pasta extraída, clique com o botão direito num espaço vazio e escolha
    **Abrir no Terminal**.
 4. Instale as bibliotecas e abra a ferramenta:
@@ -89,9 +92,10 @@ passos a mais, mas não depende de assinatura digital.
    py main.py
    ```
 
-O `adb.exe` já vem no repositório, então a extração de Android funciona sem
-passo extra. Rodando do código-fonte, os casos ficam na subpasta `extracoes`,
-ao lado do programa.
+O `adb.exe` já vem no ZIP, então a extração de Android funciona sem passo
+extra. Os casos ficam em **HexisForensics-Casos**, na sua pasta de usuário do
+Windows — a mesma da versão instalada, **fora** da pasta do programa, para que
+atualizar (baixar o ZIP novo) nunca alcance as aquisições.
 
 A [apostila](docs/Apostila_Hexis_Forensics.pdf) explica cada passo, com as
 telas.
