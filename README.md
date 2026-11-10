@@ -139,6 +139,8 @@ py tests/rodar_todos.py
 
 Dúvidas e comentários: **contatohexisforensics@gmail.com**
 
+LinkedIn: [Hexis Forensics](https://www.linkedin.com/in/hexis-forensics-75779344a)
+
 ## Licença
 
 Copyright (C) 2026 Hexis Forensics.
