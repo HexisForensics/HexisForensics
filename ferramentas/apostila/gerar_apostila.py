@@ -538,8 +538,10 @@ def conteudo() -> list:
             "instalação, a mesma suíte é executada pelo Python. Exige alguns passos a mais, "
             "mas não depende de assinatura digital."),
           passos([
-              "Instale o <b>Python 3</b> de <b>python.org</b>. Na primeira tela do instalador "
-              "do Python, marque <b>Add python.exe to PATH</b>.",
+              "Instale o <b>Python 3.13</b> de <b>python.org</b> (em Downloads, escolha o "
+              "instalador do Windows da versão <b>3.13</b>). <b>Não use o 3.14</b>: uma das "
+              "bibliotecas do iPhone ainda não tem versão pronta para ele. Na primeira tela "
+              "do instalador do Python, marque <b>Add python.exe to PATH</b>.",
               "Na página do projeto no GitHub, clique em <b>Code → Download ZIP</b> e extraia "
               "a pasta (ou use <b>git clone</b>, se tiver o Git instalado).",
               "Abra a pasta extraída, clique com o botão direito num espaço vazio e escolha "

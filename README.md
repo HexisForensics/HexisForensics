@@ -74,8 +74,10 @@ Quando o instalador é bloqueado e não há como liberá-lo, a ferramenta roda
 direto do código-fonte, como qualquer projeto de código aberto. Exige alguns
 passos a mais, mas não depende de assinatura digital.
 
-1. Instale o **[Python 3](https://www.python.org/downloads/)**. Na primeira
-   tela do instalador do Python, marque **Add python.exe to PATH**.
+1. Instale o **Python 3.13** ([na página de downloads](https://www.python.org/downloads/),
+   escolha a versão **3.13** — **não** a 3.14, que ainda não tem uma das
+   bibliotecas do iPhone). Na primeira tela do instalador do Python, marque
+   **Add python.exe to PATH**.
 2. Baixe o código: botão verde **Code → Download ZIP** no topo desta página, e
    extraia a pasta. (Ou `git clone`, se tiver o Git.)
 3. Abra a pasta extraída, clique com o botão direito num espaço vazio e escolha
