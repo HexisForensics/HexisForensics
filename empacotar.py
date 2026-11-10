@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -185,8 +186,15 @@ def empacotar_portatil() -> None:
 
     if Path(da_portatil["raiz_da_instalacao"]) != DESTINO_PORTATIL.resolve():
         falhar(f"a versão portátil acha que está em {da_portatil['raiz_da_instalacao']}")
-    if Path(da_portatil["pasta_extracoes"]) != (DESTINO_PORTATIL / "extracoes").resolve():
-        falhar(f"as extrações iriam para {da_portatil['pasta_extracoes']}")
+    # Fora do desenvolvimento (a portátil não leva o `.git`), os casos vão para
+    # `<perfil>/HexisForensics-Casos` — e NÃO para dentro da pasta do programa,
+    # senão uma atualização alcançaria a evidência (ver core.instalacao).
+    perfil = Path(os.environ.get("USERPROFILE") or str(Path.home()))
+    esperadas = {(perfil / "HexisForensics-Casos").resolve(),
+                 (perfil / "ForensicExtractor-Casos").resolve()}
+    if Path(da_portatil["pasta_extracoes"]).resolve() not in esperadas:
+        falhar(f"as extrações iriam para {da_portatil['pasta_extracoes']}, fora da pasta "
+               "de usuário HexisForensics-Casos")
     for plataforma, modulos in da_fonte["modulos"].items():
         na_portatil = da_portatil["modulos"].get(plataforma, [])
         if na_portatil != modulos:
