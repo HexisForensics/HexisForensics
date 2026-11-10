@@ -135,6 +135,10 @@ acima e rode a ferramenta do código-fonte. A documentação técnica está em
 py tests/rodar_todos.py
 ```
 
+## Contato
+
+Dúvidas e comentários: **contatohexisforensics@gmail.com**
+
 ## Licença
 
 Copyright (C) 2026 Hexis Forensics.
