@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hexis Forensics — Extração e preservação de evidência digital</title>
+<meta name="description" content="Ferramenta gratuita e de código aberto de extração e preservação de evidência digital para Android, iPhone e mídias de armazenamento. Orientada pela ABNT NBR ISO/IEC 27037.">
+<style>
+  :root{
+    --navy:#0e2338; --navy2:#13304c; --ink:#16293c; --muted:#5b7085;
+    --teal:#15c39a; --blue:#3f8dfd; --line:#e3ebf3; --bg:#f6f9fc; --card:#ffffff;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);
+       background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:var(--blue);text-decoration:none}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  .btn{display:inline-block;padding:13px 26px;border-radius:9px;font-weight:700;font-size:1rem}
+  .btn-primary{background:var(--teal);color:#07241c}
+  .btn-primary:hover{background:#11b38d}
+  .btn-ghost{border:1.5px solid rgba(255,255,255,.35);color:#eaf2fb}
+  .btn-ghost:hover{border-color:#fff}
+
+  /* HERO */
+  header.hero{background:linear-gradient(160deg,#0c1e30 0%,#123252 100%);color:#eaf2fb;
+       padding:56px 0 64px;position:relative;overflow:hidden}
+  header.hero::after{content:"";position:absolute;right:-120px;top:-60px;width:360px;height:360px;
+       border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(63,141,253,.22),transparent 60%)}
+  .brand{display:flex;align-items:center;gap:14px;margin-bottom:34px}
+  .brand .name{font-weight:800;font-size:1.15rem;letter-spacing:.3px}
+  .brand .name b{color:#fff}.brand .name span{color:var(--teal)}
+  .hero h1{font-size:2.3rem;line-height:1.2;margin:.2em 0 .3em;color:#fff;max-width:18ch}
+  .hero p.lead{font-size:1.15rem;color:#c3d4e6;max-width:60ch;margin:0 0 10px}
+  .hero .norma{font-size:.95rem;color:#93aac4;margin:0 0 28px}
+  .hero .cta{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .free{display:inline-flex;gap:8px;align-items:center;font-size:.9rem;color:#9fd9c9;margin-top:18px}
+
+  /* logo */
+  .logo{width:46px;height:46px;flex:0 0 auto}
+
+  /* SECTIONS */
+  section{padding:54px 0}
+  h2{font-size:1.55rem;color:var(--navy);margin:0 0 6px}
+  .sub{color:var(--muted);margin:0 0 28px;max-width:62ch}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px}
+  .card h3{margin:0 0 6px;font-size:1.06rem;color:var(--navy)}
+  .card p{margin:0;color:#44576a;font-size:.96rem}
+  .card .ic{font-size:1.4rem}
+
+  .principio{background:var(--navy);color:#eaf2fb;border-radius:16px;padding:32px 30px}
+  .principio h2{color:#fff}
+  .principio .sub{color:#b9cbdd}
+  .principio ul{margin:10px 0 0;padding:0;list-style:none}
+  .principio li{padding:10px 0;border-top:1px solid rgba(255,255,255,.12)}
+  .principio li:first-child{border-top:0}
+  .principio li b{color:var(--teal)}
+
+  .docs .grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .steps{counter-reset:s;display:grid;gap:14px;margin-top:6px}
+  .step{display:flex;gap:14px;align-items:flex-start}
+  .step .n{counter-increment:s;flex:0 0 auto;width:28px;height:28px;border-radius:50%;
+       background:var(--blue);color:#fff;font-weight:700;display:grid;place-items:center;font-size:.9rem}
+  .step .n::before{content:counter(s)}
+  .step p{margin:2px 0}
+  code{background:#eef3f8;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:.9em}
+
+  footer{background:#0c1e30;color:#9fb4c9;padding:34px 0;font-size:.92rem}
+  footer a{color:#cfe0f0}
+  footer .row{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}
+
+  @media(max-width:560px){.hero h1{font-size:1.8rem}.brand .name{font-size:1rem}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 100 100" aria-hidden="true">
+        <polygon points="50,6 88,28 88,72 50,94 12,72 12,28" fill="none" stroke="#3f8dfd" stroke-width="6"/>
+        <path d="M38 32 V68 M62 32 V68" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+        <path d="M38 50 H62" stroke="#15c39a" stroke-width="7" stroke-linecap="round"/>
+      </svg>
+      <div class="name"><b>HEXIS</b> <span>FORENSICS</span></div>
+    </div>
+    <h1>Extração e preservação de evidência digital</h1>
+    <p class="lead">Ferramenta <b>gratuita e de código aberto</b> para a aquisição de rotina
+       em Android, iPhone e mídias de armazenamento — com cadeia de custódia, lacre por hash e laudo.</p>
+    <p class="norma">Orientada pela ABNT NBR ISO/IEC 27037 · Windows 10 e 11</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/HexisForensics/HexisForensics/releases/latest">⬇ Baixar para Windows</a>
+      <a class="btn btn-ghost" href="https://github.com/HexisForensics/HexisForensics">Ver o código no GitHub</a>
+    </div>
+    <div class="free">● Sem custo de licença · sem conta · sem cadastro para baixar</div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>O que ela faz</h2>
+    <p class="sub">A aquisição lógica de rotina, do que responde ao exame — registrando como cada
+       dado foi obtido e entregando documentos que se sustentam sozinhos.</p>
+    <div class="grid">
+      <div class="card"><div class="ic">📱</div><h3>Android</h3>
+        <p>Agenda, chamadas, SMS/MMS, mídias, WhatsApp (pelo backup com chave de 64 dígitos),
+           artefatos do sistema e diagnóstico — sem privilégio elevado.</p></div>
+      <div class="card"><div class="ic"></div><h3>iPhone</h3>
+        <p>Backup local comum ou cifrado, com decifragem: mensagens, agenda, chamadas,
+           WhatsApp e fotos.</p></div>
+      <div class="card"><div class="ic">💽</div><h3>Pendrives e discos</h3>
+        <p>Cópia das pastas do usuário, índice da unidade com SHA-256 e imagem do volume,
+           com bloqueador de escrita.</p></div>
+      <div class="card"><div class="ic">🔒</div><h3>Lacre por hash</h3>
+        <p>O SHA-256 de cada arquivo é calculado no momento da aquisição; a integridade
+           pode ser conferida a qualquer tempo.</p></div>
+      <div class="card"><div class="ic">📄</div><h3>Documentos</h3>
+        <p>Relatório de Extração, Relatório de Conteúdo, PDF de conversas selecionadas e
+           o Laudo Pericial, assinado pelo examinador.</p></div>
+      <div class="card"><div class="ic">🛡️</div><h3>Exame sem extração</h3>
+        <p>O laudo do aparelho bloqueado ou danificado, com a mesma cadeia de custódia.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="principio">
+      <h2>Não coletado não é não existe</h2>
+      <p class="sub">O princípio que orienta cada tela e cada documento: a ferramenta nunca
+         afirma o que não verificou.</p>
+      <ul>
+        <li><b>Nunca afirmar o que não foi verificado.</b> Quando um dado não é obtido, o
+            documento diz por quê — e a ausência no material nunca é apresentada como ausência no aparelho.</li>
+        <li><b>Toda alteração no aparelho é registrada e justificada.</b> Os módulos que mexem
+            no dispositivo começam desmarcados e deixam o registro do que foi feito.</li>
+        <li><b>O necessário, bem registrado.</b> Coletar o que interessa ao exame e documentar
+            a procedência de cada dado: de que arquivo veio, por qual via, com qual hash.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="docs">
+  <div class="wrap">
+    <h2>Começar</h2>
+    <p class="sub">Baixe o instalador para Windows. Se o seu computador bloquear instaladores
+       sem assinatura, a ferramenta também roda direto do código-fonte.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>Instalador (recomendado)</h3>
+        <div class="steps">
+          <div class="step"><span class="n"></span><p>Baixe o instalador na
+             <a href="https://github.com/HexisForensics/HexisForensics/releases/latest">página de versões</a>.</p></div>
+          <div class="step"><span class="n"></span><p>Confira o hash SHA-256 publicado com
+             <code>Get-FileHash</code>.</p></div>
+          <div class="step"><span class="n"></span><p>Execute e cadastre o seu perfil de examinador.</p></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Documentação</h3>
+        <p style="margin-bottom:14px">O passo a passo completo, com as telas, está na apostila do usuário.</p>
+        <a class="btn btn-primary" style="color:#07241c" href="./Apostila_Hexis_Forensics.pdf">📘 Apostila do Usuário (PDF)</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap row">
+    <div>Copyright © 2026 Hexis Forensics · Software livre sob a
+         <a href="https://github.com/HexisForensics/HexisForensics/blob/main/LICENSE">GNU GPL-3.0</a></div>
+    <div><a href="https://github.com/HexisForensics/HexisForensics">github.com/HexisForensics/HexisForensics</a></div>
+  </div>
+</footer>
+
+</body>
+</html>
