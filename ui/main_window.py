@@ -787,7 +787,7 @@ class MainWindow(QMainWindow):
             "A ferramenta nunca afirma o que não verificou: ausência de dado "
             "no material adquirido não autoriza concluir ausência do dado no "
             "dispositivo.<br><br>"
-            "Copyright © 2026 Filipe de Morais. Software livre, distribuído nos "
+            "Copyright © 2026 Hexis Forensics. Software livre, distribuído nos "
             "termos da GNU General Public License, versão 3 (GPL-3.0), <b>sem "
             "nenhuma garantia</b>. O texto da licença está no arquivo LICENSE."
         )

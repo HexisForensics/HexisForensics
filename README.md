@@ -137,7 +137,7 @@ py tests/rodar_todos.py
 
 ## Licença
 
-Copyright (C) 2026 Filipe de Morais.
+Copyright (C) 2026 Hexis Forensics.
 
 O Hexis Forensics é software livre: pode ser redistribuído e modificado
 nos termos da **GNU General Public License, versão 3** (GPL-3.0), publicada
