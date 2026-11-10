@@ -51,6 +51,8 @@ cada dado foi obtido e entregar documentos que se sustentam sozinhos.
 
 ## Como instalar
 
+### Opção 1 — Instalador para Windows (recomendado)
+
 1. Baixe o instalador na [página de download](https://github.com/HexisForensics/HexisForensics/releases/latest).
 2. **Confira o hash.** Na pasta do arquivo, abra o Terminal e digite
    `Get-FileHash .\HexisForensics-Setup-1.0.0.exe`. O valor tem de ser
@@ -61,7 +63,36 @@ cada dado foi obtido e entregar documentos que se sustentam sozinhos.
 4. Na primeira abertura, cadastre o seu perfil de examinador e guarde o
    **código de recuperação** da senha.
 
-A apostila explica cada passo, com as telas.
+> Em alguns computadores o **Controle Inteligente de Aplicativos** do Windows 11
+> bloqueia o instalador **sem** oferecer o botão “Executar assim mesmo”, por ele
+> não ter assinatura digital. Nesse caso, instale em outro computador, peça ao
+> setor de TI que libere o programa, ou use a **Opção 2** abaixo.
+
+### Opção 2 — Rodar do código-fonte
+
+Quando o instalador é bloqueado e não há como liberá-lo, a ferramenta roda
+direto do código-fonte, como qualquer projeto de código aberto. Exige alguns
+passos a mais, mas não depende de assinatura digital.
+
+1. Instale o **[Python 3](https://www.python.org/downloads/)**. Na primeira
+   tela do instalador do Python, marque **Add python.exe to PATH**.
+2. Baixe o código: botão verde **Code → Download ZIP** no topo desta página, e
+   extraia a pasta. (Ou `git clone`, se tiver o Git.)
+3. Abra a pasta extraída, clique com o botão direito num espaço vazio e escolha
+   **Abrir no Terminal**.
+4. Instale as bibliotecas e abra a ferramenta:
+
+   ```
+   py -m pip install -r requirements.txt
+   py main.py
+   ```
+
+O `adb.exe` já vem no repositório, então a extração de Android funciona sem
+passo extra. Rodando do código-fonte, os casos ficam na subpasta `extracoes`,
+ao lado do programa.
+
+A [apostila](docs/Apostila_Hexis_Forensics.pdf) explica cada passo, com as
+telas.
 
 **Requisitos:** Windows 10 ou 11 e cabo USB de dados. Para iPhone, o
 aplicativo **Dispositivos Apple** (Microsoft Store) ou o iTunes.
@@ -90,12 +121,11 @@ existem ferramentas especializadas.
 ## Para quem programa
 
 O código está organizado em três camadas (`core` → `services` → `ui`), com
-uma suíte de testes automatizados. A documentação técnica está em
+uma suíte de testes automatizados. Para executar a suíte, veja a **Opção 2**
+acima e rode a ferramenta do código-fonte. A documentação técnica está em
 [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md).
 
 ```
-pip install -r requirements.txt
-py main.py
 py tests/rodar_todos.py
 ```
 

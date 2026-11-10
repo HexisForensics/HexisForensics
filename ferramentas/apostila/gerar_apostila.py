@@ -332,7 +332,110 @@ def conteudo() -> list:
                   "armazenamento. Foi feita para o procedimento de rotina: coletar o que "
                   "responde ao exame, registrar como cada dado foi obtido e entregar "
                   "documentos que se sustentam sozinhos.")
-    h += [secao("Os princípios da ferramenta"),
+    h += [secao("Por que esta ferramenta existe"),
+          p("Boa parte dos exames em celulares e mídias é de rotina e não precisa de "
+            "recursos avançados. Mesmo assim, quem faz esse trabalho costuma esbarrar em "
+            "dois caminhos ruins."),
+          sub("As ferramentas pagas são caras para a rotina"),
+          itens([
+              "<b>Licença cara.</b> Licenças anuais, por estação e cotadas em dólar "
+              "inviabilizam o uso em menor escala.",
+              "<b>Capacidade ociosa.</b> Paga-se por recursos avançados que os casos "
+              "simples e recorrentes não usam.",
+              "<b>Formação cara.</b> A formação certificada é cara, quando a maioria dos "
+              "casos pede formação elementar e sólida.",
+              "<b>Deslocamento do aparelho.</b> A evidência viaja até onde há ferramenta: "
+              "mais etapas na cadeia de custódia e mais risco aos dados voláteis.",
+          ]),
+          sub("As ferramentas livres são gratuitas, mas não simples"),
+          itens([
+              "<b>Complexas de operar.</b> Linha de comando, ambiente técnico e pouca "
+              "documentação: pouco amigáveis para o usuário comum de TI.",
+              "<b>Sem documentação pericial.</b> Em geral, não geram cadeia de custódia "
+              "nem laudo: o examinador monta tudo à parte.",
+          ]),
+          p("Na prática, a ferramenta livre é barata para baixar e cara para aprender: a "
+            "complexidade de operação vira complexidade e custo de formação."),
+          caixa("nota", "O que faltava: uma ferramenta simples, documentada e sem custo de "
+                "licença para a aquisição de rotina."),
+
+          secao("A proposta"),
+          p("Aquisição lógica de rotina, simples de operar, com cadeia de custódia, lacre "
+            "por hash e documentos. Cada dor tem uma resposta:"),
+          tabela_simples(["Dor", "Resposta"], [
+              ["<b>Licença cara</b>", "Sem custo de licença."],
+              ["<b>Capacidade ociosa</b>", "Foco no que a rotina pede: Android, iPhone e mídias."],
+              ["<b>Formação cara</b>", "Operação guiada, tela a tela, ao alcance de formação "
+               "elementar e sólida."],
+              ["<b>Deslocamento do aparelho</b>", "Windows 10 ou 11 e um cabo USB, onde o "
+               "aparelho estiver."],
+              ["<b>Complexidade das livres</b>", "Interface gráfica, sem linha de comando."],
+              ["<b>Sem documentação pericial</b>", "Cadeia de custódia, lacre por hash e "
+               "laudo já incluídos."],
+          ], [0.32, 0.68]),
+
+          secao("O que ela faz e até onde vai"),
+          p("O alcance de cada coleta depende da plataforma e do tipo de extração. O quadro "
+            "resume o que a versão 1.0 faz:"),
+          tabela_simples(["Plataforma", "Lógica", "Sistema de arquivos", "Física (bit a bit)"], [
+              ["<b>Android</b>", "Faz. Em aparelho comum, sem privilégio elevado.",
+               "Parcial. Sem root, só o armazenamento compartilhado: os bancos dos "
+               "aplicativos não vêm.",
+               "Só com root. Partição de dados, perfil DES. Sem root, falha de forma explícita."],
+              ["<b>iPhone</b>", "Faz. Backup comum e cifrado.", "Não faz. Exigiria jailbreak.",
+               "Não faz. Exigiria exploração da inicialização do aparelho."],
+              ["<b>Pendrives e discos</b>", "Faz. Cópia das pastas do usuário e índice com hash.",
+               "Parcial. Índice da unidade inteira (caminho, datas e SHA-256), sem copiar o "
+               "conteúdo; a cópia alcança só as pastas do usuário.",
+               "Faz. Imagem .img do volume; exige Administrador e perfil DES."],
+          ], [0.16, 0.26, 0.33, 0.25]),
+          Spacer(1, 6),
+          p("<b>Foco: aquisição lógica de rotina.</b> Sistema de arquivos completo e imagem "
+            "física só com privilégio elevado, nunca no iPhone, e declarados como tal."),
+
+          secao("Como funciona, em cinco passos"),
+          passos([
+              "<b>Conectar.</b> Android pela depuração USB, iPhone pareado, mídia com "
+              "bloqueador de escrita.",
+              "<b>Declarar o método.</b> A tela Método e limitações diz o que a coleta não alcança.",
+              "<b>Identificar a peça.</b> Caso, autorização, marca e modelo, lacre e duas fotografias.",
+              "<b>Extrair com hash.</b> Manifesto com o SHA-256 de cada arquivo: o lacre da aquisição.",
+              "<b>Gerar os documentos.</b> Relatórios, conversas selecionadas e laudo.",
+          ]),
+
+          secao("Os documentos que ela gera"),
+          p("Cada aquisição gera documentos que se sustentam sozinhos:"),
+          itens([
+              "<b>Relatório de Extração.</b> Linha do tempo do procedimento, ambiente, "
+              "módulos, desfecho e manifesto de hashes.",
+              "<b>Relatório de Conteúdo.</b> Mensagens, chamadas e contatos interpretados, "
+              "com a origem de cada linha.",
+              "<b>Conversas selecionadas.</b> Em PDF, só as conversas relevantes, completas.",
+              "<b>Laudo Pericial.</b> O documento final, assinado pelo examinador da sessão.",
+          ]),
+          p("Todos são gravados <b>fora</b> da aquisição lacrada, que nunca é alterada "
+            "(capítulo 9)."),
+
+          secao("O diferencial: não coletado não é não existe"),
+          p("Cada módulo termina em um de três estados:"),
+          tabela_simples(["Estado", "O que significa"], [
+              ["<b>Concluído</b>", "O módulo obteve o que se propunha."],
+              ["<b>Concluído com ressalva</b>", "Obteve parte e declarou o que não alcançou."],
+              ["<b>Não obteve dado</b>", "Nada daquele material foi adquirido, o que não "
+               "significa que o dado não exista no aparelho."],
+          ], [0.3, 0.7]),
+          Spacer(1, 6),
+          p("Na prática:"),
+          itens([
+              "<b>Consulta recusada pelo sistema:</b> a recusa é preservada e declarada; "
+              "resposta vazia é registrada como tal.",
+              "<b>Backup cifrado não decifrado:</b> “nada se afirma” sobre o conteúdo.",
+              "<b>Aparelho bloqueado:</b> o laudo diz por que não extraiu.",
+          ]),
+          p("<b>Por que importa:</b> a ausência de um dado no material nunca é apresentada "
+            "como ausência do dado no aparelho."),
+
+          secao("Os princípios da ferramenta"),
           p("Três ideias orientam cada tela e cada documento. Conhecê-las ajuda a ler o "
             "que a ferramenta diz — e o que ela, de propósito, não diz."),
           itens([
@@ -349,16 +452,40 @@ def conteudo() -> list:
           ]),
           secao("O que a ferramenta não faz"),
           p("Ser honesto sobre o alcance é parte do método. A ferramenta <b>não</b> "
-            "desbloqueia aparelho, não contorna senha, não faz extração física de celular "
-            "sem privilégio elevado e não decodifica todos os aplicativos existentes. Para "
-            "esses casos existem ferramentas especializadas. O Hexis Forensics cobre a "
-            "aquisição lógica de rotina — e o que cerca a extração: cadeia de custódia, "
-            "lacre por hash, laudo, exame sem extração e entrega documentada."),
+            "desbloqueia aparelho, não contorna senha, não recupera dado apagado, não "
+            "extrai da nuvem, não faz extração física de iPhone e, no Android, só faz "
+            "extração física com root. Também não decodifica todos os aplicativos "
+            "existentes. Para esses casos existem ferramentas especializadas. O Hexis "
+            "Forensics cobre a aquisição lógica de rotina — e o que cerca a extração: cadeia "
+            "de custódia, lacre por hash, laudo, exame sem extração e entrega documentada."),
           secao("Os papéis DEFR e DES"),
           p("A norma ABNT NBR ISO/IEC 27037 distingue o <b>DEFR</b> (primeiro respondedor: "
             "identifica, coleta e preserva seguindo procedimento) do <b>DES</b> (especialista: "
             "decide diante do que foge do procedimento). Cada módulo declara o perfil mínimo "
             "que exige. A ferramenta não impede ninguém — ela informa, e o laudo registra."),
+          secao("Conformidade e transparência"),
+          sub("Conformidade"),
+          itens([
+              "<b>ABNT NBR ISO/IEC 27037.</b> Identificação, coleta, aquisição e preservação.",
+              "<b>Cadeia de custódia (CPP, arts. 158-A a 158-F).</b> Lacre, fotografias e "
+              "registro de cada etapa.",
+          ]),
+          sub("Transparência"),
+          itens([
+              "<b>Instalador com hash publicado.</b> O SHA-256 permite conferir o arquivo "
+              "antes de instalar (capítulo 2).",
+              "<b>Testada em aparelhos reais.</b> Motorola, Samsung, iPhone 11 e pendrive, "
+              "com o que foi provado em cada um (capítulo 11).",
+              "<b>Limitações declaradas.</b> Por exemplo: agente não verificado em Xiaomi; "
+              "IMEI não entregue sem root a partir do Android 10.",
+          ]),
+          secao("Para ir além: o Treinamento Oficial"),
+          p("Esta apostila ensina a operar a ferramenta. O <b>Treinamento Oficial Hexis "
+            "Forensics</b> vai além: ensina a computação forense que sustenta cada tela — "
+            "cadeia de custódia, integridade por hash, os limites de cada tipo de extração e "
+            "a redação do laudo. Há também oferta em parceria com instituições de ensino "
+            "superior e implantação com treinamento de equipes para polícias e órgãos de "
+            "perícia."),
           ]
 
     # =====================================================================
@@ -400,10 +527,32 @@ def conteudo() -> list:
               "Clique em <b>Mais informações</b>.",
               "Confira o nome do arquivo e clique em <b>Executar assim mesmo</b>.",
           ]),
-          caixa("nota", "Se o <b>Controle Inteligente de Aplicativos</b> do Windows 11 estiver "
-                "ligado, ele bloqueia o instalador sem oferecer o botão: exige assinatura "
-                "digital, que esta versão não tem. Nesse caso, instale em outro computador. "
-                "Em computador de empresa ou órgão, quem decide é o setor de TI."),
+          caixa("nota", "Se o <b>Controle Inteligente de Aplicativos</b> do Windows 11 "
+                "estiver ligado, ele bloqueia o instalador sem oferecer o botão: exige "
+                "assinatura digital, que esta versão não tem. Não há versão portátil. As "
+                "saídas são instalar em outro computador, pedir ao setor de TI que libere o "
+                "programa, ou <b>rodar do código-fonte</b> (seção a seguir)."),
+          secao("Alternativa: rodar do código-fonte"),
+          p("Quando o instalador é bloqueado e não há como liberá-lo, a ferramenta roda "
+            "direto do código-fonte, como qualquer projeto de código aberto — não há "
+            "instalação, a mesma suíte é executada pelo Python. Exige alguns passos a mais, "
+            "mas não depende de assinatura digital."),
+          passos([
+              "Instale o <b>Python 3</b> de <b>python.org</b>. Na primeira tela do instalador "
+              "do Python, marque <b>Add python.exe to PATH</b>.",
+              "Na página do projeto no GitHub, clique em <b>Code → Download ZIP</b> e extraia "
+              "a pasta (ou use <b>git clone</b>, se tiver o Git instalado).",
+              "Abra a pasta extraída, clique com o botão direito num espaço vazio e escolha "
+              "<b>Abrir no Terminal</b>.",
+              "Digite <b>py -m pip install -r requirements.txt</b> e tecle Enter. Aguarde a "
+              "instalação das bibliotecas (demora na primeira vez).",
+              "Digite <b>py main.py</b> e tecle Enter. A ferramenta abre na tela de entrada, "
+              "igual à versão instalada.",
+          ]),
+          caixa("nota", "Rodando do código-fonte, os casos ficam na subpasta <b>extracoes</b>, "
+                "ao lado do programa — não na pasta do usuário. O <b>adb.exe</b> já vem junto "
+                "no repositório, então a extração de Android funciona sem passo extra; para o "
+                "iPhone, continua valendo o aplicativo Dispositivos Apple (Requisitos)."),
           secao("Primeiro acesso: o seu perfil de examinador"),
           p("A ferramenta abre na <b>tela de entrada</b>. Cada examinador tem perfil e senha "
             "próprios: é isso que identifica quem fez cada extração e quem assina cada laudo."),
