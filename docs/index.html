@@ -66,6 +66,10 @@
   .step p{margin:2px 0}
   code{background:#eef3f8;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:.9em}
 
+  .aviso{background:#fff8ef;border:1px solid #f0dcc0;border-left:4px solid #e0922f;
+       border-radius:10px;padding:18px 22px;color:#5a4324;font-size:.95rem}
+  .aviso b{color:#8a5a12}
+
   footer{background:#0c1e30;color:#9fb4c9;padding:34px 0;font-size:.92rem}
   footer a{color:#cfe0f0}
   footer .row{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}
@@ -106,7 +110,7 @@
       <div class="card"><div class="ic">📱</div><h3>Android</h3>
         <p>Agenda, chamadas, SMS/MMS, mídias, WhatsApp (pelo backup com chave de 64 dígitos),
            artefatos do sistema e diagnóstico — sem privilégio elevado.</p></div>
-      <div class="card"><div class="ic"></div><h3>iPhone</h3>
+      <div class="card"><div class="ic">🍎</div><h3>iPhone</h3>
         <p>Backup local comum ou cifrado, com decifragem: mensagens, agenda, chamadas,
            WhatsApp e fotos.</p></div>
       <div class="card"><div class="ic">💽</div><h3>Pendrives e discos</h3>
@@ -160,9 +164,22 @@
       </div>
       <div class="card">
         <h3>Documentação</h3>
-        <p style="margin-bottom:14px">O passo a passo completo, com as telas, está na apostila do usuário.</p>
-        <a class="btn btn-primary" style="color:#07241c" href="./Apostila_Hexis_Forensics.pdf">📘 Apostila do Usuário (PDF)</a>
+        <p style="margin-bottom:14px">O passo a passo completo, com as telas, está na apostila; o
+           essencial, no guia rápido.</p>
+        <a class="btn btn-primary" style="color:#07241c;margin-bottom:10px" href="./Apostila_Hexis_Forensics.pdf">📘 Apostila do Usuário (PDF)</a><br>
+        <a class="btn" style="border:1.5px solid var(--line);color:var(--blue)" href="./Guia_de_Extracao_Rapida.pdf">⚡ Guia de Extração Rápida (PDF)</a>
       </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="aviso">
+      <b>Aviso.</b> O uso da ferramenta, a observância das normas aplicáveis ao exame e as
+      conclusões extraídas do material são de <b>responsabilidade exclusiva de quem a utiliza</b>.
+      O autor não responde por uso indevido, ilícito ou sem autorização. Trabalhos de natureza
+      pericial exigem a observância das leis e dos regulamentos obrigatórios.
     </div>
   </div>
 </section>
