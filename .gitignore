@@ -18,6 +18,9 @@ env/
 # Binários do ADB (o usuário copia localmente; não fazem parte do código-fonte)
 binario/*
 !binario/.gitkeep
+!binario/adb.exe
+!binario/AdbWinApi.dll
+!binario/AdbWinUsbApi.dll
 
 # Resultados de extrações — dados de perícia não devem ir para o controle de versão
 extracoes/*
