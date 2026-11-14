@@ -15,7 +15,7 @@ Android · iPhone · memorias USB y discos · orientada por la norma ISO/IEC 270
 No hace falta cuenta en GitHub.</p>
 
 <p align="center">
-  📘 <a href="docs/Apostila_Hexis_Forensics.pdf">Manual del Usuario</a> (en portugués) ·
+  📘 <a href="docs/Manual_Usuario_Hexis_Forensics_ES.pdf">Manual del Usuario</a> ·
   ⚡ <a href="docs/Guia_Extraccion_Rapida_Hexis_Forensics_ES.pdf">Guía de Extracción Rápida</a>
 </p>
 
@@ -102,8 +102,8 @@ extra. Los casos quedan en **HexisForensics-Casos**, en su carpeta de usuario de
 Windows — la misma de la versión instalada, **fuera** de la carpeta del programa,
 para que actualizar (descargar el ZIP nuevo) nunca alcance las adquisiciones.
 
-El [manual](docs/Apostila_Hexis_Forensics.pdf) (por ahora en portugués) explica cada
-paso, con las pantallas; la **Guía de Extracción Rápida** de arriba está en español.
+El [manual](docs/Manual_Usuario_Hexis_Forensics_ES.pdf) explica cada paso, con las
+pantallas; la **Guía de Extracción Rápida** de arriba también está en español.
 
 **Requisitos:** Windows 10 u 11 y cable USB de datos. Para iPhone, la aplicación
 **Dispositivos Apple** (Microsoft Store) o iTunes.
