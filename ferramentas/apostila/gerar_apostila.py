@@ -325,6 +325,18 @@ def conteudo() -> list:
     sumario.levelStyles = [SUMARIO_1, SUMARIO_2]
     h += [Paragraph("Sumário", H1), Spacer(1, 10), sumario]
 
+    # --- Aviso legal (antes do capítulo 1). Não entra no sumário.
+    h += [PageBreak(),
+          Paragraph("Aviso — tratamento de dados pessoais", H2),
+          caixa("atencao",
+                "Extrair e examinar dados de um aparelho é <b>tratamento de dados pessoais</b>. "
+                "Use a ferramenta só com <b>base legal</b> (ordem judicial, requisição de "
+                "autoridade competente ou consentimento documentado do titular) e conforme as "
+                "normas aplicáveis: CF e CPP na investigação penal, LGPD nas demais perícias e, "
+                "fora do Brasil, a lei local. Colete só o necessário e guarde com segurança. A "
+                "legalidade do exame é responsabilidade de quem o executa e de quem o autoriza."),
+          ]
+
     # =====================================================================
     h += capitulo(1, "Apresentação",
                   "O Hexis Forensics é uma ferramenta gratuita de extração e preservação "
