@@ -29,10 +29,11 @@
   .brand{display:flex;align-items:center;gap:14px;margin-bottom:34px}
   .brand .name{font-weight:800;font-size:1.15rem;letter-spacing:.3px}
   .brand .name b{color:#fff}.brand .name span{color:var(--teal)}
-  .lang{margin-left:auto;color:#cfe9e0;border:1px solid rgba(255,255,255,.3);
+  .lang{margin-left:auto;display:inline-flex;align-items:center;color:#cfe9e0;border:1px solid rgba(255,255,255,.3);
        padding:5px 12px;border-radius:7px;font-size:.85rem;font-weight:700}
   .lang + .lang{margin-left:0}
   .lang:hover{border-color:#fff;color:#fff}
+  .lang svg{width:18px;height:12px;border-radius:2px;margin-right:6px;flex:0 0 auto}
   .hero h1{font-size:2.3rem;line-height:1.2;margin:.2em 0 .3em;color:#fff;max-width:18ch}
   .hero p.lead{font-size:1.15rem;color:#c3d4e6;max-width:60ch;margin:0 0 10px}
   .hero .norma{font-size:.95rem;color:#93aac4;margin:0 0 28px}
@@ -90,8 +91,8 @@
         <path d="M38 50 H62" stroke="#15c39a" stroke-width="7" stroke-linecap="round"/>
       </svg>
       <div class="name"><b>HEXIS</b> <span>FORENSICS</span></div>
-      <a class="lang" href="../">PT</a>
-      <a class="lang" href="../en/">EN</a>
+      <a class="lang" href="../"><svg viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#009b3a"/><path d="M15 2 27 10 15 18 3 10Z" fill="#fedf00"/><circle cx="15" cy="10" r="4.2" fill="#002776"/></svg>PT</a>
+      <a class="lang" href="../en/"><svg viewBox="0 0 60 40" aria-hidden="true"><rect width="60" height="40" fill="#012169"/><path d="M0 0 60 40M60 0 0 40" stroke="#fff" stroke-width="8"/><path d="M0 0 60 40M60 0 0 40" stroke="#c8102e" stroke-width="4"/><path d="M30 0V40M0 20H60" stroke="#fff" stroke-width="12"/><path d="M30 0V40M0 20H60" stroke="#c8102e" stroke-width="7"/></svg>EN</a>
     </div>
     <h1>Extracción y preservación de evidencia digital</h1>
     <p class="lead">Herramienta <b>gratuita y de código abierto</b> para la adquisición de rutina
