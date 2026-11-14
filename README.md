@@ -1,3 +1,5 @@
+🌐 **Português** · [Español](README.es.md)
+
 <p align="center"><img src="assets/marca/logo_claro.png" alt="Hexis Forensics" width="420"></p>
 
 <p align="center"><b>Extração e preservação de evidência digital — gratuita e de código aberto</b><br>
