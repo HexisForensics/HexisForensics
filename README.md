@@ -16,7 +16,8 @@ Não é preciso conta no GitHub.</p>
 
 <p align="center">
   📘 <a href="docs/Apostila_Hexis_Forensics.pdf">Apostila do Usuário</a> ·
-  ⚡ <a href="docs/Guia_de_Extracao_Rapida.pdf">Guia de Extração Rápida</a>
+  ⚡ <a href="docs/Guia_de_Extracao_Rapida.pdf">Guia de Extração Rápida</a> ·
+  🧪 <a href="docs/Guia_de_Pratica_com_Emulador.pdf">Guia de Prática com Emulador</a>
 </p>
 
 ---

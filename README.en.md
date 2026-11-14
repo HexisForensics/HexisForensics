@@ -16,7 +16,8 @@ No GitHub account required.</p>
 
 <p align="center">
   📘 <a href="docs/User_Manual_Hexis_Forensics_EN.pdf">User Manual</a> ·
-  ⚡ <a href="docs/Quick_Extraction_Guide_Hexis_Forensics_EN.pdf">Quick Extraction Guide</a>
+  ⚡ <a href="docs/Quick_Extraction_Guide_Hexis_Forensics_EN.pdf">Quick Extraction Guide</a> ·
+  🧪 <a href="docs/Practice_Guide_Emulator_Hexis_Forensics_EN.pdf">Emulator Practice Guide</a>
 </p>
 
 > ℹ️ **The program and the documents it generates (reports and the expert report) are in Portuguese.**

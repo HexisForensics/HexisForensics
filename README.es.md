@@ -16,7 +16,8 @@ No hace falta cuenta en GitHub.</p>
 
 <p align="center">
   📘 <a href="docs/Manual_Usuario_Hexis_Forensics_ES.pdf">Manual del Usuario</a> ·
-  ⚡ <a href="docs/Guia_Extraccion_Rapida_Hexis_Forensics_ES.pdf">Guía de Extracción Rápida</a>
+  ⚡ <a href="docs/Guia_Extraccion_Rapida_Hexis_Forensics_ES.pdf">Guía de Extracción Rápida</a> ·
+  🧪 <a href="docs/Guia_Practica_Emulador_Hexis_Forensics_ES.pdf">Guía de Práctica con Emulador</a>
 </p>
 
 > ℹ️ **El programa y los documentos que genera (informes y laudo) están en portugués.**
