@@ -1,4 +1,4 @@
-🌐 **Español** · [Português](README.md)
+🌐 **Español** · [Português](README.md) · [English](README.en.md)
 
 <p align="center"><img src="assets/marca/logo_claro.png" alt="Hexis Forensics" width="420"></p>
 
