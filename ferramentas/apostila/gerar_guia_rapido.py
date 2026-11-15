@@ -16,6 +16,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
+from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import (Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table,
                                 TableStyle)
 
@@ -40,11 +41,11 @@ SUB = ParagraphStyle("s", fontName="Helvetica", fontSize=8.5, textColor=colors.g
 FAIXA = ParagraphStyle("f", fontName="Helvetica-Bold", fontSize=10.5, textColor=colors.white,
                        leading=13)
 ETAPA = ParagraphStyle("e", fontName="Helvetica-Bold", fontSize=9.2, textColor=ESCURO,
-                       leading=12, spaceBefore=4, spaceAfter=1)
-CORPO = ParagraphStyle("c", fontName="Helvetica", fontSize=8.5, leading=10.8)
+                       leading=11.4, spaceBefore=3, spaceAfter=0.5)
+CORPO = ParagraphStyle("c", fontName="Helvetica", fontSize=8.5, leading=10.1)
 NUMERO = ParagraphStyle("n", fontName="Helvetica-Bold", fontSize=8.5, textColor=AZUL,
                         leading=10.8, alignment=1)
-CAIXA = ParagraphStyle("x", parent=CORPO, fontSize=8.2, leading=10.4)
+CAIXA = ParagraphStyle("x", parent=CORPO, fontSize=8.1, leading=9.8)
 
 LARGURA = A4[0] - 2.4 * cm
 CONTADOR = {"n": 0}
@@ -55,7 +56,7 @@ def faixa(texto, cor=ESCURO):
     t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), cor),
                            ("TOPPADDING", (0, 0), (-1, -1), 3),
                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
-    return [Spacer(1, 6), t, Spacer(1, 2)]
+    return [Spacer(1, 3), t, Spacer(1, 2)]
 
 
 def etapa(texto):
@@ -72,8 +73,8 @@ def passos(lista, reiniciar=False):
         linhas.append([Paragraph(str(CONTADOR["n"]), NUMERO), Paragraph(texto, CORPO)])
     t = Table(linhas, colWidths=[0.8 * cm, LARGURA - 0.8 * cm])
     t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
-                           ("TOPPADDING", (0, 0), (-1, -1), 1.3),
-                           ("BOTTOMPADDING", (0, 0), (-1, -1), 1.3),
+                           ("TOPPADDING", (0, 0), (-1, -1), 0.9),
+                           ("BOTTOMPADDING", (0, 0), (-1, -1), 0.9),
                            ("LINEBELOW", (0, 0), (-1, -2), 0.25, LINHA)]))
     return t
 
@@ -110,20 +111,78 @@ def cabecalho(subtitulo):
     return [t, Spacer(1, 2)]
 
 
-def rodape(canvas, doc):
-    canvas.saveState()
-    canvas.setFont("Helvetica", 7.5)
-    canvas.setFillColor(colors.grey)
-    canvas.drawString(1.2 * cm, 0.55 * cm,
-                      f"Hexis Forensics {VERSAO} · Guia de Extração Rápida · os detalhes de cada "
-                      "passo estão na Apostila do Usuário")
-    canvas.drawRightString(A4[0] - 1.2 * cm, 0.55 * cm, f"página {doc.page} de 2")
-    canvas.restoreState()
+class CanvasNumerado(Canvas):
+    """Só desenha o rodapé depois de saber quantas páginas há: 'página N de M'."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._paginas = []
+
+    def showPage(self):
+        self._paginas.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        total = len(self._paginas)
+        for estado in self._paginas:
+            self.__dict__.update(estado)
+            self._rodape(total)
+            super().showPage()
+        super().save()
+
+    def _rodape(self, total):
+        self.saveState()
+        self.setFont("Helvetica", 7.5)
+        self.setFillColor(colors.grey)
+        self.drawString(1.2 * cm, 0.55 * cm,
+                        f"Hexis Forensics {VERSAO} · Guia de Extração Rápida · os detalhes de cada "
+                        "passo estão na Apostila do Usuário")
+        self.drawRightString(A4[0] - 1.2 * cm, 0.55 * cm,
+                             f"página {self.getPageNumber()} de {total}")
+        self.restoreState()
 
 
 def pagina_android():
-    h = cabecalho("Página 1 · ANDROID, do cabo ao laudo, com o WhatsApp · verso: iPhone e "
-                  "depois da extração")
+    h = cabecalho("Página 1 · INSTALAR e ANDROID, com o WhatsApp · verso: iPhone e depois da "
+                  "extração")
+
+    h += caixa("<b>AVISO — TRATAMENTO DE DADOS PESSOAIS.</b> Extrair e examinar dados de um "
+               "aparelho é tratamento de dados pessoais. Use a ferramenta só com <b>base legal</b> "
+               "(ordem judicial, requisição de autoridade competente ou consentimento documentado "
+               "do titular) e conforme as normas aplicáveis: CF e CPP na investigação penal, LGPD "
+               "nas demais perícias e, fora do Brasil, a lei local. Colete só o necessário e guarde "
+               "com segurança. <b>A legalidade do exame é responsabilidade de quem o executa e de "
+               "quem o autoriza.</b>", alerta=True)
+
+    h += faixa("INSTALAR A FERRAMENTA · uma vez por computador", AZUL)
+    h.append(etapa("A. Pelo instalador (caminho normal)  <font color='grey' size='7.5'>(apostila, "
+                   "cap. 2)</font>"))
+    h.append(passos([
+        "<b>Confira o hash:</b> na pasta do instalador, clique com o botão direito num espaço "
+        "vazio › <b>Abrir no Terminal</b> › digite <b>Get-FileHash .\\HexisForensics-Setup-1.0.0."
+        "exe</b> e tecle Enter. O valor tem de ser idêntico ao publicado. Diferente: não instale.",
+        "Execute o instalador e marque <b>Criar atalho na Área de Trabalho</b>. Se aparecer “O "
+        "Windows protegeu o computador”: <b>Mais informações</b> › <b>Executar assim mesmo</b>.",
+    ], reiniciar=True))
+    h.append(etapa("B. Pelo código-fonte do GitHub  <font color='grey' size='7.5'>· só se o Windows "
+                   "bloquear o instalador sem oferecer o botão (Controle Inteligente de Aplicativos)"
+                   "</font>"))
+    h.append(passos([
+        "Instale o <b>Python 3.13</b> de python.org (não use o 3.14). Na primeira tela do "
+        "instalador do Python, marque <b>Add python.exe to PATH</b>.",
+        "Em <b>github.com/HexisForensics/HexisForensics/releases</b>, na versão mais recente, baixe "
+        "o <b>Fonte (ZIP)</b>. Não use o Code › Download ZIP da página principal.",
+        "<b>Confira o hash:</b> na pasta do arquivo, <b>Abrir no Terminal</b> › <b>Get-FileHash "
+        ".\\HexisForensics-1.0.0-fonte.zip</b>. O valor tem de ser idêntico ao publicado na Release.",
+        "Extraia a pasta › abra-a › <b>Abrir no Terminal</b> › digite <b>py -m pip install -r "
+        "requirements.txt</b> (demora na primeira vez) › depois <b>py main.py</b>. A ferramenta abre "
+        "na tela de entrada.",
+    ]))
+    h += caixa("<b>Nos dois caminhos</b>, os casos ficam em <b>HexisForensics-Casos</b>, na sua "
+               "pasta de usuário do Windows: atualizar a ferramenta nunca alcança as aquisições. Na "
+               "primeira abertura, crie o seu <b>perfil de examinador</b> e guarde o <b>código de "
+               "recuperação</b>.")
+
     h += caixa("<b>Tenha em mãos antes de começar:</b> cabo USB de <b>dados</b> (cabo só de "
                "carga não serve) · número do <b>lacre</b> · a peça para <b>duas fotos</b> "
                "(frente e verso) · o documento de <b>autorização</b> digitalizado · o seu "
@@ -222,6 +281,9 @@ def pagina_iphone_e_depois():
          "certa."],
         ["<b>Relatório de Extração</b>", "O procedimento: peça, fotos, método, desfecho de "
          "cada módulo e hashes."],
+        ["<b>Ficha do Aparelho</b>", "Capa de leitura rápida, no nível do caso: bloqueio, IMEI, "
+         "ICCID, número, operadora, segurança e desfecho, cada um com a fonte lacrada. Não "
+         "obtido = <b>NÃO APURADO</b>, nunca “não existe”."],
         ["<b>Laudo Pericial</b>", "O documento final, no nome do examinador da sessão."],
         ["<b>Conferir Integridade</b>", "Recalcula o hash de cada arquivo e compara com o "
          "lacre. Faça antes de entregar."],
@@ -239,6 +301,9 @@ def pagina_iphone_e_depois():
 
     h += faixa("DEU ERRADO?", VERMELHO)
     h.append(tabela([
+        ["Windows bloqueou o instalador", "Sem o botão Executar assim mesmo: instale em outro "
+         "computador, peça ao setor de TI que libere o programa ou rode pelo <b>código-fonte</b> "
+         "(frente, Instalar B)."],
         ["Android “não autorizado”", "Desbloqueie a tela e aceite <b>Permitir</b>. Sem o "
          "aviso: Opções do desenvolvedor > Revogar autorizações > reconecte."],
         ["Nenhum aparelho responde", "Troque o cabo · modo USB em <b>Transferência de "
@@ -264,8 +329,7 @@ def main() -> int:
     SimpleDocTemplate(str(SAIDA), pagesize=A4, leftMargin=1.2 * cm, rightMargin=1.2 * cm,
                       topMargin=0.9 * cm, bottomMargin=1.0 * cm,
                       title="Guia de Extração Rápida — Hexis Forensics",
-                      author="Hexis Forensics").build(historia, onFirstPage=rodape,
-                                                      onLaterPages=rodape)
+                      author="Hexis Forensics").build(historia, canvasmaker=CanvasNumerado)
     print(f"Guia gerado: {SAIDA}")
     return 0
 

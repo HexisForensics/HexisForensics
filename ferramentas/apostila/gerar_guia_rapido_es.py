@@ -236,6 +236,10 @@ def contenido():
          "Clic en las conversaciones relevantes → Gerar PDF das selecionadas. Verifique en el título de la ventana que la adquisición sea la correcta."],
         ["Relatório de Extração (Informe de Extracción)",
          "El procedimiento: pieza, fotos, método, desenlace de cada módulo y hashes."],
+        ["Ficha do Aparelho (Ficha del Dispositivo)",
+         "Portada de lectura rápida, a nivel del caso: bloqueo al recibir, IMEI, ICCID, número, "
+         "operadora, estado de seguridad y desenlace, cada campo con su fuente sellada. No "
+         "obtenido = <b>NÃO APURADO</b>, nunca «no existe en el aparato»."],
         ["Laudo Pericial (Informe Pericial)",
          "El documento final, a nombre del examinador de la sesión."],
         ["Conferir Integridade (Verificar Integridad)",

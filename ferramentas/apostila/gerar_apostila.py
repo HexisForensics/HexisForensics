@@ -420,6 +420,9 @@ def conteudo() -> list:
           itens([
               "<b>Relatório de Extração.</b> Linha do tempo do procedimento, ambiente, "
               "módulos, desfecho e manifesto de hashes.",
+              "<b>Ficha do Aparelho.</b> Capa de leitura rápida: bloqueio no recebimento, IMEI, "
+              "ICCID, número, operadora, estado de segurança e desfecho, cada campo com a fonte "
+              "lacrada. O que a coleta não alcançou consta como NÃO APURADO.",
               "<b>Relatório de Conteúdo.</b> Mensagens, chamadas e contatos interpretados, "
               "com a origem de cada linha.",
               "<b>Conversas selecionadas.</b> Em PDF, só as conversas relevantes, completas.",
@@ -1009,12 +1012,19 @@ def conteudo() -> list:
           tabela_simples(["Documento", "Para que serve"], [
               ["<b>Relatório de Extração</b>", "Linha do tempo do procedimento, ambiente, "
                "módulos, desfecho e o manifesto de hashes."],
+              ["<b>Ficha do Aparelho</b>", "Capa de leitura rápida: bloqueio no recebimento, "
+               "IMEI, ICCID, número, operadora, estado de segurança e desfecho, cada campo com a "
+               "fonte lacrada. Não obtido = <b>NÃO APURADO</b>, nunca ausência do dado no aparelho."],
               ["<b>Relatório de Conteúdo</b>", "As mensagens, chamadas e contatos "
                "interpretados: planilhas CSV, caderno HTML e PDF, com a origem de cada linha."],
               ["<b>PDF de conversas selecionadas</b>", "Só as conversas relevantes, completas."],
               ["<b>Laudo Pericial</b>", "O documento final, assinado pelo examinador da sessão."],
           ], [0.3, 0.7]),
           Spacer(1, 8),
+          p("A regra da <b>Ficha do Aparelho</b> é: abre com o que a coleta obteve; a ressalva "
+            "vem depois, não no lugar. <b>NÃO APURADO</b> nunca significa que o dado não exista no "
+            "aparelho — só que a coleta, por suas limitações, não o alcançou (capítulo 9 "
+            "“não coletado não é não existe”)."),
           p("Os documentos abrem no <b>visualizador da ferramenta</b> (páginas, zoom, "
             "imprimir, salvar cópia) e ficam listados na aba <b>Documentos</b>. Eles são "
             "gravados <b>fora</b> da aquisição lacrada, que nunca é alterada."),
@@ -1095,7 +1105,7 @@ def conteudo() -> list:
           tabela_simples(["Pasta do caso", "Conteúdo"], [
               ["<b>&lt;plataforma&gt;_&lt;data&gt;_&lt;hora&gt;</b>", "A aquisição lacrada. Nunca "
                "é reescrita."],
-              ["<b>documentos</b>", "Relatório de Extração, Laudo, Conversas."],
+              ["<b>documentos</b>", "Relatório de Extração, Ficha do Aparelho, Laudo, Conversas."],
               ["<b>relatorios</b>", "Relatórios de Conteúdo (CSV, HTML, PDF)."],
               ["<b>decifrados</b>", "Backups decifrados, com a procedência."],
               ["<b>complementos</b>", "Retificações, autorizações, decifragens, entregas."],
@@ -1217,11 +1227,16 @@ def conteudo() -> list:
          "iOS inclui o registro de chamadas."],
         ["crypt15", "Formato do backup cifrado do WhatsApp."],
         ["EXIF", "Dados que a câmera grava dentro da foto: data, câmera e, às vezes, GPS."],
+        ["Ficha do Aparelho", "Documento derivado de leitura rápida, no nível do caso, que reúne "
+         "bloqueio no recebimento, IMEI, ICCID, número, operadora, estado de segurança e desfecho, "
+         "cada campo com a fonte lacrada."],
         ["GPS (UTC)", "Hora dos satélites gravada junto da coordenada; independe do relógio "
          "do aparelho."],
         ["DEFR / DES", "Primeiro respondedor e especialista, na ABNT NBR ISO/IEC 27037."],
         ["Hash (SHA-256)", "Impressão digital de um arquivo: qualquer alteração muda o valor."],
         ["Lacre (manifesto)", "A lista de hashes de todos os arquivos da aquisição."],
+        ["NÃO APURADO", "Marca da Ficha do Aparelho para o campo que a coleta não alcançou. "
+         "Nunca significa ausência do dado no aparelho."],
         ["Seleção expressa", "Módulo que altera o aparelho e só roda se escolhido um a um."],
         ["Ressalva", "O que o módulo não alcançou, declarado junto do que obteve."],
     ], [0.25, 0.75])]
