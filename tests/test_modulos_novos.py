@@ -3,6 +3,7 @@ Testes dos modulos de completude acrescentados a extracao Android:
 identificacao (IMEI e contas), artefatos de atividade do sistema,
 mensageiros alem do WhatsApp e copia dos APKs instalados.
 """
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -16,6 +17,7 @@ from core.android.extractors.artefatos_sistema import COLETAS, ArtefatosSistemaE
 from core.android.extractors.identificacao import (
     IdentificacaoExtractor,
     extrair_digitos_de_parcel,
+    extrair_identificadores_sim,
     imei_valido_por_luhn,
 )
 from core.android.extractors.mensageiros import MensageirosExtractor
@@ -96,11 +98,38 @@ checar("o IMEI e reconstruido do Parcel em UTF-16", "490154203237518" in digitos
 checar("Parcel sem trecho entre aspas nao produz numero", extrair_digitos_de_parcel("Result: Parcel()") == [])
 checar("saida vazia nao produz numero", extrair_digitos_de_parcel("") == [])
 
+# ---------------------------------------------------------------------------
+print("\n[2b] Parse de ICCID e numero da linha a partir do dump de assinatura")
+# ---------------------------------------------------------------------------
+ic, nu = extrair_identificadores_sim(
+    "  {id=1 iccId=8955071234567890123 number=null}\n"
+    "  {id=1 iccId=8955071234567890123 number=+5511912345678}\n"
+)
+checar("ICCID e numero sao extraidos do dump isub", ic == "8955071234567890123" and nu == "+5511912345678")
+checar("number=null nao vira numero", extrair_identificadores_sim("number=null")[1] == "")
+checar("campo numerico curto nao e tomado por ICCID", extrair_identificadores_sim("iccId=123")[0] == "")
+checar("sem dado de SIM, devolve vazio sem palpite", extrair_identificadores_sim("") == ("", ""))
+
+
+# Dump de assinatura (`dumpsys isub`): traz o ICCID e o número da linha. A
+# primeira entrada vem com `number=null` (instante transitório do boot), para
+# testar que o parser ignora o nulo e pega o valor estável seguinte.
+ISUB = (
+    "SubscriptionController:\n"
+    " defaultSubId=1\n"
+    "++++++++++++++++++++++++++++++++\n"
+    " ActiveSubInfoList:\n"
+    "  {id=1 iccId=8955071234567890123 simSlotIndex=0 carrierId=1 displayName=Vivo number=null mcc=724}\n"
+    "  {id=1 iccId=8955071234567890123 simSlotIndex=0 carrierId=1 displayName=Vivo number=+5511912345678 mcc=724 mnc=06 countryIso=br}\n"
+)
+
 
 class ADBComImei(ADBBase):
     def responder(self, argumentos):
         if "iphonesubinfo" in argumentos:
             return PARCEL
+        if "isub" in argumentos:
+            return ISUB
         if "account" in argumentos:
             return (
                 "Accounts: 2\n"
@@ -114,6 +143,8 @@ class ADBSemImei(ADBBase):
     def responder(self, argumentos):
         if "iphonesubinfo" in argumentos:
             return "Result: Parcel(00000000 'Permission Denial')"
+        if "isub" in argumentos:
+            return ISUB
         if "account" in argumentos:
             return "Account {name=fulano@gmail.com, type=com.google}"
         return ""
@@ -125,9 +156,18 @@ with tempfile.TemporaryDirectory() as td:
     checar("IMEI lido e reportado no resultado", resultado.detalhes["imei"] == "490154203237518")
     checar("extracao com IMEI e sucesso", resultado.sucesso is True)
     checar("contas cadastradas sao contadas", resultado.detalhes["contas_encontradas"] == 2)
+    checar("ICCID do SIM vai para o resultado", resultado.detalhes["iccid"] == "8955071234567890123")
+    checar("numero da linha (MSISDN) vai para o resultado",
+           resultado.detalhes["numero_telefone"] == "+5511912345678")
+    reg = json.loads((pasta_caso / "identificacao" / "identificacao.json").read_text(encoding="utf-8"))
+    checar("identificacao.json traz imei, ICCID e numero (de onde o laudo/ficha leem)",
+           reg.get("imei") == "490154203237518" and reg.get("iccid") == "8955071234567890123"
+           and reg.get("numero_telefone") == "+5511912345678")
     resumo = (pasta_caso / "identificacao" / "resumo_identificacao.txt").read_text(encoding="utf-8")
     checar("resumo traz o IMEI", "490154203237518" in resumo)
     checar("resumo traz as contas", "fulano@gmail.com" in resumo)
+    checar("resumo traz a secao do SIM com numero e ICCID",
+           "+5511912345678" in resumo and "8955071234567890123" in resumo)
     checar(
         "saida bruta de cada via e preservada como evidencia",
         (pasta_caso / "identificacao" / "leituras_brutas" / "dumpsys_iphonesubinfo.txt").exists(),
@@ -139,9 +179,21 @@ with tempfile.TemporaryDirectory() as td:
     checar("IMEI nao obtido nao e inventado", resultado.detalhes["imei"] == "")
     checar("IMEI nao obtido vira ressalva, nao sucesso liso", resultado.detalhes.get("acesso_negado") is True)
     checar("contas continuam sendo coletadas", resultado.detalhes["contas_encontradas"] == 1)
+    # O defeito que esta correcao resolve: com o IMEI recusado, o ICCID e o
+    # numero que o SIM entregou ainda tem de chegar ao registro estruturado.
+    checar("sem IMEI, ICCID e numero AINDA sao obtidos",
+           resultado.detalhes["iccid"] == "8955071234567890123"
+           and resultado.detalhes["numero_telefone"] == "+5511912345678")
+    reg_sem = json.loads(
+        (pasta_caso / "identificacao" / "identificacao.json").read_text(encoding="utf-8"))
+    checar("sem IMEI, identificacao.json AINDA e gravado com ICCID e numero",
+           reg_sem.get("iccid") == "8955071234567890123"
+           and reg_sem.get("numero_telefone") == "+5511912345678"
+           and "imei" not in reg_sem)
     resumo = (pasta_caso / "identificacao" / "resumo_identificacao.txt").read_text(encoding="utf-8")
     checar("resumo explica que a ausencia e recusa do sistema", "NÃO OBTIDO" in resumo)
     checar("resumo indica vias alternativas ao examinador", "*#06#" in resumo)
+    checar("resumo traz o SIM mesmo sem IMEI", "+5511912345678" in resumo)
 
 # ---------------------------------------------------------------------------
 print("\n[3] Artefatos de atividade do sistema")

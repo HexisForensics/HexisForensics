@@ -120,6 +120,34 @@ def imei_valido_por_luhn(imei: str) -> bool:
     return soma % 10 == 0
 
 
+def extrair_identificadores_sim(conteudo: str) -> Tuple[str, str]:
+    """
+    Extrai ICCID e número da linha (MSISDN) da saída de `dumpsys isub`.
+
+    Os dois vêm no mesmo dump de assinatura de onde a operadora já era lida,
+    mas não eram elevados a registro estruturado — ficavam só no bruto
+    (`assinante_sim.txt`). Sem isso, o laudo e a Ficha do Aparelho exibiam
+    como NÃO APURADO um número e um ICCID que o aparelho entregou e que estão
+    selados. Devolve strings vazias quando não encontra: ausência declarada,
+    nunca palpite.
+    """
+    iccid = ""
+    correspondencia = re.search(r"iccId=(\d{18,22})", conteudo)
+    # ICCID começa sempre por 89 (identificador de telecom, ITU-T E.118);
+    # a exigência filtra uma captura equivocada de outro campo numérico.
+    if correspondencia and correspondencia.group(1).startswith("89"):
+        iccid = correspondencia.group(1)
+
+    numero = ""
+    # `number=` pode vir como `null` num instante transitório do boot; só
+    # interessa um valor com dígitos.
+    correspondencia_numero = re.search(r"number=(\+?\d{6,15})\b", conteudo)
+    if correspondencia_numero:
+        numero = correspondencia_numero.group(1)
+
+    return iccid, numero
+
+
 @registrar_extrator
 class IdentificacaoExtractor(AndroidExtractor):
     id = "android_identificacao"
@@ -154,19 +182,38 @@ class IdentificacaoExtractor(AndroidExtractor):
         coletados = self._coletar_telefonia(pasta)
         self.progresso(85)
 
+        iccid, numero = "", ""
+        caminho_sim = pasta / "assinante_sim.txt"
+        if caminho_sim.is_file():
+            iccid, numero = extrair_identificadores_sim(
+                caminho_sim.read_text(encoding="utf-8", errors="ignore")
+            )
+
         contas = self._extrair_contas(pasta / "contas_cadastradas.txt")
-        self._gravar_resumo(pasta, imei, contas, vias_registradas)
+        self._gravar_resumo(pasta, imei, contas, vias_registradas, iccid, numero)
         self.progresso(100)
 
-        # O IMEI apurado vai também para forma estruturada, que é de onde o
-        # laudo o lê. Só quando obtido: gravar campo vazio faria o laudo
-        # exibir uma linha de IMEI em branco, sugerindo falha de leitura do
-        # documento em vez da recusa do sistema, que está no resumo.
+        # O que foi apurado vai também para forma estruturada, de onde o laudo
+        # e a Ficha do Aparelho leem. Grava-se SÓ o que foi obtido — campo
+        # vazio é omitido, para o documento não exibir uma linha em branco. A
+        # ausência do IMEI NÃO impede registrar o ICCID e o número que o SIM
+        # entregou: antes, com o IMEI recusado, nada era gravado (o `if imei`
+        # barrava tudo) e número e ICCID não chegavam ao laudo, apesar de
+        # estarem selados em assinante_sim.txt.
+        estruturados = {}
         if imei:
-            gravar_identificacao(pasta_caso, {"imei": imei})
+            estruturados["imei"] = imei
+        if iccid:
+            estruturados["iccid"] = iccid
+        if numero:
+            estruturados["numero_telefone"] = numero
+        if estruturados:
+            gravar_identificacao(pasta_caso, estruturados)
 
         detalhes = {
             "imei": imei or "",
+            "iccid": iccid,
+            "numero_telefone": numero,
             "vias_de_leitura_tentadas": vias_registradas,
             "contas_encontradas": len(contas),
             "arquivos_gerados": coletados,
@@ -311,7 +358,8 @@ class IdentificacaoExtractor(AndroidExtractor):
         return sorted({f"{nome.strip()} ({tipo.strip()})" for nome, tipo in encontradas})
 
     def _gravar_resumo(
-        self, pasta: Path, imei: Optional[str], contas: List[str], vias: List[str]
+        self, pasta: Path, imei: Optional[str], contas: List[str], vias: List[str],
+        iccid: str = "", numero: str = "",
     ) -> None:
         linhas = [
             "=" * 66,
@@ -336,6 +384,12 @@ class IdentificacaoExtractor(AndroidExtractor):
                 "Vias alternativas: etiqueta sob a bateria, bandeja do SIM, embalagem,",
                 "*#06# na discagem do aparelho, ou consulta à operadora.",
             ]
+
+        linhas += ["", "[LINHA / CHIP (SIM)]"]
+        linhas.append(f"Número de telefone: {numero}" if numero
+                      else "Número de telefone: não apurado pelo shell.")
+        linhas.append(f"ICCID do chip: {iccid}" if iccid
+                      else "ICCID do chip: não apurado pelo shell.")
 
         linhas += ["", f"Vias de leitura percorridas: {', '.join(vias) or 'nenhuma'}", ""]
         linhas += ["[CONTAS CADASTRADAS NO APARELHO]"]
