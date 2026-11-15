@@ -89,9 +89,8 @@ A versão de cada documento acompanha a da ferramenta (`core/versao.py`).
 - **Apostila / Manual (PT/ES/EN):** atualizada com a Ficha do Aparelho (cap. 1, 9,
   10 e glossário), **nos três idiomas**. **Feito.**
 - **Guia de Prática com Emulador (PT/ES/EN):** sem alteração pendente conhecida.
-- **Publicação na Release:** **feita** em `v1.0.0` (15/11) — apostila/manual
-  (PT/ES/EN) e guia de extração rápida (PT/ES/EN), cada PDF com seu `.sha256`,
-  via `gh release upload ... --clobber`. O `gh` foi instalado nesta estação.
-- **Pendência conhecida na Release:** o **Guia de Prática com Emulador** está
-  incompleto como asset — faltam o **PT** e os `.sha256` dos três. A tratar numa
-  próxima leva, se for para publicá-lo também.
+- **Publicação na Release:** **completa** em `v1.0.0` (15/11). Os **9 documentos
+  de produto (3 documentos × 3 idiomas)** estão publicados, **cada um com seu
+  `.sha256`** — apostila/manual, guia de extração rápida e guia de prática com
+  emulador, nos três idiomas. Publicado via `gh release upload ... --clobber`
+  (o `gh` foi instalado e autenticado nesta estação).
