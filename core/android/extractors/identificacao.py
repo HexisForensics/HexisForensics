@@ -148,6 +148,38 @@ def extrair_identificadores_sim(conteudo: str) -> Tuple[str, str]:
     return iccid, numero
 
 
+def diagnostico_sim(conteudo: str) -> Tuple[str, str]:
+    """
+    (nota_numero, nota_iccid): explica, em uma frase, POR QUE número e ICCID
+    não foram apurados, quando for o caso.
+
+    A partir do Android 12 o sistema costuma **mascarar** o ICCID (expõe só
+    um prefixo, como `iccId=895510254[****]`) e **não provisiona** o número
+    ao shell sem privilégio elevado. Dizer isso é melhor que um `NÃO APURADO`
+    seco — é o mesmo tratamento que já se dá à recusa do IMEI. Devolve string
+    vazia quando o campo foi obtido ou quando não há o que explicar.
+    """
+    iccid, numero = extrair_identificadores_sim(conteudo)
+
+    nota_iccid = ""
+    # ICCID ausente, mas há um `iccId=` com valor mascarado (dígitos seguidos
+    # de um caractere de máscara: `[`, `*`, `.`, `x`/`X`).
+    if not iccid and re.search(r"iccId=\d*[\[\*xX.]", conteudo):
+        nota_iccid = (
+            "ICCID mascarado pelo sistema (comportamento do Android 12+): não exposto "
+            "por inteiro ao shell sem privilégio elevado."
+        )
+
+    nota_numero = ""
+    if not numero and "number=" in conteudo:
+        nota_numero = (
+            "número não exposto pelo sistema (pode não estar provisionado no chip pela "
+            "operadora)."
+        )
+
+    return nota_numero, nota_iccid
+
+
 @registrar_extrator
 class IdentificacaoExtractor(AndroidExtractor):
     id = "android_identificacao"
@@ -183,14 +215,17 @@ class IdentificacaoExtractor(AndroidExtractor):
         self.progresso(85)
 
         iccid, numero = "", ""
+        nota_numero, nota_iccid = "", ""
         caminho_sim = pasta / "assinante_sim.txt"
         if caminho_sim.is_file():
-            iccid, numero = extrair_identificadores_sim(
-                caminho_sim.read_text(encoding="utf-8", errors="ignore")
-            )
+            conteudo_sim = caminho_sim.read_text(encoding="utf-8", errors="ignore")
+            iccid, numero = extrair_identificadores_sim(conteudo_sim)
+            nota_numero, nota_iccid = diagnostico_sim(conteudo_sim)
 
         contas = self._extrair_contas(pasta / "contas_cadastradas.txt")
-        self._gravar_resumo(pasta, imei, contas, vias_registradas, iccid, numero)
+        self._gravar_resumo(
+            pasta, imei, contas, vias_registradas, iccid, numero, nota_numero, nota_iccid
+        )
         self.progresso(100)
 
         # O que foi apurado vai também para forma estruturada, de onde o laudo
@@ -359,7 +394,7 @@ class IdentificacaoExtractor(AndroidExtractor):
 
     def _gravar_resumo(
         self, pasta: Path, imei: Optional[str], contas: List[str], vias: List[str],
-        iccid: str = "", numero: str = "",
+        iccid: str = "", numero: str = "", nota_numero: str = "", nota_iccid: str = "",
     ) -> None:
         linhas = [
             "=" * 66,
@@ -385,11 +420,14 @@ class IdentificacaoExtractor(AndroidExtractor):
                 "*#06# na discagem do aparelho, ou consulta à operadora.",
             ]
 
+        def _linha_sim(rotulo: str, valor: str, nota: str) -> str:
+            if valor:
+                return f"{rotulo}: {valor}"
+            return f"{rotulo}: NÃO APURADO" + (f" — {nota}" if nota else ".")
+
         linhas += ["", "[LINHA / CHIP (SIM)]"]
-        linhas.append(f"Número de telefone: {numero}" if numero
-                      else "Número de telefone: não apurado pelo shell.")
-        linhas.append(f"ICCID do chip: {iccid}" if iccid
-                      else "ICCID do chip: não apurado pelo shell.")
+        linhas.append(_linha_sim("Número de telefone", numero, nota_numero))
+        linhas.append(_linha_sim("ICCID do chip", iccid, nota_iccid))
 
         linhas += ["", f"Vias de leitura percorridas: {', '.join(vias) or 'nenhuma'}", ""]
         linhas += ["[CONTAS CADASTRADAS NO APARELHO]"]

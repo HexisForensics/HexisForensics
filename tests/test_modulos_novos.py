@@ -16,6 +16,7 @@ from core.android.extractors.apks import ApksExtractor
 from core.android.extractors.artefatos_sistema import COLETAS, ArtefatosSistemaExtractor
 from core.android.extractors.identificacao import (
     IdentificacaoExtractor,
+    diagnostico_sim,
     extrair_digitos_de_parcel,
     extrair_identificadores_sim,
     imei_valido_por_luhn,
@@ -109,6 +110,15 @@ checar("ICCID e numero sao extraidos do dump isub", ic == "8955071234567890123" 
 checar("number=null nao vira numero", extrair_identificadores_sim("number=null")[1] == "")
 checar("campo numerico curto nao e tomado por ICCID", extrair_identificadores_sim("iccId=123")[0] == "")
 checar("sem dado de SIM, devolve vazio sem palpite", extrair_identificadores_sim("") == ("", ""))
+
+# Android 12+ real (medido no A33/Android 16): ICCID mascarado e number vazio.
+MASCARADO = "iccId=895510254[****] carrierName=Vivo number= \niccId=895503200[****] number="
+nota_num, nota_icc = diagnostico_sim(MASCARADO)
+checar("ICCID mascarado nao vira valor", extrair_identificadores_sim(MASCARADO)[0] == "")
+checar("mascaramento do ICCID e EXPLICADO, nao so 'nao apurado'", "mascarado" in nota_icc.lower())
+checar("numero ausente ganha explicacao de nao-provisionamento", "provisionado" in nota_num.lower())
+checar("quando ha valor cheio, nao ha nota de ICCID",
+       diagnostico_sim("iccId=8955071234567890123 number=+5511912345678") == ("", ""))
 
 
 # Dump de assinatura (`dumpsys isub`): traz o ICCID e o número da linha. A
