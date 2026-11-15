@@ -85,11 +85,10 @@ A versão de cada documento acompanha a da ferramenta (`core/versao.py`).
 
 - **Guia de Extração Rápida (PT/ES/EN):** atualizado com a **Ficha do Aparelho**;
   o PT recebeu também o aviso legal e a seção de instalação (alinhado ao ES/EN).
-  Os três em 2 páginas. **Feito e no repositório.**
-- **Apostila (PT):** atualizada com a Ficha do Aparelho (cap. 1, 9, 10 e
-  glossário). **Feito.**
-- **Apostila (ES/EN):** a Ficha do Aparelho **ainda não foi aplicada** — a
-  sincronizar quando o texto da atualização em curso chegar.
+  Os três em 2 páginas. **Feito.**
+- **Apostila / Manual (PT/ES/EN):** atualizada com a Ficha do Aparelho (cap. 1, 9,
+  10 e glossário), **nos três idiomas**. **Feito.**
 - **Guia de Prática com Emulador (PT/ES/EN):** sem alteração pendente conhecida.
-- **Publicação na Release:** **segurada** até o drop coordenado, quando a
-  apostila (nos três idiomas) estiver pronta. Evita duas levas de download.
+- **Publicação na Release:** os 6 PDFs (3 apostilas + 3 guias) e seus `.sha256`
+  estão gerados em `saida/`, prontos para subir. O upload exige `gh` (ou a UI web),
+  que não está instalado nesta estação — ver fluxo de atualização, passo 5.

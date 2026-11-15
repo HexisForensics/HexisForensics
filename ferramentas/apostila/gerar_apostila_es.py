@@ -432,6 +432,10 @@ def conteudo() -> list:
           itens([
               "<b>Informe de Extracción.</b> Línea de tiempo del procedimiento, entorno, "
               "módulos, desenlace y manifiesto de hashes.",
+              "<b>Ficha do Aparelho (Ficha del Dispositivo).</b> Portada de lectura rápida: "
+              "bloqueo al recibir, IMEI, ICCID, número, operadora, estado de seguridad y "
+              "desenlace, cada campo con su fuente sellada. Lo que la recolección no alcanzó "
+              "consta como NÃO APURADO.",
               "<b>Informe de Contenido.</b> Mensajes, llamadas y contactos interpretados, con "
               "el origen de cada línea.",
               "<b>Conversaciones seleccionadas.</b> En PDF, solo las conversaciones relevantes, "
@@ -1054,6 +1058,10 @@ def conteudo() -> list:
           tabela_simples(["Documento", "Para qué sirve"], [
               ["<b>Informe de Extracción</b>", "Línea de tiempo del procedimiento, entorno, "
                "módulos, desenlace y el manifiesto de hashes."],
+              ["<b>Ficha do Aparelho</b>", "Portada de lectura rápida: bloqueo al recibir, IMEI, "
+               "ICCID, número, operadora, estado de seguridad y desenlace, cada campo con su "
+               "fuente sellada. No obtenido = <b>NÃO APURADO</b>, nunca ausencia del dato en el "
+               "aparato."],
               ["<b>Informe de Contenido</b>", "Los mensajes, llamadas y contactos "
                "interpretados: planillas CSV, cuaderno HTML y PDF, con el origen de cada línea."],
               ["<b>PDF de conversaciones seleccionadas</b>", "Solo las conversaciones "
@@ -1062,6 +1070,10 @@ def conteudo() -> list:
                "sesión."],
           ], [0.3, 0.7]),
           Spacer(1, 8),
+          p("La regla de la <b>Ficha do Aparelho</b> es: abre con lo que la recolección obtuvo; "
+            "la salvedad viene después, no en su lugar. <b>NÃO APURADO</b> nunca significa que el "
+            "dato no exista en el aparato — solo que la recolección, por sus límites, no lo "
+            "alcanzó (capítulo 9)."),
           p("Los documentos abren en el <b>visor de la herramienta</b> (páginas, zoom, "
             "imprimir, guardar copia) y quedan listados en la pestaña <b>Documentos</b>. Se "
             "graban <b>fuera</b> de la adquisición sellada, que nunca se altera."),
@@ -1152,7 +1164,8 @@ def conteudo() -> list:
           tabela_simples(["Carpeta del caso", "Contenido"], [
               ["<b>&lt;plataforma&gt;_&lt;fecha&gt;_&lt;hora&gt;</b>", "La adquisición sellada. "
                "Nunca se reescribe."],
-              ["<b>documentos</b>", "Informe de Extracción, Laudo, Conversaciones."],
+              ["<b>documentos</b>", "Informe de Extracción, Ficha do Aparelho, Laudo, "
+               "Conversaciones."],
               ["<b>relatorios</b>", "Informes de Contenido (CSV, HTML, PDF)."],
               ["<b>decifrados</b>", "Copias descifradas, con la procedencia."],
               ["<b>complementos</b>", "Rectificaciones, autorizaciones, descifrados, entregas."],
@@ -1279,6 +1292,11 @@ def conteudo() -> list:
          "única en que iOS incluye el registro de llamadas."],
         ["crypt15", "Formato de la copia de seguridad cifrada de WhatsApp."],
         ["EXIF", "Datos que la cámara graba dentro de la foto: fecha, cámara y, a veces, GPS."],
+        ["Ficha do Aparelho", "Documento derivado de lectura rápida, a nivel del caso, que reúne "
+         "bloqueo al recibir, IMEI, ICCID, número, operadora, estado de seguridad y desenlace, "
+         "cada campo con su fuente sellada."],
+        ["NÃO APURADO", "Marca de la Ficha do Aparelho para el campo que la recolección no "
+         "alcanzó. Nunca significa ausencia del dato en el aparato."],
         ["GPS (UTC)", "Hora de los satélites grabada junto con la coordenada; no depende del "
          "reloj del dispositivo."],
         ["DEFR / DES", "Primer respondedor y especialista, en la norma ISO/IEC 27037."],
