@@ -245,8 +245,8 @@ class CasesManagerDialog(QDialog):
         )
         for botao, linha, coluna in disposicao:
             grade.addWidget(botao, linha, coluna)
-        grade.addWidget(self.botao_ficha, 2, 0, 1, 3)
-        grade.addWidget(self.botao_laudo_pericial, 3, 0, 1, 3)
+        grade.addWidget(self.botao_ficha, 2, 0)
+        grade.addWidget(self.botao_laudo_pericial, 2, 1, 1, 2)
         for coluna in range(3):
             grade.setColumnStretch(coluna, 1)
         layout_det.addLayout(grade)
