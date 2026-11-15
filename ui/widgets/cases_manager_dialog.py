@@ -45,7 +45,7 @@ from services.case_service import (
     gravar_protocolos_respondidos,
     ler_cadeia_custodia,
 )
-from services import laudo_service, relatorio_extracao_service, sessao_service
+from services import ficha_service, laudo_service, relatorio_extracao_service, sessao_service
 from services.decifragem_service import (
     decifrar_backup_ios,
     decifrar_whatsapp,
@@ -196,6 +196,15 @@ class CasesManagerDialog(QDialog):
         )
         self.botao_relatorio_extracao.clicked.connect(self._gerar_relatorio_de_extracao)
 
+        self.botao_ficha = QPushButton("🪪 Ficha do Aparelho (PDF)")
+        self.botao_ficha.setEnabled(False)
+        self.botao_ficha.setToolTip(
+            "Capa de leitura rápida: abre com o que a coleta obteve — bloqueio ao "
+            "ser recebido, identificação do aparelho e da linha, segurança e desfecho. "
+            "Cada campo cita a fonte selada; o que não veio consta como NÃO APURADO."
+        )
+        self.botao_ficha.clicked.connect(self._gerar_ficha_do_aparelho)
+
         self.botao_laudo_pericial = QPushButton("⚖ Laudo Pericial (PDF)")
         self.botao_laudo_pericial.setEnabled(False)
         self.botao_laudo_pericial.setToolTip(
@@ -236,7 +245,8 @@ class CasesManagerDialog(QDialog):
         )
         for botao, linha, coluna in disposicao:
             grade.addWidget(botao, linha, coluna)
-        grade.addWidget(self.botao_laudo_pericial, 2, 0, 1, 3)
+        grade.addWidget(self.botao_ficha, 2, 0, 1, 3)
+        grade.addWidget(self.botao_laudo_pericial, 3, 0, 1, 3)
         for coluna in range(3):
             grade.setColumnStretch(coluna, 1)
         layout_det.addLayout(grade)
@@ -257,8 +267,8 @@ class CasesManagerDialog(QDialog):
     def _habilitar_documentos(self, habilitar: bool) -> None:
         """Liga ou desliga, juntos, os botões que dependem de uma aquisição escolhida."""
         self.botao_relatorio.setEnabled(habilitar)
-        for nome in ("botao_relatorio_extracao", "botao_laudo_pericial", "botao_decifrar",
-                     "botao_conversas"):
+        for nome in ("botao_relatorio_extracao", "botao_ficha", "botao_laudo_pericial",
+                     "botao_decifrar", "botao_conversas"):
             botao = getattr(self, nome, None)
             if botao is not None:
                 botao.setEnabled(habilitar)
@@ -357,6 +367,18 @@ class CasesManagerDialog(QDialog):
         finally:
             self.unsetCursor()
         self._informar_documento("Relatório de Extração gerado", documento)
+
+    def _gerar_ficha_do_aparelho(self) -> None:
+        pasta_aquisicao = self._aquisicao_selecionada()
+        if pasta_aquisicao is None:
+            QMessageBox.warning(self, "Aviso", "Selecione uma aquisição na lista.")
+            return
+        self.setCursor(Qt.WaitCursor)
+        try:
+            documento = ficha_service.gerar(pasta_aquisicao)
+        finally:
+            self.unsetCursor()
+        self._informar_documento("Ficha do Aparelho gerada", documento)
 
     def _gerar_laudo_pericial(self) -> None:
         pasta_aquisicao = self._aquisicao_selecionada()

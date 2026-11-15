@@ -24,6 +24,7 @@ PADRAO_AQUISICAO = re.compile(r"(android|ios|computador)_\d{8}_\d{6}", re.IGNORE
 TIPOS = (
     ("Laudo_Pericial", "Laudo Pericial"),
     ("Relatorio_de_Extracao", "Relatório de Extração"),
+    ("Ficha_do_Aparelho", "Ficha do Aparelho"),
     ("Relatorio_de_Conteudo", "Relatório de Conteúdo"),
     ("Conversas_selecionadas", "Conversas selecionadas"),
 )
