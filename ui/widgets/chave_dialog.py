@@ -29,6 +29,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from services.idioma import traduzir
+
 GRUPOS = 16
 TAMANHO_DO_GRUPO = 4
 COLUNAS = 4
@@ -37,19 +39,14 @@ COLUNAS = 4
 class ChaveDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Chave de criptografia do backup do WhatsApp")
+        self.setWindowTitle(traduzir("ck_titulo"))
         self.setModal(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(12)
 
-        instrucao = QLabel(
-            "Digite a <b>chave de 64 dígitos</b> exibida pelo WhatsApp ao ativar o backup "
-            "criptografado de ponta a ponta: 16 grupos de 4 caracteres, na mesma ordem "
-            "da tela do aparelho (da esquerda para a direita, de cima para baixo).<br>"
-            "Você também pode <b>colar</b> a chave inteira em qualquer campo."
-        )
+        instrucao = QLabel(traduzir("ck_instrucao"))
         instrucao.setWordWrap(True)
         layout.addWidget(instrucao)
 
@@ -81,22 +78,19 @@ class ChaveDialog(QDialog):
         self.rotulo_contagem = QLabel()
         layout.addWidget(self.rotulo_contagem)
 
-        aviso = QLabel(
-            "A chave ficará registrada no caso, como complemento: é o que permite a outro "
-            "examinador repetir a decifragem. Se um dígito estiver errado, nada é decifrado."
-        )
+        aviso = QLabel(traduzir("ck_aviso"))
         aviso.setWordWrap(True)
         aviso.setObjectName("TextoSecundario")
         layout.addWidget(aviso)
 
         linha = QHBoxLayout()
-        botao_limpar = QPushButton("Limpar")
+        botao_limpar = QPushButton(traduzir("ck_btn_limpar"))
         botao_limpar.clicked.connect(self._limpar)
         linha.addWidget(botao_limpar)
         linha.addStretch()
-        botao_cancelar = QPushButton("Cancelar")
+        botao_cancelar = QPushButton(traduzir("ck_btn_cancelar"))
         botao_cancelar.clicked.connect(self.reject)
-        self.botao_ok = QPushButton("Decifrar")
+        self.botao_ok = QPushButton(traduzir("ck_btn_decifrar"))
         self.botao_ok.setDefault(True)
         self.botao_ok.clicked.connect(self.accept)
         linha.addWidget(botao_cancelar)
@@ -117,10 +111,11 @@ class ChaveDialog(QDialog):
     def _atualizar(self) -> None:
         digitos = self._digitos()
         total = GRUPOS * TAMANHO_DO_GRUPO
-        self.rotulo_contagem.setText(
-            f"<b>{digitos} de {total}</b> dígitos"
-            + (" — chave completa." if digitos == total else f" — faltam {total - digitos}.")
-        )
+        self.rotulo_contagem.setText(traduzir(
+            "ck_contagem", digitos=digitos, total=total,
+            sufixo=(traduzir("ck_completa") if digitos == total
+                    else traduzir("ck_faltam", n=total - digitos)),
+        ))
         self.botao_ok.setEnabled(digitos == total)
 
     def _ao_editar(self, indice: int, texto: str) -> None:

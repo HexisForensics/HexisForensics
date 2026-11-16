@@ -478,5 +478,23 @@
   "ex_perfil_excluido_corpo": "Seu perfil foi excluído. A sessão foi encerrada.",
   "ex_novo_codigo_titulo": "Novo código de recuperação",
   "ex_novo_codigo_corpo": "Gerar um código novo? O código atual deixa de valer.",
-  "ex_codigo_novo": "Seu novo código de recuperação:\n\n    {codigo}\n\nAnote ou imprima e guarde em local seguro. Ele não será mostrado de novo."
+  "ex_codigo_novo": "Seu novo código de recuperação:\n\n    {codigo}\n\nAnote ou imprima e guarde em local seguro. Ele não será mostrado de novo.",
+
+  "ck_titulo": "Chave de criptografia do backup do WhatsApp",
+  "ck_instrucao": "Digite a <b>chave de 64 dígitos</b> exibida pelo WhatsApp ao ativar o backup criptografado de ponta a ponta: 16 grupos de 4 caracteres, na mesma ordem da tela do aparelho (da esquerda para a direita, de cima para baixo).<br>Você também pode <b>colar</b> a chave inteira em qualquer campo.",
+  "ck_aviso": "A chave ficará registrada no caso, como complemento: é o que permite a outro examinador repetir a decifragem. Se um dígito estiver errado, nada é decifrado.",
+  "ck_btn_limpar": "Limpar",
+  "ck_btn_cancelar": "Cancelar",
+  "ck_btn_decifrar": "Decifrar",
+  "ck_contagem": "<b>{digitos} de {total}</b> dígitos{sufixo}",
+  "ck_completa": " — chave completa.",
+  "ck_faltam": " — faltam {n}.",
+
+  "dp_titulo_padrao": "Status do Dispositivo",
+  "dp_status_desconhecido": "Status: desconhecido",
+  "dp_detalhe_inicial": "Clique em 'Verificar Conexão' para checar o dispositivo.",
+  "dp_btn_verificar": "🔎 Verificar Conexão",
+  "dp_conectado": "✔ Conectado e autorizado",
+  "dp_aguardando": "⚠ Detectado, aguardando autorização",
+  "dp_nao_detectado": "✖ Nenhum dispositivo detectado"
 }

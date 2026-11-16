@@ -478,5 +478,23 @@
   "ex_perfil_excluido_corpo": "Your profile has been deleted. The session was ended.",
   "ex_novo_codigo_titulo": "New recovery code",
   "ex_novo_codigo_corpo": "Generate a new code? The current code stops working.",
-  "ex_codigo_novo": "Your new recovery code:\n\n    {codigo}\n\nWrite it down or print it and keep it somewhere safe. It will not be shown again."
+  "ex_codigo_novo": "Your new recovery code:\n\n    {codigo}\n\nWrite it down or print it and keep it somewhere safe. It will not be shown again.",
+
+  "ck_titulo": "WhatsApp backup encryption key",
+  "ck_instrucao": "Enter the <b>64-digit key</b> shown by WhatsApp when the end-to-end encrypted backup is enabled: 16 groups of 4 characters, in the same order as on the device screen (left to right, top to bottom).<br>You can also <b>paste</b> the whole key into any field.",
+  "ck_aviso": "The key will be recorded in the case, as an addendum: it is what lets another examiner repeat the decryption. If one digit is wrong, nothing is decrypted.",
+  "ck_btn_limpar": "Clear",
+  "ck_btn_cancelar": "Cancel",
+  "ck_btn_decifrar": "Decrypt",
+  "ck_contagem": "<b>{digitos} of {total}</b> digits{sufixo}",
+  "ck_completa": " — key complete.",
+  "ck_faltam": " — {n} to go.",
+
+  "dp_titulo_padrao": "Device Status",
+  "dp_status_desconhecido": "Status: unknown",
+  "dp_detalhe_inicial": "Click 'Check Connection' to check the device.",
+  "dp_btn_verificar": "🔎 Check Connection",
+  "dp_conectado": "✔ Connected and authorized",
+  "dp_aguardando": "⚠ Detected, awaiting authorization",
+  "dp_nao_detectado": "✖ No device detected"
 }
