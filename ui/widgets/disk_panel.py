@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from services.device_service import UnidadeInfo
+from services.idioma import traduzir
 
 
 def _formatar_espaco(bytes_valor: int) -> str:
@@ -50,13 +51,13 @@ class DiskPanel(QGroupBox):
     # onde a informação não desequilibra o layout.
     def __init__(
         self,
-        titulo: str = "Unidade de Disco (computador, HD externo ou pendrive)",
+        titulo: str = None,
         parent=None,
     ):
-        super().__init__(titulo, parent)
+        super().__init__(titulo if titulo is not None else traduzir("dk_titulo_padrao"), parent)
         layout = QVBoxLayout(self)
 
-        self.label_status = QLabel("Nenhuma unidade detectada ainda.")
+        self.label_status = QLabel(traduzir("dk_status_inicial"))
         self.label_status.setWordWrap(True)
 
         self.combo_unidades = QComboBox()
@@ -73,7 +74,7 @@ class DiskPanel(QGroupBox):
         self.label_aviso.setVisible(False)
 
         linha_botoes = QHBoxLayout()
-        self.botao_atualizar = QPushButton("🔄 Atualizar Unidades")
+        self.botao_atualizar = QPushButton(traduzir("dk_btn_atualizar"))
         self.botao_atualizar.clicked.connect(self.atualizar_solicitado.emit)
         linha_botoes.addWidget(self.botao_atualizar)
         linha_botoes.addStretch()
@@ -97,40 +98,39 @@ class DiskPanel(QGroupBox):
         }
 
         if not unidades:
-            self.label_status.setText(
-                f"<b style='color:{COR_FALHA};'>✖ Nenhuma unidade detectada.</b> "
-                "Conecte o disco do computador periciado (por dock/adaptador), "
-                "um HD externo ou um pendrive, e clique em 'Atualizar Unidades'."
-            )
+            self.label_status.setText(traduzir("dk_nenhuma", cor=COR_FALHA))
             self.combo_unidades.blockSignals(False)
             self.unidade_selecionada_mudou.emit("")
             return
 
         for unidade in unidades:
-            rotulo_exibicao = unidade.rotulo or "(sem rótulo)"
-            texto = (
-                f"{unidade.caminho}  —  {rotulo_exibicao}  [{unidade.tipo_descricao}]  "
-                f"{_formatar_espaco(unidade.bytes_livres)} livres de "
-                f"{_formatar_espaco(unidade.bytes_total)}"
+            rotulo_exibicao = unidade.rotulo or traduzir("dk_sem_rotulo")
+            texto = traduzir(
+                "dk_item",
+                caminho=unidade.caminho,
+                rotulo=rotulo_exibicao,
+                tipo=unidade.tipo_descricao,
+                livres=_formatar_espaco(unidade.bytes_livres),
+                total=_formatar_espaco(unidade.bytes_total),
             )
             # A estação do examinador continua na lista — esconder unidade
             # sem dizer que escondeu é a mesma doença de uma conclusão sem
             # lastro, só que em forma de tela. Ela vem NOMEADA, para ser
             # reconhecida e não escolhida por engano.
             if unidade.e_estacao_do_examinador:
-                texto = f"⚠ ESTAÇÃO DO EXAMINADOR — {texto}"
+                texto = traduzir("dk_estacao_prefixo", texto=texto)
             # Volume que o Windows nao conseguiu ler aparece dizendo isso na
             # propria linha. Sem essa marca, ele se apresenta como um disco
             # de 0 GB sem rotulo — e "o pendrive esta com defeito" vira a
             # leitura mais natural de uma tela que nao explicou nada.
             if unidade.bloqueio == "bitlocker":
-                texto = f"🔒 BITLOCKER BLOQUEADO — {texto}"
+                texto = traduzir("dk_bitlocker_prefixo", texto=texto)
             elif unidade.bloqueio:
-                texto = f"⛔ NÃO LEGÍVEL — {texto}"
+                texto = traduzir("dk_nao_legivel_prefixo", texto=texto)
             self.combo_unidades.addItem(texto, userData=unidade.caminho)
 
         self.label_status.setText(
-            f"<b style='color:{COR_SUCESSO};'>✔ {len(unidades)} unidade(s) detectada(s).</b>"
+            traduzir("dk_detectadas", cor=COR_SUCESSO, n=len(unidades))
         )
         self.combo_unidades.blockSignals(False)
         self._ao_mudar_selecao(self.combo_unidades.currentIndex())
@@ -160,17 +160,10 @@ class DiskPanel(QGroupBox):
         # cada um fala de um problema diferente com a mesma escolha.
         avisos = []
         if self.unidade_selecionada_e_estacao():
-            avisos.append(
-                f"<b style='color:{COR_FALHA};'>⚠ Esta é a estação do examinador</b> — "
-                "a unidade onde o HexisForensics está instalado. Ela não é objeto "
-                "de perícia, e periciá-la faz a coleta ler o disco em que a própria "
-                "saída está sendo gravada."
-            )
+            avisos.append(traduzir("dk_aviso_estacao", cor=COR_FALHA))
         explicacao = self.explicacao_do_bloqueio_selecionado()
         if explicacao:
-            avisos.append(
-                f"<b style='color:{COR_FALHA};'>⛔ Volume não legível</b> — {explicacao}"
-            )
+            avisos.append(traduzir("dk_aviso_bloqueio", cor=COR_FALHA, explicacao=explicacao))
 
         self.label_aviso.setText("<br><br>".join(avisos))
         self.label_aviso.setVisible(bool(avisos))

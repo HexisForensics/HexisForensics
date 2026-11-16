@@ -496,5 +496,18 @@
   "dp_btn_verificar": "🔎 Verificar Conexão",
   "dp_conectado": "✔ Conectado e autorizado",
   "dp_aguardando": "⚠ Detectado, aguardando autorização",
-  "dp_nao_detectado": "✖ Nenhum dispositivo detectado"
+  "dp_nao_detectado": "✖ Nenhum dispositivo detectado",
+
+  "dk_titulo_padrao": "Unidade de Disco (computador, HD externo ou pendrive)",
+  "dk_status_inicial": "Nenhuma unidade detectada ainda.",
+  "dk_btn_atualizar": "🔄 Atualizar Unidades",
+  "dk_sem_rotulo": "(sem rótulo)",
+  "dk_nenhuma": "<b style='color:{cor};'>✖ Nenhuma unidade detectada.</b> Conecte o disco do computador periciado (por dock/adaptador), um HD externo ou um pendrive, e clique em 'Atualizar Unidades'.",
+  "dk_item": "{caminho}  —  {rotulo}  [{tipo}]  {livres} livres de {total}",
+  "dk_estacao_prefixo": "⚠ ESTAÇÃO DO EXAMINADOR — {texto}",
+  "dk_bitlocker_prefixo": "🔒 BITLOCKER BLOQUEADO — {texto}",
+  "dk_nao_legivel_prefixo": "⛔ NÃO LEGÍVEL — {texto}",
+  "dk_detectadas": "<b style='color:{cor};'>✔ {n} unidade(s) detectada(s).</b>",
+  "dk_aviso_estacao": "<b style='color:{cor};'>⚠ Esta é a estação do examinador</b> — a unidade onde o HexisForensics está instalado. Ela não é objeto de perícia, e periciá-la faz a coleta ler o disco em que a própria saída está sendo gravada.",
+  "dk_aviso_bloqueio": "<b style='color:{cor};'>⛔ Volume não legível</b> — {explicacao}"
 }

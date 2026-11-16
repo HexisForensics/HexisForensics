@@ -496,5 +496,18 @@
   "dp_btn_verificar": "🔎 Check Connection",
   "dp_conectado": "✔ Connected and authorized",
   "dp_aguardando": "⚠ Detected, awaiting authorization",
-  "dp_nao_detectado": "✖ No device detected"
+  "dp_nao_detectado": "✖ No device detected",
+
+  "dk_titulo_padrao": "Disk Drive (computer, external HDD or USB drive)",
+  "dk_status_inicial": "No drive detected yet.",
+  "dk_btn_atualizar": "🔄 Refresh Drives",
+  "dk_sem_rotulo": "(no label)",
+  "dk_nenhuma": "<b style='color:{cor};'>✖ No drive detected.</b> Connect the disk of the examined computer (via dock/adapter), an external HDD or a USB drive, and click 'Refresh Drives'.",
+  "dk_item": "{caminho}  —  {rotulo}  [{tipo}]  {livres} free of {total}",
+  "dk_estacao_prefixo": "⚠ EXAMINER STATION — {texto}",
+  "dk_bitlocker_prefixo": "🔒 BITLOCKER LOCKED — {texto}",
+  "dk_nao_legivel_prefixo": "⛔ NOT READABLE — {texto}",
+  "dk_detectadas": "<b style='color:{cor};'>✔ {n} drive(s) detected.</b>",
+  "dk_aviso_estacao": "<b style='color:{cor};'>⚠ This is the examiner station</b> — the drive where HexisForensics is installed. It is not an object of examination, and examining it makes the collection read the disk on which its own output is being written.",
+  "dk_aviso_bloqueio": "<b style='color:{cor};'>⛔ Volume not readable</b> — {explicacao}"
 }
