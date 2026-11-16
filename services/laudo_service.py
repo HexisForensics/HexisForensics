@@ -46,11 +46,6 @@ from services.relatorio_service import levantar_artefatos
 
 PREFIXO = "Laudo_Pericial"
 
-MESES = (
-    "janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto",
-    "setembro", "outubro", "novembro", "dezembro",
-)
-
 
 def perguntas_dos_protocolos() -> list:
     """
@@ -76,45 +71,25 @@ def texto_da_conclusao(desfecho) -> str:
     próprio caso desmentia o laudo.
     """
     if desfecho.vazio:
-        return (
-            "Não foi possível reproduzir o desfecho desta coleta a partir do que foi "
-            "selado na aquisição. Este laudo não afirma completude nem incompletude do "
-            "material: o registro necessário para tanto não está disponível."
-        )
+        return traduzir("ld_conc_vazio")
 
     if desfecho.integral:
-        return (
-            f"{desfecho.resumo} Todos os módulos empregados concluíram sem ressalva, e o "
-            "material adquirido está preservado sob o selo de integridade descrito na "
-            "seção 7. As limitações do método constam da seção 5 e delimitam o que esta "
-            "coleta alcança."
-        )
+        return traduzir("ld_conc_integral", resumo=desfecho.resumo)
 
     partes = [desfecho.resumo]
     if desfecho.cancelada:
-        partes.append(
-            "A execução foi interrompida antes de percorrer todos os módulos previstos, "
-            "de modo que o material adquirido é PARCIAL em relação ao que fora planejado."
-        )
+        partes.append(traduzir("ld_conc_cancelada"))
     if desfecho.falharam:
-        partes.append(
-            "Houve módulo que não obteve dado. A ausência do material correspondente "
-            "decorre disso, e NÃO autoriza concluir que o dado inexista no dispositivo."
-        )
+        partes.append(traduzir("ld_conc_falharam"))
     if desfecho.com_ressalva:
-        partes.append(
-            "Houve módulo concluído com ressalva, isto é, que obteve parte do material e "
-            "declarou o que não alcançou. A seção 6 identifica quais."
-        )
-    partes.append(
-        "O material efetivamente adquirido está preservado sob o selo descrito na seção 7, "
-        "e as limitações do método constam da seção 5."
-    )
+        partes.append(traduzir("ld_conc_ressalva"))
+    partes.append(traduzir("ld_conc_final"))
     return " ".join(partes)
 
 
 def _data_por_extenso(momento: datetime) -> str:
-    return f"{momento.day} de {MESES[momento.month - 1]} de {momento.year}"
+    mes = traduzir(f"ld_mes_{momento.month:02d}")
+    return traduzir("ld_data_extenso", dia=momento.day, mes=mes, ano=momento.year)
 
 
 def _declaracao(texto: str, vazio: str, e) -> Paragraph:
@@ -162,130 +137,115 @@ def gerar(
         largura = identidade.largura_util()
         numero = (dados_form.get("numero") or "").strip()
 
+        subtitulo = traduzir("ld_subtitulo") + (
+            traduzir("ld_subtitulo_numero", numero=identidade.escapar(numero)) if numero else "")
         historia = [
             Spacer(1, 6),
-            Paragraph("LAUDO PERICIAL", e["titulo"]),
-            Paragraph(
-                "Exame de extração de dados em dispositivo"
-                + (f" — Laudo n.º {identidade.escapar(numero)}" if numero else ""),
-                e["subtitulo"],
-            ),
+            Paragraph(traduzir("ld_titulo"), e["titulo"]),
+            Paragraph(subtitulo, e["subtitulo"]),
         ]
 
         def acrescentar(titulo, elementos):
             historia.extend(blocos.secao(titulo, elementos))
 
         # --- 1. PREÂMBULO -------------------------------------------------
-        pares = [("Caso", identidade.escapar(dossie.caso))]
+        pares = [(traduzir("ld_l_caso"), identidade.escapar(dossie.caso))]
         pares += [
             (rotulo, identidade.escapar(valor) if valor else traduzir("bl_nao_informado"))
             for rotulo, valor in dossie.dados_do_caso
         ]
         pares += [
-            ("Aquisição examinada", identidade.escapar(pasta_aquisicao.name)),
-            ("Data da aquisição",
+            (traduzir("ld_l_aquisicao_examinada"), identidade.escapar(pasta_aquisicao.name)),
+            (traduzir("ld_l_data_aquisicao"),
              identidade.escapar(carimbo_legivel(dossie.abertura)) or traduzir("bl_nao_informado")),
-            ("Operador da aquisição", identidade.escapar(blocos.texto_do_operador(dossie))),
-            ("Examinador que subscreve",
+            (traduzir("ld_l_operador_aquisicao"), identidade.escapar(blocos.texto_do_operador(dossie))),
+            (traduzir("ld_l_examinador_subscreve"),
              identidade.escapar(subscritor.resumo()) if subscritor.declarado
-             else "<i>perfil do examinador não preenchido</i>"),
-            ("Data de emissão do laudo", agora.strftime("%d/%m/%Y %H:%M:%S %z")),
+             else traduzir("ld_perfil_nao_preenchido")),
+            (traduzir("ld_l_data_emissao"), agora.strftime("%d/%m/%Y %H:%M:%S %z")),
         ]
-        acrescentar("1. Preâmbulo", [
+        acrescentar(traduzir("ld_sec_1"), [
             identidade.tabela_de_pares(pares, largura),
             Spacer(1, 3),
             Paragraph(
-                "O operador da aquisição é o que ficou gravado, sob o selo, no dia da "
-                "coleta. O examinador que subscreve é quem emite este laudo. "
-                + ("Ambos abriram a sessão com a própria senha nesta estação; a senha não "
-                   "prova identidade, e a ferramenta não a confere além disso."
+                traduzir("ld_preambulo_nota_base")
+                + (traduzir("ld_preambulo_nota_senha")
                    if dossie.operador is not None and dossie.operador.autenticacao.strip()
-                   else "Os dois dados são declarados; a ferramenta não confere identidade."),
+                   else traduzir("ld_preambulo_nota_declarado")),
                 e["nota"],
             ),
         ])
 
         # --- 2. OBJETIVO --------------------------------------------------
-        acrescentar("2. Objetivo do exame", [_declaracao(
-            dados_form.get("objetivo"),
-            "O examinador não informou o objetivo do exame nem quesitos.", e,
+        acrescentar(traduzir("ld_sec_2"), [_declaracao(
+            dados_form.get("objetivo"), traduzir("ld_sem_objetivo"), e,
         )])
 
         # --- 3. MATERIAL EXAMINADO ---------------------------------------
-        acrescentar("3. Material examinado", blocos.bloco_peca(dossie, largura))
-        historia.append(Paragraph("Fotografias da peça", e["subsecao"]))
+        acrescentar(traduzir("ld_sec_3"), blocos.bloco_peca(dossie, largura))
+        historia.append(Paragraph(traduzir("ld_sub_fotos"), e["subsecao"]))
         historia.extend(blocos.bloco_fotos(dossie, largura))
-        historia.append(Paragraph("Autorização de acesso aos dados", e["subsecao"]))
+        historia.append(Paragraph(traduzir("ld_sub_autorizacao"), e["subsecao"]))
         historia.extend(blocos.bloco_autorizacao(dossie, largura))
 
         # --- 4. METODOLOGIA ----------------------------------------------
         metodologia = [
-            Paragraph(
-                "A aquisição seguiu as diretrizes da ABNT NBR ISO/IEC 27037:2013 "
-                "(identificação, coleta, aquisição e preservação de evidência digital). "
-                "O hash de cada arquivo foi calculado no encerramento da aquisição, e "
-                "toda saída de comando foi preservada como parte do material.",
-                e["corpo"],
-            ),
+            Paragraph(traduzir("ld_metodo_intro"), e["corpo"]),
             Spacer(1, 5),
             identidade.tabela_de_pares([
-                ("Modalidade de acesso",
+                (traduzir("ld_l_modalidade"),
                  identidade.escapar(dados_form.get("tipo_extracao"))
                  if (dados_form.get("tipo_extracao") or "").strip()
-                 else "<i>não descrita pelo examinador</i>"),
+                 else traduzir("ld_modalidade_vazia")),
             ], largura),
-            Paragraph("Módulos empregados", e["subsecao"]),
+            Paragraph(traduzir("ld_sub_modulos"), e["subsecao"]),
         ]
         metodologia += blocos.bloco_metodo(dossie, largura)
-        metodologia.append(Paragraph("Ambiente da aquisição", e["subsecao"]))
+        metodologia.append(Paragraph(traduzir("ld_sub_ambiente"), e["subsecao"]))
         metodologia += blocos.bloco_ambiente(dossie, largura)
         metodologia += blocos.bloco_alteracoes_ocorridas(dossie, largura)
-        metodologia.append(Paragraph("Requisitos verificados pela ferramenta", e["subsecao"]))
+        metodologia.append(Paragraph(traduzir("ld_sub_requisitos"), e["subsecao"]))
         metodologia += blocos.bloco_protocolos_da_ferramenta(dossie, largura)
-        metodologia.append(Paragraph("Circunstâncias declaradas pelo examinador", e["subsecao"]))
+        metodologia.append(Paragraph(traduzir("ld_sub_circunstancias"), e["subsecao"]))
         metodologia += blocos.bloco_protocolos_do_examinador(
             dados_form.get("protocolos") or [], dados_form.get("observacoes", ""), largura
         )
-        acrescentar("4. Metodologia", metodologia)
+        acrescentar(traduzir("ld_sec_4"), metodologia)
 
         # --- 5. LIMITAÇÕES -----------------------------------------------
-        acrescentar("5. Limitações do método", blocos.bloco_limitacoes(dossie, largura))
+        acrescentar(traduzir("ld_sec_5"), blocos.bloco_limitacoes(dossie, largura))
 
         # --- 6. EXAMES E RESULTADOS --------------------------------------
-        resultados = [Paragraph("Desfecho da coleta, por módulo", e["subsecao"])]
+        resultados = [Paragraph(traduzir("ld_sub_desfecho"), e["subsecao"])]
         resultados += blocos.bloco_desfecho(dossie, largura)
-        resultados.append(Paragraph("Conteúdo interpretado", e["subsecao"]))
+        resultados.append(Paragraph(traduzir("ld_sub_conteudo"), e["subsecao"]))
         if erro_do_conteudo:
             resultados.append(Paragraph(
-                "O conteúdo desta aquisição NÃO pôde ser interpretado para este laudo "
-                f"({identidade.escapar(erro_do_conteudo)}). Nada se afirma aqui sobre o que "
-                "o material contém.",
+                traduzir("ld_conteudo_erro", erro=identidade.escapar(erro_do_conteudo)),
                 e["alerta"],
             ))
         else:
             resultados += blocos.bloco_conteudo(artefatos, largura, nome_do_fuso(fuso))
-            resultados.append(Paragraph("Comunicações: volume e interlocutores", e["subsecao"]))
+            resultados.append(Paragraph(traduzir("ld_sub_comunicacoes"), e["subsecao"]))
             resultados += blocos.bloco_analise_do_conteudo(artefatos, largura)
-        resultados.append(Paragraph("Arquivos adquiridos, por categoria", e["subsecao"]))
+        resultados.append(Paragraph(traduzir("ld_sub_arquivos"), e["subsecao"]))
         resultados += blocos.bloco_arquivos_por_categoria(dossie, largura)
-        resultados.append(Paragraph("Inventário do material adquirido", e["subsecao"]))
+        resultados.append(Paragraph(traduzir("ld_sub_inventario"), e["subsecao"]))
         resultados += blocos.bloco_inventario(dossie, largura)
-        acrescentar("6. Exames realizados e resultados", resultados)
+        acrescentar(traduzir("ld_sec_6"), resultados)
 
         # --- 7. CADEIA DE CUSTÓDIA E INTEGRIDADE -------------------------
-        acrescentar(
-            "7. Cadeia de custódia e integridade", blocos.bloco_integridade(dossie, largura)
-        )
+        acrescentar(traduzir("ld_sec_7"), blocos.bloco_integridade(dossie, largura))
 
         # --- 8. CONCLUSÃO -------------------------------------------------
         conclusao = [Paragraph(identidade.escapar(texto_da_conclusao(dossie.desfecho)), e["corpo"])]
         consideracoes = (dados_form.get("consideracoes") or "").strip()
         if consideracoes:
             conclusao += [
-                Paragraph("Considerações do examinador", e["subsecao"]),
+                Paragraph(traduzir("ld_sub_consideracoes"), e["subsecao"]),
                 Paragraph(identidade.escapar(consideracoes), e["corpo"]),
             ]
-        acrescentar("8. Conclusão", conclusao)
+        acrescentar(traduzir("ld_sec_8"), conclusao)
 
         # --- ENCERRAMENTO -------------------------------------------------
         linha = Table([[""]], colWidths=[230])
@@ -299,19 +259,14 @@ def gerar(
         ]
         historia.append(KeepTogether([
             Spacer(1, 18),
-            Paragraph(
-                "Este laudo é acompanhado do Relatório de Extração da mesma aquisição, "
-                "que traz a linha do tempo do procedimento e a reprodução do manifesto de "
-                "hashes. A numeração de páginas e o hash do manifesto constam do rodapé.",
-                e["corpo"],
-            ),
+            Paragraph(traduzir("ld_encerramento"), e["corpo"]),
             Spacer(1, 14),
             Paragraph(_data_por_extenso(agora) + ".", e["assinatura"]),
             Spacer(1, 42),
             linha,
             Spacer(1, 4),
             Paragraph(
-                f"<b>{identidade.escapar(nome)}</b>" if nome else "<b>Examinador</b>",
+                f"<b>{identidade.escapar(nome)}</b>" if nome else traduzir("ld_assinatura_examinador"),
                 e["assinatura"],
             ),
             Paragraph(identidade.escapar(" · ".join(complementos)) if complementos else "",
@@ -319,17 +274,14 @@ def gerar(
         ]))
 
         historia.append(PageBreak())
-        acrescentar(
-            "Anexo — Linha do tempo do procedimento",
-            blocos.bloco_linha_do_tempo(dossie, largura),
-        )
+        acrescentar(traduzir("ld_anexo_tempo"), blocos.bloco_linha_do_tempo(dossie, largura))
 
         caminho = destino or destino_livre(
             pasta_de_documentos(pasta_aquisicao), f"{PREFIXO}_{pasta_aquisicao.name}"
         )
         identidade.montar_documento(
             caminho,
-            "Laudo Pericial",
+            traduzir("ld_titulo_doc"),
             historia,
             rastreio=dossie.rastreio,
             selo=dossie.sha256_do_manifesto,
@@ -345,20 +297,20 @@ def gerar(
 # Exame sem extração
 # ---------------------------------------------------------------------------
 def _preambulo(dossie, pasta_aquisicao, subscritor, agora, largura, e) -> list:
-    pares = [("Caso", identidade.escapar(dossie.caso))]
+    pares = [(traduzir("ld_l_caso"), identidade.escapar(dossie.caso))]
     pares += [
         (rotulo, identidade.escapar(valor) if valor else traduzir("bl_nao_informado"))
         for rotulo, valor in dossie.dados_do_caso
     ]
     pares += [
-        ("Registro examinado", identidade.escapar(pasta_aquisicao.name)),
-        ("Data do exame",
+        (traduzir("ld_l_registro_examinado"), identidade.escapar(pasta_aquisicao.name)),
+        (traduzir("ld_l_data_exame"),
          identidade.escapar(carimbo_legivel(dossie.abertura)) or traduzir("bl_nao_informado")),
-        ("Operador do exame", identidade.escapar(blocos.texto_do_operador(dossie))),
-        ("Examinador que subscreve",
+        (traduzir("ld_l_operador_exame"), identidade.escapar(blocos.texto_do_operador(dossie))),
+        (traduzir("ld_l_examinador_subscreve"),
          identidade.escapar(subscritor.resumo()) if subscritor.declarado
-         else "<i>perfil do examinador não preenchido</i>"),
-        ("Data de emissão do laudo", agora.strftime("%d/%m/%Y %H:%M:%S %z")),
+         else traduzir("ld_perfil_nao_preenchido")),
+        (traduzir("ld_l_data_emissao"), agora.strftime("%d/%m/%Y %H:%M:%S %z")),
     ]
     return [identidade.tabela_de_pares(pares, largura)]
 
@@ -382,7 +334,7 @@ def _assinatura(subscritor, agora, e, texto_final: str) -> KeepTogether:
         linha,
         Spacer(1, 4),
         Paragraph(
-            f"<b>{identidade.escapar(nome)}</b>" if nome else "<b>Examinador</b>",
+            f"<b>{identidade.escapar(nome)}</b>" if nome else traduzir("ld_assinatura_examinador"),
             e["assinatura"],
         ),
         Paragraph(identidade.escapar(" · ".join(complementos)) if complementos else "",
@@ -405,112 +357,91 @@ def _gerar_sem_extracao(
         e = identidade.estilos()
         largura = identidade.largura_util()
         numero = (dados_form.get("numero") or "").strip()
+        subtitulo = traduzir("ld_subtitulo_sem_extracao") + (
+            traduzir("ld_subtitulo_numero", numero=identidade.escapar(numero)) if numero else "")
         historia = [
             Spacer(1, 6),
-            Paragraph("LAUDO PERICIAL", e["titulo"]),
-            Paragraph(
-                "Exame sem Extração"
-                + (f" — Laudo n.º {identidade.escapar(numero)}" if numero else ""),
-                e["subtitulo"],
-            ),
+            Paragraph(traduzir("ld_titulo"), e["titulo"]),
+            Paragraph(subtitulo, e["subtitulo"]),
         ]
 
         def acrescentar(titulo, elementos):
             historia.extend(blocos.secao(titulo, elementos))
 
-        acrescentar("1. Preâmbulo", _preambulo(dossie, pasta_aquisicao, subscritor, agora,
-                                               largura, e))
-        acrescentar("2. Objetivo do exame", [_declaracao(
-            dados_form.get("objetivo"),
-            "O examinador não informou o objetivo do exame nem quesitos.", e,
+        acrescentar(traduzir("ld_sec_1"), _preambulo(dossie, pasta_aquisicao, subscritor, agora,
+                                                      largura, e))
+        acrescentar(traduzir("ld_sec_2"), [_declaracao(
+            dados_form.get("objetivo"), traduzir("ld_sem_objetivo"), e,
         )])
 
-        acrescentar("3. Material examinado", blocos.bloco_peca(
-            dossie, largura,
-            "Nenhuma característica foi lida do próprio dispositivo: não houve extração, e a "
-            "tentativa de conexão (seção 5) não obteve dele identificação alguma. A "
-            "descrição da peça é a declarada acima, no cadastro.",
+        acrescentar(traduzir("ld_sec_3"), blocos.bloco_peca(
+            dossie, largura, traduzir("ld_se_sem_caracteristicas"),
         ))
-        historia.append(Paragraph("Fotografias da peça", e["subsecao"]))
+        historia.append(Paragraph(traduzir("ld_sub_fotos"), e["subsecao"]))
         historia.extend(blocos.bloco_fotos(dossie, largura))
-        historia.append(Paragraph("Autorização de acesso aos dados", e["subsecao"]))
+        historia.append(Paragraph(traduzir("ld_sub_autorizacao"), e["subsecao"]))
         historia.extend(blocos.bloco_autorizacao(dossie, largura))
 
         def valor(chave):
             texto = str(exame.get(chave) or "").strip()
             return identidade.escapar(texto) if texto else traduzir("bl_nao_informado")
 
-        acrescentar("4. Estado do aparelho", [
+        acrescentar(traduzir("ld_se_sec_4"), [
             identidade.tabela_de_pares([
-                ("O aparelho liga", valor("liga")),
-                ("Estado em que foi recebido", valor("estado_ao_receber")),
-                ("Bateria", valor("bateria")),
-                ("Isolado da rede", valor("isolado_da_rede")),
-                ("Tipo de bloqueio", valor("tipo_de_bloqueio")),
+                (traduzir("ld_l_liga"), valor("liga")),
+                (traduzir("ld_l_estado_recebido"), valor("estado_ao_receber")),
+                (traduzir("ld_l_bateria"), valor("bateria")),
+                (traduzir("ld_l_isolado"), valor("isolado_da_rede")),
+                (traduzir("ld_l_tipo_bloqueio"), valor("tipo_de_bloqueio")),
             ], largura),
             Spacer(1, 3),
-            Paragraph(
-                "Declarado pelo examinador no ato do exame. A ferramenta não verifica o "
-                "estado físico do aparelho.", e["nota"],
-            ),
+            Paragraph(traduzir("ld_estado_nota"), e["nota"]),
         ])
 
         tentativa = exame.get("tentativa") or {}
         relativo = f"{exame_sem_extracao.PASTA}/{exame_sem_extracao.NOME_TENTATIVA}"
         selado = (dossie.hashes or {}).get(relativo, "")
         registro = [
-            Paragraph("Declaradas pelo examinador", e["subsecao"]),
-            _declaracao(exame.get("tentativas"), "O examinador não descreveu tentativas.", e),
-            Paragraph("Registrada pela ferramenta", e["subsecao"]),
+            Paragraph(traduzir("ld_sub_tent_declaradas"), e["subsecao"]),
+            _declaracao(exame.get("tentativas"), traduzir("ld_sem_tentativas"), e),
+            Paragraph(traduzir("ld_sub_tent_registrada"), e["subsecao"]),
         ]
         if tentativa.get("realizada"):
             registro.append(identidade.tabela_de_pares([
-                ("Momento", identidade.escapar(carimbo_legivel(tentativa.get("momento", "")))
+                (traduzir("ld_l_momento"), identidade.escapar(carimbo_legivel(tentativa.get("momento", "")))
                  or traduzir("bl_nao_informado")),
-                ("Resultado", identidade.escapar(tentativa.get("resultado", ""))),
-                ("Resposta integral", identidade.escapar(relativo)
-                 + (f"<br/>SHA-256 {selado}" if selado else "")),
+                (traduzir("ld_l_resultado"), identidade.escapar(tentativa.get("resultado", ""))),
+                (traduzir("ld_l_resposta_integral"), identidade.escapar(relativo)
+                 + (traduzir("ld_tent_sha", selado=selado) if selado else "")),
             ], largura))
-            registro += [Spacer(1, 3), Paragraph(
-                "A tentativa não altera o aparelho: no Android, a listagem de dispositivos do "
-                "ADB; no iPhone, uma sessão sem pedido de pareamento. A resposta integral do "
-                "aparelho está preservada na aquisição, sob o selo da seção 6.", e["nota"],
-            )]
+            registro += [Spacer(1, 3), Paragraph(traduzir("ld_tent_nota"), e["nota"])]
         else:
-            registro.append(Paragraph(
-                "Tentativa de conexão não realizada: o examinador declarou que o aparelho "
-                "não liga.", e["corpo"],
-            ))
-        acrescentar("5. Tentativas realizadas", registro)
+            registro.append(Paragraph(traduzir("ld_tent_nao_realizada"), e["corpo"]))
+        acrescentar(traduzir("ld_se_sec_5"), registro)
 
-        acrescentar("6. Cadeia de custódia e integridade",
-                    blocos.bloco_integridade(dossie, largura))
+        acrescentar(traduzir("ld_se_sec_6"), blocos.bloco_integridade(dossie, largura))
 
         conclusao = [Paragraph(identidade.escapar(exame_sem_extracao.texto_da_conclusao(exame)),
                                e["corpo"])]
         recomendacao = str(exame.get("recomendacao") or "").strip()
         if recomendacao:
-            conclusao += [Paragraph("Recomendação", e["subsecao"]),
+            conclusao += [Paragraph(traduzir("ld_sub_recomendacao"), e["subsecao"]),
                           Paragraph(identidade.escapar(recomendacao), e["corpo"])]
         consideracoes = (dados_form.get("consideracoes") or "").strip()
         if consideracoes:
-            conclusao += [Paragraph("Considerações do examinador", e["subsecao"]),
+            conclusao += [Paragraph(traduzir("ld_sub_consideracoes"), e["subsecao"]),
                           Paragraph(identidade.escapar(consideracoes), e["corpo"])]
-        acrescentar("7. Conclusão", conclusao)
+        acrescentar(traduzir("ld_se_sec_7"), conclusao)
 
-        historia.append(_assinatura(
-            subscritor, agora, e,
-            "A numeração de páginas e o hash do manifesto da aquisição constam do rodapé.",
-        ))
+        historia.append(_assinatura(subscritor, agora, e, traduzir("ld_se_encerramento")))
         historia.append(PageBreak())
-        acrescentar("Anexo — Linha do tempo do procedimento",
-                    blocos.bloco_linha_do_tempo(dossie, largura))
+        acrescentar(traduzir("ld_anexo_tempo"), blocos.bloco_linha_do_tempo(dossie, largura))
 
         caminho = destino or destino_livre(
             pasta_de_documentos(pasta_aquisicao), f"{PREFIXO}_{pasta_aquisicao.name}"
         )
         identidade.montar_documento(
-            caminho, "Laudo Pericial — Exame sem Extração", historia,
+            caminho, traduzir("ld_titulo_doc_sem_extracao"), historia,
             rastreio=dossie.rastreio, selo=dossie.sha256_do_manifesto,
             autor=subscritor.nome.strip() if subscritor.declarado else "",
             teste=dossie.de_teste or subscritor.de_teste,
