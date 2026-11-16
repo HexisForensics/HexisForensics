@@ -17,6 +17,7 @@ from typing import Optional
 from reportlab.platypus import Paragraph, Spacer
 
 from core.ficha import montar_ficha
+from core.idioma import traduzir
 from services import blocos_pdf as blocos
 from services import identidade_pdf as identidade
 from services.dossie_service import montar_dossie
@@ -55,19 +56,16 @@ def gerar(pasta_aquisicao: Path, destino: Optional[Path] = None) -> DocumentoGer
 
         historia = [
             Spacer(1, 6),
-            Paragraph("FICHA DO APARELHO", e["titulo"]),
+            Paragraph(traduzir("fha_titulo_pdf"), e["titulo"]),
             Paragraph(
-                f"Caso {identidade.escapar(dossie.caso)} — aquisição "
-                f"{identidade.escapar(pasta_aquisicao.name)}",
+                traduzir(
+                    "fha_subtitulo",
+                    caso=identidade.escapar(dossie.caso),
+                    aquisicao=identidade.escapar(pasta_aquisicao.name),
+                ),
                 e["subtitulo"],
             ),
-            Paragraph(
-                "Leitura rápida: abre com o que a coleta obteve. Campo marcado "
-                "<b>NÃO APURADO</b> não significa ausência do dado no aparelho — "
-                "significa que a coleta, por suas limitações, não o alcançou. Cada "
-                "valor é conferível na aquisição selada, no caminho indicado como fonte.",
-                e["nota"],
-            ),
+            Paragraph(traduzir("fha_nota_pdf"), e["nota"]),
             Spacer(1, 10),
         ]
 
@@ -79,7 +77,7 @@ def gerar(pasta_aquisicao: Path, destino: Optional[Path] = None) -> DocumentoGer
 
         if ficha.ressalvas:
             historia.append(Spacer(1, 12))
-            historia.append(Paragraph("Ressalvas declaradas", e["subsecao"]))
+            historia.append(Paragraph(traduzir("fha_ressalvas_pdf"), e["subsecao"]))
             for nome, chaves in ficha.ressalvas:
                 historia.append(
                     Paragraph(
@@ -94,7 +92,7 @@ def gerar(pasta_aquisicao: Path, destino: Optional[Path] = None) -> DocumentoGer
         )
         identidade.montar_documento(
             caminho,
-            "Ficha do Aparelho",
+            traduzir("fha_titulo_doc"),
             historia,
             rastreio=dossie.rastreio,
             selo=dossie.sha256_do_manifesto,

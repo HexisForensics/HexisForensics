@@ -37,7 +37,13 @@ from typing import List, Tuple
 
 from core.aparelho import ler_caracteristicas
 from core.desfecho import NOME_DESFECHO, PASTA_DESFECHO, ler_desfecho
+from core.idioma import traduzir
 
+# Marcador canônico em PT, mantido para quem importa a constante (testes) e
+# como valor de referência. A Ficha é documento DERIVADO: o que ela EXIBE é
+# resolvido por `traduzir("fha_nao_apurado")` no idioma ativo (PT idêntico a
+# esta constante). O "NÃO APURADO" dos extratores SELADOS é literal próprio
+# deles, em PT, e não passa por aqui (Fase 3).
 NAO_APURADO = "NÃO APURADO"
 
 PASTA_ESTADO = "estado_inicial"
@@ -45,9 +51,8 @@ NOME_BLOQUEIO = "bloqueio_de_tela.txt"
 
 # Fonte comum dos campos que a extração apura sobre o aparelho e a linha. Os
 # dois módulos (características técnicas e identificação) gravam cada um o seu
-# JSON; `ler_caracteristicas` os consolida. A ficha aponta as duas pastas,
-# para o leitor conferir o campo na que o contém.
-FONTE_APURADO = "device_specs/ e identificacao/ (características apuradas)"
+# JSON; `ler_caracteristicas` os consolida. O texto fica no catálogo
+# (`fha_fonte_apurado`); os nomes das pastas são dado e não se traduzem.
 
 LARGURA = 70
 
@@ -89,37 +94,39 @@ def ler_bloqueio_ao_receber(pasta_aquisicao: Path) -> Tuple[str, str]:
     try:
         texto = caminho.read_text(encoding="utf-8", errors="replace")
     except OSError:
-        return NAO_APURADO, ""
+        return traduzir("fha_nao_apurado"), ""
     correspondencia = re.search(r"deviceLocked=([01])", texto)
     if not correspondencia:
-        return NAO_APURADO, fonte
-    return ("DESBLOQUEADO" if correspondencia.group(1) == "0" else "BLOQUEADO"), fonte
+        return traduzir("fha_nao_apurado"), fonte
+    chave = "fha_desbloqueado" if correspondencia.group(1) == "0" else "fha_bloqueado"
+    return traduzir(chave), fonte
 
 
 # Campos fixos da ficha, na ordem da leitura de uma investigação: o aparelho,
 # depois a linha, depois a segurança. Ausentes constam como NÃO APURADO — a
 # ficha não esconde o que a coleta não alcançou.
+# (chave do rótulo no catálogo, chave do valor nas características apuradas).
 _CAMPOS_FIXOS = (
-    ("Fabricante", "fabricante"),
-    ("Modelo", "modelo"),
-    ("Marca / nome comercial", "marca"),
-    ("Número de série", "numero_serie"),
-    ("IMEI", "imei"),
-    ("Número de telefone", "numero_telefone"),
-    ("ICCID do chip", "iccid"),
-    ("Operadora do SIM", "operadora_sim"),
-    ("Patch de segurança", "patch_seguranca"),
-    ("Estado da criptografia", "estado_criptografia"),
-    ("Estado do boot verificado", "boot_verificado"),
-    ("Bootloader travado (1 = sim)", "bootloader_travado"),
+    ("fha_l_fabricante", "fabricante"),
+    ("fha_l_modelo", "modelo"),
+    ("fha_l_marca", "marca"),
+    ("fha_l_numero_serie", "numero_serie"),
+    ("fha_l_imei", "imei"),
+    ("fha_l_numero_telefone", "numero_telefone"),
+    ("fha_l_iccid", "iccid"),
+    ("fha_l_operadora", "operadora_sim"),
+    ("fha_l_patch", "patch_seguranca"),
+    ("fha_l_cripto", "estado_criptografia"),
+    ("fha_l_boot", "boot_verificado"),
+    ("fha_l_bootloader", "bootloader_travado"),
 )
 
 # Campos que só entram quando foram apurados: não poluem a ficha com
 # NÃO APURADO de coisa que nem todo aparelho tem (segundo chip, UDID de iOS).
 _CAMPOS_OPCIONAIS = (
-    ("IMEI (segundo)", "imei_2"),
-    ("UDID", "udid"),
-    ("Nome dado ao aparelho", "nome_do_aparelho"),
+    ("fha_l_imei2", "imei_2"),
+    ("fha_l_udid", "udid"),
+    ("fha_l_nome_aparelho", "nome_do_aparelho"),
 )
 
 
@@ -132,6 +139,8 @@ def montar_ficha(pasta_aquisicao: Path) -> FichaDoAparelho:
     def apurado(chave: str) -> str:
         return str(apuradas.get(chave, "") or "").strip()
 
+    nao_apurado = traduzir("fha_nao_apurado")
+    fonte_apurado = traduzir("fha_fonte_apurado")
     campos: List[CampoDaFicha] = []
 
     # 1) Bloqueio ao receber — o campo-rei da cadeia de custódia, declarado
@@ -139,35 +148,37 @@ def montar_ficha(pasta_aquisicao: Path) -> FichaDoAparelho:
     valor_bloqueio, fonte_bloqueio = ler_bloqueio_ao_receber(pasta)
     campos.append(
         CampoDaFicha(
-            "Bloqueio ao ser recebido", valor_bloqueio, fonte_bloqueio,
-            apurado=valor_bloqueio != NAO_APURADO,
+            traduzir("fha_l_bloqueio"), valor_bloqueio, fonte_bloqueio,
+            apurado=valor_bloqueio != nao_apurado,
         )
     )
 
     # 2) Versão do sistema — uma linha, seja Android ou iOS.
     versao = apurado("versao_android") or apurado("versao_ios")
     linhas_fixas = list(_CAMPOS_FIXOS)
-    linhas_fixas.insert(8, ("Versão do sistema", "__versao__"))
+    linhas_fixas.insert(8, ("fha_l_versao", "__versao__"))
 
-    for rotulo, chave in linhas_fixas:
+    for rotulo_key, chave in linhas_fixas:
+        rotulo = traduzir(rotulo_key)
         valor = versao if chave == "__versao__" else apurado(chave)
         if valor:
-            campos.append(CampoDaFicha(rotulo, valor, FONTE_APURADO, apurado=True))
+            campos.append(CampoDaFicha(rotulo, valor, fonte_apurado, apurado=True))
         else:
-            campos.append(CampoDaFicha(rotulo, NAO_APURADO, FONTE_APURADO, apurado=False))
+            campos.append(CampoDaFicha(rotulo, nao_apurado, fonte_apurado, apurado=False))
 
     # 2b) Opcionais, só quando apurados.
-    for rotulo, chave in _CAMPOS_OPCIONAIS:
+    for rotulo_key, chave in _CAMPOS_OPCIONAIS:
         valor = apurado(chave)
         if valor:
-            campos.append(CampoDaFicha(rotulo, valor, FONTE_APURADO, apurado=True))
+            campos.append(CampoDaFicha(traduzir(rotulo_key), valor, fonte_apurado, apurado=True))
 
     # 3) Desfecho da coleta — o que foi obtido, e o que ficou com ressalva.
     fonte_desfecho = f"{PASTA_DESFECHO}/{NOME_DESFECHO}"
+    rotulo_desfecho = traduzir("fha_l_desfecho")
     if desfecho.vazio:
-        campos.append(CampoDaFicha("Desfecho da coleta", NAO_APURADO, fonte_desfecho, apurado=False))
+        campos.append(CampoDaFicha(rotulo_desfecho, nao_apurado, fonte_desfecho, apurado=False))
     else:
-        campos.append(CampoDaFicha("Desfecho da coleta", desfecho.resumo, fonte_desfecho, apurado=True))
+        campos.append(CampoDaFicha(rotulo_desfecho, desfecho.resumo, fonte_desfecho, apurado=True))
 
     ressalvas = [(m.nome, list(m.ressalvas)) for m in desfecho.modulos if m.ressalvas]
 
@@ -178,29 +189,27 @@ def render_texto(ficha: FichaDoAparelho) -> str:
     """Versão em texto da ficha — a mesma que o PDF imprime, legível no bloco de notas."""
     linhas = [
         "=" * LARGURA,
-        "FICHA DO APARELHO".center(LARGURA),
-        "Leitura rápida — abre com o que foi obtido".center(LARGURA),
+        traduzir("fha_titulo_pdf").center(LARGURA),
+        traduzir("fha_sub_txt").center(LARGURA),
         "=" * LARGURA,
-        f"Aquisição: {ficha.aquisicao}",
+        traduzir("fha_aquisicao_txt", valor=ficha.aquisicao),
         "",
     ]
     largura_rotulo = max((len(c.rotulo) for c in ficha.campos), default=0)
     for campo in ficha.campos:
         linhas.append(f"{campo.rotulo.ljust(largura_rotulo)}  {campo.valor}")
         if campo.fonte:
-            linhas.append(f"{' ' * largura_rotulo}  fonte: {campo.fonte}")
+            linhas.append(f"{' ' * largura_rotulo}  {traduzir('fha_fonte_prefixo')}{campo.fonte}")
 
     if ficha.ressalvas:
-        linhas += ["", "-" * LARGURA, "RESSALVAS DECLARADAS"]
+        linhas += ["", "-" * LARGURA, traduzir("fha_ressalvas_txt")]
         for nome, chaves in ficha.ressalvas:
             linhas.append(f"  • {nome}: {', '.join(chaves)}")
 
     linhas += [
         "",
         "-" * LARGURA,
-        "NÃO APURADO não significa ausência do dado no aparelho: significa que",
-        "a coleta, por suas limitações, não o alcançou. O material bruto e",
-        "selado de cada campo está na aquisição, no caminho indicado em 'fonte'.",
+        traduzir("fha_rodape_txt"),
         "=" * LARGURA,
     ]
     return "\n".join(linhas) + "\n"
