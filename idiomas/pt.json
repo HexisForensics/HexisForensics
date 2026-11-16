@@ -1,0 +1,22 @@
+{
+  "cadeia_titulo": "CADEIA DE CUSTÓDIA",
+  "cadeia_caso": "Caso: {valor}",
+  "cadeia_nao_informado": "não informado",
+  "cadeia_fotos_anexas": "Fotos Anexas: {valor}",
+  "cadeia_fotos_nenhuma": "nenhuma",
+
+  "campo_referencia": "Referência",
+  "campo_descricao": "Descrição",
+  "campo_solicitante": "Solicitante",
+  "campo_equipamento": "Equipamento",
+  "campo_cor": "Cor",
+  "campo_estado": "Estado",
+  "campo_lacre": "Lacre",
+
+  "pdf_pagina_de": "Página {n} de {total}",
+  "pdf_selo_manifesto": "SHA-256 do manifesto: {selo}",
+  "pdf_sem_manifesto": "Aquisição SEM manifesto de integridade — nada se afirma sobre a preservação.",
+  "pdf_gerado_em": "gerado em {quando}",
+
+  "rotulo_imei": "IMEI: {valor}"
+}

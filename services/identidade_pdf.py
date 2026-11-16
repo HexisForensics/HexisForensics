@@ -29,6 +29,7 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import Image as ImagemPDF
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
 
+from core.idioma import traduzir
 from core.instalacao import raiz_da_instalacao
 from core.versao import identificacao_ferramenta
 
@@ -314,11 +315,12 @@ def montar_documento(
         tela.setFillColor(CINZA_TEXTO)
         tela.setFont(f["texto"], 7)
         tela.drawString(
-            MARGEM, base + 0.3 * cm, f"{identificacao_ferramenta()}  ·  gerado em {gerado_em}"
+            MARGEM, base + 0.3 * cm,
+            f"{identificacao_ferramenta()}  ·  {traduzir('pdf_gerado_em', quando=gerado_em)}",
         )
         tela.drawRightString(
             largura - MARGEM, base + 0.3 * cm,
-            f"Página {tela.getPageNumber()} de {total_de_paginas}",
+            traduzir("pdf_pagina_de", n=tela.getPageNumber(), total=total_de_paginas),
         )
         if teste:
             tela.saveState()
@@ -341,8 +343,8 @@ def montar_documento(
         if selo is not None:
             tela.drawString(
                 MARGEM, base,
-                f"SHA-256 do manifesto: {selo}" if selo
-                else "Aquisição SEM manifesto de integridade — nada se afirma sobre a preservação.",
+                traduzir("pdf_selo_manifesto", selo=selo) if selo
+                else traduzir("pdf_sem_manifesto"),
             )
         tela.restoreState()
 

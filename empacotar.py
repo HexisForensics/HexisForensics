@@ -57,7 +57,7 @@ PACOTES_DESCOBERTOS = (
 )
 
 # O que fica AO LADO do executável, legível e substituível pelo usuário.
-PASTAS_AO_LADO = ("branding", "assets", "binario")
+PASTAS_AO_LADO = ("branding", "assets", "binario", "idiomas")
 
 LANCADOR_ADMIN = """@echo off
 REM Abre o HexisForensics como Administrador.
@@ -105,8 +105,8 @@ DESTINO_PORTATIL = RAIZ / "dist" / f"{NOME}-portatil"
 
 # Código e recursos da suíte, copiados para a raiz da pasta portátil.
 ITENS_DA_SUITE = ("main.py", "core", "services", "ui", "branding", "assets", "binario",
-                  "ferramentas", "agente_android", "requirements.txt", "README.md", "MANUAL.md",
-                  "LICENSE")
+                  "idiomas", "ferramentas", "agente_android", "requirements.txt", "README.md",
+                  "MANUAL.md", "LICENSE")
 
 # Do interpretador, o que a suíte não usa. Nada daqui é importado por
 # `core`, `services` ou `ui` — e a prova é o passo de verificação, que
