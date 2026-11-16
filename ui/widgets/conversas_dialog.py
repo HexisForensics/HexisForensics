@@ -28,11 +28,13 @@ from PySide6.QtWidgets import (
 )
 
 from services.conversas_service import gerar_pdf_conversas, listar_conversas
+from services.idioma import traduzir
 
 from .visualizador_pdf import abrir_pdf
 from .ajuste_de_tela import caber_na_tela
 
-COLUNAS = ("", "Via", "Conversa / número", "Nome", "Mensagens", "Período")
+# A primeira coluna (checkbox) não tem rótulo; as demais são chaves do catálogo.
+COLUNAS = ("", "cv_col_via", "cv_col_conversa", "cv_col_nome", "cv_col_mensagens", "cv_col_periodo")
 
 
 class ConversasDialog(QDialog):
@@ -42,30 +44,26 @@ class ConversasDialog(QDialog):
         # Caso e aquisição no título: com a aquisição errada selecionada no
         # gerenciador, a lista vinha vazia e parecia defeito (31/10/2026).
         pasta = Path(pasta_aquisicao)
-        self.setWindowTitle(f"PDF de conversas — {pasta.parent.name} · {pasta.name}")
+        self.setWindowTitle(traduzir("cv_titulo", caso=pasta.parent.name, aquisicao=pasta.name))
         caber_na_tela(self, 1000, 640)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(10)
 
-        explicacao = QLabel(
-            "Marque as conversas relevantes ao exame. O PDF traz cada uma <b>completa</b>, "
-            "em ordem cronológica, com a origem de cada mensagem. A íntegra de todas as "
-            "conversas continua na planilha e no caderno HTML do Relatório de Conteúdo."
-        )
+        explicacao = QLabel(traduzir("cv_explicacao"))
         explicacao.setWordWrap(True)
         layout.addWidget(explicacao)
 
         linha_busca = QHBoxLayout()
         self.campo_filtro = QLineEdit()
-        self.campo_filtro.setPlaceholderText("Filtrar por número, nome ou via…")
+        self.campo_filtro.setPlaceholderText(traduzir("cv_ph_filtro"))
         self.campo_filtro.textChanged.connect(self._filtrar)
         linha_busca.addWidget(self.campo_filtro, 1)
         layout.addLayout(linha_busca)
 
         self.tabela = QTableWidget(0, len(COLUNAS))
-        self.tabela.setHorizontalHeaderLabels(COLUNAS)
+        self.tabela.setHorizontalHeaderLabels([traduzir(c) if c else "" for c in COLUNAS])
         self.tabela.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tabela.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.tabela.verticalHeader().setVisible(False)
@@ -85,9 +83,9 @@ class ConversasDialog(QDialog):
 
         linha = QHBoxLayout()
         linha.addStretch()
-        botao_cancelar = QPushButton("Fechar")
+        botao_cancelar = QPushButton(traduzir("cv_btn_fechar"))
         botao_cancelar.clicked.connect(self.reject)
-        self.botao_gerar = QPushButton("📄 Gerar PDF das selecionadas")
+        self.botao_gerar = QPushButton(traduzir("cv_btn_gerar"))
         self.botao_gerar.setDefault(True)
         self.botao_gerar.clicked.connect(self._gerar)
         linha.addWidget(botao_cancelar)
@@ -121,9 +119,7 @@ class ConversasDialog(QDialog):
         self._atualizar_contagem()
         if not self._conversas:
             self.rotulo_contagem.setText(
-                f"<b>Nenhuma conversa interpretada na aquisição {Path(self.pasta_aquisicao).name}."
-                "</b> Confira se é a aquisição certa. Isso não significa que o aparelho não "
-                "tenha conversas: veja o Relatório de Conteúdo para o motivo."
+                traduzir("cv_nenhuma", nome=Path(self.pasta_aquisicao).name)
             )
 
     def _alternar_linha(self, linha: int, coluna: int) -> None:
@@ -150,10 +146,9 @@ class ConversasDialog(QDialog):
             conversa.quantidade for conversa in self._conversas
             if (conversa.artefato, conversa.chave) in set(escolhidas)
         )
-        self.rotulo_contagem.setText(
-            f"<b>{len(escolhidas)}</b> de {len(self._conversas)} conversas selecionadas — "
-            f"{mensagens} mensagem(ns) no PDF."
-        )
+        self.rotulo_contagem.setText(traduzir(
+            "cv_contagem", n=len(escolhidas), total=len(self._conversas), m=mensagens
+        ))
         self.botao_gerar.setEnabled(bool(escolhidas))
 
     def _filtrar(self, texto: str) -> None:
@@ -171,6 +166,6 @@ class ConversasDialog(QDialog):
         finally:
             self.unsetCursor()
         if documento.erro:
-            QMessageBox.warning(self, "PDF não gerado", documento.erro)
+            QMessageBox.warning(self, traduzir("cv_pdf_nao_gerado"), documento.erro)
             return
         abrir_pdf(documento.caminho, self)

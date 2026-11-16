@@ -604,5 +604,32 @@
   "vit_recebimento": "intake",
   "vit_aquisicao": "acquisition",
   "vit_lacre": "seal",
-  "vit_laudo": "report"
+  "vit_laudo": "report",
+
+  "cv_titulo": "Conversations PDF — {caso} · {aquisicao}",
+  "cv_col_via": "Via",
+  "cv_col_conversa": "Conversation / number",
+  "cv_col_nome": "Name",
+  "cv_col_mensagens": "Messages",
+  "cv_col_periodo": "Period",
+  "cv_explicacao": "Check the conversations relevant to the examination. The PDF includes each one <b>in full</b>, in chronological order, with the origin of each message. The complete set of all conversations stays in the spreadsheet and the HTML notebook of the Content Report.",
+  "cv_ph_filtro": "Filter by number, name or via…",
+  "cv_btn_fechar": "Close",
+  "cv_btn_gerar": "📄 Generate PDF of selected",
+  "cv_nenhuma": "<b>No conversation interpreted in acquisition {nome}.</b> Check that it is the right acquisition. This does not mean the device has no conversations: see the Content Report for the reason.",
+  "cv_contagem": "<b>{n}</b> of {total} conversations selected — {m} message(s) in the PDF.",
+  "cv_pdf_nao_gerado": "PDF not generated",
+
+  "xp_titulo_padrao": "Extraction Types",
+  "xp_pendente": "· Pending",
+  "xp_em_execucao": "⏳ Running...",
+  "xp_requer_root": "requires root",
+  "xp_selecao_expressa": "  [alters the device — explicit selection]",
+  "xp_nenhum_marcado": "<b>No module selected.</b>",
+  "xp_marcados": "<b>{n} of {total} modules selected:</b> {lista}",
+  "xp_falha": "✖ Failure",
+  "xp_parcial": "⚠ Partial",
+  "xp_sucesso": "✔ Success",
+  "xp_marcar_todos": "Select all",
+  "xp_desmarcar_todos": "Deselect all"
 }

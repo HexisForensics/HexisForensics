@@ -604,5 +604,32 @@
   "vit_recebimento": "recebimento",
   "vit_aquisicao": "aquisição",
   "vit_lacre": "lacre",
-  "vit_laudo": "laudo"
+  "vit_laudo": "laudo",
+
+  "cv_titulo": "PDF de conversas — {caso} · {aquisicao}",
+  "cv_col_via": "Via",
+  "cv_col_conversa": "Conversa / número",
+  "cv_col_nome": "Nome",
+  "cv_col_mensagens": "Mensagens",
+  "cv_col_periodo": "Período",
+  "cv_explicacao": "Marque as conversas relevantes ao exame. O PDF traz cada uma <b>completa</b>, em ordem cronológica, com a origem de cada mensagem. A íntegra de todas as conversas continua na planilha e no caderno HTML do Relatório de Conteúdo.",
+  "cv_ph_filtro": "Filtrar por número, nome ou via…",
+  "cv_btn_fechar": "Fechar",
+  "cv_btn_gerar": "📄 Gerar PDF das selecionadas",
+  "cv_nenhuma": "<b>Nenhuma conversa interpretada na aquisição {nome}.</b> Confira se é a aquisição certa. Isso não significa que o aparelho não tenha conversas: veja o Relatório de Conteúdo para o motivo.",
+  "cv_contagem": "<b>{n}</b> de {total} conversas selecionadas — {m} mensagem(ns) no PDF.",
+  "cv_pdf_nao_gerado": "PDF não gerado",
+
+  "xp_titulo_padrao": "Tipos de Extração",
+  "xp_pendente": "· Pendente",
+  "xp_em_execucao": "⏳ Em execução...",
+  "xp_requer_root": "requer root",
+  "xp_selecao_expressa": "  [altera o dispositivo — seleção expressa]",
+  "xp_nenhum_marcado": "<b>Nenhum módulo marcado.</b>",
+  "xp_marcados": "<b>{n} de {total} módulos marcados:</b> {lista}",
+  "xp_falha": "✖ Falha",
+  "xp_parcial": "⚠ Parcial",
+  "xp_sucesso": "✔ Sucesso",
+  "xp_marcar_todos": "Marcar todos",
+  "xp_desmarcar_todos": "Desmarcar todos"
 }

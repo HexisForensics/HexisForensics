@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
 from core.base_extractor import BaseExtractor
 
 from services.extraction_service import indica_ressalva
+from services.idioma import traduzir
 
 from ..style import (
     COR_EM_EXECUCAO,
@@ -50,18 +51,15 @@ from ..style import (
 
 LARGURA_COLUNA_STATUS = 150
 
-TEXTO_PENDENTE = "· Pendente"
-TEXTO_EM_EXECUCAO = "⏳ Em execução..."
-
 
 class ExtractionPanel(QGroupBox):
     def __init__(
         self,
         extratores: List[Type[BaseExtractor]],
-        titulo: str = "Tipos de Extração",
+        titulo: str = None,
         parent=None,
     ):
-        super().__init__(titulo, parent)
+        super().__init__(titulo if titulo is not None else traduzir("xp_titulo_padrao"), parent)
         self._extratores = extratores
         self._checkboxes: Dict[str, QCheckBox] = {}
         self._status_labels: Dict[str, QLabel] = {}
@@ -76,11 +74,13 @@ class ExtractionPanel(QGroupBox):
         for classe_extrator in extratores:
             rotulo = classe_extrator.nome_exibicao
             if getattr(classe_extrator, "requer_privilegio_root", False):
-                rotulo += f"  [{getattr(classe_extrator, 'rotulo_privilegio', 'requer root')}]"
+                privilegio = getattr(classe_extrator, "rotulo_privilegio", None) \
+                    or traduzir("xp_requer_root")
+                rotulo += f"  [{privilegio}]"
 
             expressa = getattr(classe_extrator, "selecao_expressa", False)
             if expressa:
-                rotulo += "  [altera o dispositivo — seleção expressa]"
+                rotulo += traduzir("xp_selecao_expressa")
 
             checkbox = QCheckBox(rotulo)
             checkbox.setToolTip(classe_extrator.descricao)
@@ -91,7 +91,7 @@ class ExtractionPanel(QGroupBox):
                 not getattr(classe_extrator, "requer_privilegio_root", False) and not expressa
             )
 
-            label_status = QLabel(TEXTO_PENDENTE)
+            label_status = QLabel(traduzir("xp_pendente"))
             label_status.setFixedWidth(LARGURA_COLUNA_STATUS)
             label_status.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             label_status.setStyleSheet(f"color: {COR_PENDENTE};")
@@ -119,8 +119,8 @@ class ExtractionPanel(QGroupBox):
         layout_externo.addWidget(self.rotulo_resumo)
 
         linha_acoes = QHBoxLayout()
-        self.botao_marcar_todos = QPushButton("Marcar todos")
-        self.botao_desmarcar_todos = QPushButton("Desmarcar todos")
+        self.botao_marcar_todos = QPushButton(traduzir("xp_marcar_todos"))
+        self.botao_desmarcar_todos = QPushButton(traduzir("xp_desmarcar_todos"))
         self.botao_marcar_todos.clicked.connect(lambda: self._marcar_todos(True))
         self.botao_desmarcar_todos.clicked.connect(lambda: self._marcar_todos(False))
         linha_acoes.addWidget(self.botao_marcar_todos)
@@ -134,12 +134,12 @@ class ExtractionPanel(QGroupBox):
             if self._checkboxes[classe.id].isChecked()
         ]
         if not marcados:
-            self.rotulo_resumo.setText("<b>Nenhum módulo marcado.</b>")
+            self.rotulo_resumo.setText(traduzir("xp_nenhum_marcado"))
             return
-        self.rotulo_resumo.setText(
-            f"<b>{len(marcados)} de {len(self._extratores)} módulos marcados:</b> "
-            + " · ".join(marcados)
-        )
+        self.rotulo_resumo.setText(traduzir(
+            "xp_marcados", n=len(marcados), total=len(self._extratores),
+            lista=" · ".join(marcados),
+        ))
 
     def _marcar_todos(self, marcado: bool) -> None:
         expressos = {
@@ -166,7 +166,7 @@ class ExtractionPanel(QGroupBox):
     def resetar_status(self) -> None:
         """Volta todas as linhas para 'Pendente' — chamado ao iniciar uma nova extração."""
         for label in self._status_labels.values():
-            label.setText(TEXTO_PENDENTE)
+            label.setText(traduzir("xp_pendente"))
             label.setStyleSheet(f"color: {COR_PENDENTE};")
             label.setToolTip("")
 
@@ -174,7 +174,7 @@ class ExtractionPanel(QGroupBox):
         label = self._status_labels.get(id_extrator)
         if label is None:
             return
-        label.setText(TEXTO_EM_EXECUCAO)
+        label.setText(traduzir("xp_em_execucao"))
         label.setStyleSheet(f"color: {COR_EM_EXECUCAO}; font-weight: 600;")
 
     def marcar_concluido(
@@ -197,11 +197,11 @@ class ExtractionPanel(QGroupBox):
             return
 
         if not sucesso:
-            cor, texto = COR_FALHA, "✖ Falha"
+            cor, texto = COR_FALHA, traduzir("xp_falha")
         elif indica_ressalva(detalhes):
-            cor, texto = COR_PARCIAL, "⚠ Parcial"
+            cor, texto = COR_PARCIAL, traduzir("xp_parcial")
         else:
-            cor, texto = COR_SUCESSO, "✔ Sucesso"
+            cor, texto = COR_SUCESSO, traduzir("xp_sucesso")
 
         label.setText(texto)
         label.setStyleSheet(f"color: {cor}; font-weight: 600;")
