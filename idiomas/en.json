@@ -509,5 +509,26 @@
   "dk_nao_legivel_prefixo": "⛔ NOT READABLE — {texto}",
   "dk_detectadas": "<b style='color:{cor};'>✔ {n} drive(s) detected.</b>",
   "dk_aviso_estacao": "<b style='color:{cor};'>⚠ This is the examiner station</b> — the drive where HexisForensics is installed. It is not an object of examination, and examining it makes the collection read the disk on which its own output is being written.",
-  "dk_aviso_bloqueio": "<b style='color:{cor};'>⛔ Volume not readable</b> — {explicacao}"
+  "dk_aviso_bloqueio": "<b style='color:{cor};'>⛔ Volume not readable</b> — {explicacao}",
+
+  "eg_titulo": "Export for delivery",
+  "eg_partes_material": "{n} material item(s)",
+  "eg_partes_documentos": "{n} document(s)",
+  "eg_e": " and ",
+  "eg_explicacao": "<b>Will be exported:</b> {partes} from acquisition <b>{nome}</b>.<br>Each copy is verified by SHA-256 after being written, the delivery includes a receipt (PDF and text) and is recorded in the case.",
+  "eg_teste": "<br><b style='color:#ff6b6b'>TEST MODE:</b> the receipt will be marked as TEST.",
+  "eg_ph_destino": "USB drive or folder where the delivery will be written",
+  "eg_btn_escolher": "Choose…",
+  "eg_label_destino": "Destination",
+  "eg_ph_finalidade": "e.g. delivered to the Court — Case 123/2026",
+  "eg_label_finalidade": "Purpose / recipient",
+  "eg_btn_exportar": "📤 Export",
+  "eg_destino_dialogo": "Delivery destination",
+  "eg_destino_titulo": "Destination",
+  "eg_destino_invalido": "Choose a destination folder that exists.",
+  "eg_nada_entregue": "Nothing was delivered",
+  "eg_mensagem": "{n} file(s) delivered, each verified by SHA-256.\n\nDelivery folder:\n{pasta}\n\nThe delivery was recorded in the case.",
+  "eg_falhas_prefixo": "\n\nATTENTION — not delivered:\n{lista}",
+  "eg_ressalvas_titulo": "Delivery with caveats",
+  "eg_concluida_titulo": "Delivery completed"
 }

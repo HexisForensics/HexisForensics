@@ -509,5 +509,26 @@
   "dk_nao_legivel_prefixo": "⛔ NÃO LEGÍVEL — {texto}",
   "dk_detectadas": "<b style='color:{cor};'>✔ {n} unidade(s) detectada(s).</b>",
   "dk_aviso_estacao": "<b style='color:{cor};'>⚠ Esta é a estação do examinador</b> — a unidade onde o HexisForensics está instalado. Ela não é objeto de perícia, e periciá-la faz a coleta ler o disco em que a própria saída está sendo gravada.",
-  "dk_aviso_bloqueio": "<b style='color:{cor};'>⛔ Volume não legível</b> — {explicacao}"
+  "dk_aviso_bloqueio": "<b style='color:{cor};'>⛔ Volume não legível</b> — {explicacao}",
+
+  "eg_titulo": "Exportar para entrega",
+  "eg_partes_material": "{n} item(ns) do material",
+  "eg_partes_documentos": "{n} documento(s)",
+  "eg_e": " e ",
+  "eg_explicacao": "<b>Vai ser exportado:</b> {partes} da aquisição <b>{nome}</b>.<br>Cada cópia é conferida pelo SHA-256 depois de gravada, a entrega leva um recibo (PDF e texto) e fica registrada no caso.",
+  "eg_teste": "<br><b style='color:#ff6b6b'>MODO DE TESTE:</b> o recibo sairá marcado como TESTE.",
+  "eg_ph_destino": "Pendrive ou pasta onde a entrega será gravada",
+  "eg_btn_escolher": "Escolher…",
+  "eg_label_destino": "Destino",
+  "eg_ph_finalidade": "Ex.: entregue ao Juízo da 1ª Vara — Proc. 123/2026",
+  "eg_label_finalidade": "Finalidade / destinatário",
+  "eg_btn_exportar": "📤 Exportar",
+  "eg_destino_dialogo": "Destino da entrega",
+  "eg_destino_titulo": "Destino",
+  "eg_destino_invalido": "Escolha uma pasta de destino que exista.",
+  "eg_nada_entregue": "Nada foi entregue",
+  "eg_mensagem": "{n} arquivo(s) entregue(s), cada um conferido pelo SHA-256.\n\nPasta da entrega:\n{pasta}\n\nA entrega foi registrada no caso.",
+  "eg_falhas_prefixo": "\n\nATENÇÃO — não entregues:\n{lista}",
+  "eg_ressalvas_titulo": "Entrega com ressalvas",
+  "eg_concluida_titulo": "Entrega concluída"
 }
