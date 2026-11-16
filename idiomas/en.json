@@ -378,5 +378,20 @@
   "md_justificativa": "      Rationale: {valor}",
   "md_nota_alteracoes": "<i>This is what the run may cause. The change that actually occurs is recorded in the procedure record, at the moment it occurs.</i>",
   "md_btn_ciente": "Acknowledged — Continue",
-  "md_btn_cancelar": "Cancel"
+  "md_btn_cancelar": "Cancel",
+
+  "es_titulo": "Examination without extraction",
+  "es_explicacao": "Record the device's condition and what was attempted. If the device powers on, the tool then attempts the connection, <b>without altering it</b>, and keeps its response as proof of the attempt. The report will say that extraction was not possible — not that the device has no data.",
+  "es_label_liga": "Does the device power on?",
+  "es_label_estado": "Condition in which it was received",
+  "es_label_bateria": "Battery",
+  "es_ph_bateria": "e.g. 45% / no charge / not shown",
+  "es_label_isolamento": "Isolated from the network (airplane mode or\nFaraday bag)?",
+  "es_label_bloqueio": "Lock type",
+  "es_label_tentativas": "Attempts and observations",
+  "es_ph_tentativas": "What the examiner did or attempted. E.g.: device powered on in the examiner's presence; PIN lock screen shown; credential not provided; no unlock attempt, to avoid triggering wipe-on-attempts.",
+  "es_label_recomendacao": "Recommendation",
+  "es_btn_registrar": "Record examination",
+  "es_campo_obrigatorio_titulo": "Required field",
+  "es_campo_obrigatorio_corpo": "Describe what was done or attempted. It is what supports the negative report."
 }

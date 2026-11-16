@@ -21,25 +21,21 @@ from PySide6.QtWidgets import (
 )
 
 from services.exame_service import RECOMENDACAO_PADRAO, RESPOSTAS, TIPOS_DE_BLOQUEIO
+from services.idioma import traduzir
 from .ajuste_de_tela import caber_na_tela
 
 
 class ExameSemExtracaoDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Exame sem extração")
+        self.setWindowTitle(traduzir("es_titulo"))
         self.setModal(True)
         caber_na_tela(self, 560, 600)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(10)
-        explicacao = QLabel(
-            "Registre o estado do aparelho e o que foi tentado. Se o aparelho liga, a "
-            "ferramenta tenta a conexão em seguida, <b>sem alterá-lo</b>, e guarda a resposta "
-            "dele como prova da tentativa. O laudo dirá que não foi possível extrair — e "
-            "não que o aparelho não tem dados."
-        )
+        explicacao = QLabel(traduzir("es_explicacao"))
         explicacao.setWordWrap(True)
         layout.addWidget(explicacao)
 
@@ -48,39 +44,35 @@ class ExameSemExtracaoDialog(QDialog):
         self.campo_liga = QComboBox()
         self.campo_liga.addItems(("Sim", "Não"))
         self.campo_liga.currentTextChanged.connect(self._ao_mudar_liga)
-        form.addRow("O aparelho liga?", self.campo_liga)
+        form.addRow(traduzir("es_label_liga"), self.campo_liga)
 
         self.campo_estado = QComboBox()
         self.campo_estado.addItems(("Ligado", "Desligado", "Não verificado"))
-        form.addRow("Estado em que foi recebido", self.campo_estado)
+        form.addRow(traduzir("es_label_estado"), self.campo_estado)
 
         self.campo_bateria = QLineEdit()
-        self.campo_bateria.setPlaceholderText("Ex.: 45% / sem carga / não exibida")
-        form.addRow("Bateria", self.campo_bateria)
+        self.campo_bateria.setPlaceholderText(traduzir("es_ph_bateria"))
+        form.addRow(traduzir("es_label_bateria"), self.campo_bateria)
 
         self.campo_isolamento = QComboBox()
         self.campo_isolamento.addItems(RESPOSTAS)
-        form.addRow("Isolado da rede (modo avião ou\nbolsa de Faraday)?", self.campo_isolamento)
+        form.addRow(traduzir("es_label_isolamento"), self.campo_isolamento)
 
         self.campo_bloqueio = QComboBox()
         self.campo_bloqueio.addItems(TIPOS_DE_BLOQUEIO)
-        form.addRow("Tipo de bloqueio", self.campo_bloqueio)
+        form.addRow(traduzir("es_label_bloqueio"), self.campo_bloqueio)
 
         self.campo_tentativas = QPlainTextEdit()
-        self.campo_tentativas.setPlaceholderText(
-            "O que o examinador fez ou tentou. Ex.: aparelho ligado na presença do examinador; "
-            "tela de bloqueio por PIN exibida; credencial não fornecida; nenhuma tentativa de "
-            "desbloqueio para não acionar o apagamento por tentativas."
-        )
-        form.addRow("Tentativas e observações", self.campo_tentativas)
+        self.campo_tentativas.setPlaceholderText(traduzir("es_ph_tentativas"))
+        form.addRow(traduzir("es_label_tentativas"), self.campo_tentativas)
 
         self.campo_recomendacao = QPlainTextEdit(RECOMENDACAO_PADRAO)
         self.campo_recomendacao.setFixedHeight(70)
-        form.addRow("Recomendação", self.campo_recomendacao)
+        form.addRow(traduzir("es_label_recomendacao"), self.campo_recomendacao)
         layout.addLayout(form)
 
         botoes = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        botoes.button(QDialogButtonBox.Ok).setText("Registrar exame")
+        botoes.button(QDialogButtonBox.Ok).setText(traduzir("es_btn_registrar"))
         botoes.accepted.connect(self._confirmar)
         botoes.rejected.connect(self.reject)
         layout.addWidget(botoes)
@@ -94,8 +86,8 @@ class ExameSemExtracaoDialog(QDialog):
     def _confirmar(self) -> None:
         if not self.campo_tentativas.toPlainText().strip():
             QMessageBox.warning(
-                self, "Campo obrigatório",
-                "Descreva o que foi feito ou tentado. É o que sustenta o laudo negativo.",
+                self, traduzir("es_campo_obrigatorio_titulo"),
+                traduzir("es_campo_obrigatorio_corpo"),
             )
             return
         self.accept()

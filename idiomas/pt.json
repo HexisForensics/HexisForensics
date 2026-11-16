@@ -378,5 +378,20 @@
   "md_justificativa": "      Justificativa: {valor}",
   "md_nota_alteracoes": "<i>É o que a execução pode provocar. A alteração que de fato ocorrer é anotada no registro do procedimento, no momento em que ocorrer.</i>",
   "md_btn_ciente": "Ciente — Prosseguir",
-  "md_btn_cancelar": "Cancelar"
+  "md_btn_cancelar": "Cancelar",
+
+  "es_titulo": "Exame sem extração",
+  "es_explicacao": "Registre o estado do aparelho e o que foi tentado. Se o aparelho liga, a ferramenta tenta a conexão em seguida, <b>sem alterá-lo</b>, e guarda a resposta dele como prova da tentativa. O laudo dirá que não foi possível extrair — e não que o aparelho não tem dados.",
+  "es_label_liga": "O aparelho liga?",
+  "es_label_estado": "Estado em que foi recebido",
+  "es_label_bateria": "Bateria",
+  "es_ph_bateria": "Ex.: 45% / sem carga / não exibida",
+  "es_label_isolamento": "Isolado da rede (modo avião ou\nbolsa de Faraday)?",
+  "es_label_bloqueio": "Tipo de bloqueio",
+  "es_label_tentativas": "Tentativas e observações",
+  "es_ph_tentativas": "O que o examinador fez ou tentou. Ex.: aparelho ligado na presença do examinador; tela de bloqueio por PIN exibida; credencial não fornecida; nenhuma tentativa de desbloqueio para não acionar o apagamento por tentativas.",
+  "es_label_recomendacao": "Recomendação",
+  "es_btn_registrar": "Registrar exame",
+  "es_campo_obrigatorio_titulo": "Campo obrigatório",
+  "es_campo_obrigatorio_corpo": "Descreva o que foi feito ou tentado. É o que sustenta o laudo negativo."
 }
