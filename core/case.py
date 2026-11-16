@@ -262,15 +262,17 @@ def registrar_info_caso(
     """
     timestamp = timestamp or datetime.now()
     caminho_arquivo = Path(pasta_caso) / "informacoes_caso.txt"
+    idi = idioma_para_selar(pasta_caso)
 
     conteudo = (
         "=" * 58 + "\n"
-        "                 INFORMAÇÕES DO CASO\n"
+        + traduzir("sl_info_titulo", idi) + "\n"
         + "=" * 58 + "\n"
-        f"Identificador do Caso:        {identificador_caso}\n"
-        f"Plataforma:                   {plataforma}\n"
-        f"Identificador do Dispositivo: {id_dispositivo}\n"
-        f"Data/Hora de Abertura:        {timestamp.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        + traduzir("sl_info_l_caso", idi, valor=identificador_caso) + "\n"
+        + traduzir("sl_info_l_plataforma", idi, valor=plataforma) + "\n"
+        + traduzir("sl_info_l_dispositivo", idi, valor=id_dispositivo) + "\n"
+        + traduzir("sl_info_l_abertura", idi,
+                   valor=timestamp.strftime('%Y-%m-%d %H:%M:%S')) + "\n"
         + "=" * 58 + "\n"
     )
     caminho_arquivo.write_text(conteudo, encoding="utf-8")
@@ -466,19 +468,20 @@ def juntar_complemento(pasta_caso: Path, titulo: str, texto: str) -> Path:
         caminho = pasta / f"{base}_{sufixo}.txt"
         sufixo += 1
 
+    idi = idioma_para_selar(pasta_caso)
     conteudo = [
         "=" * 70,
-        "COMPLEMENTO AO CASO".center(70),
+        traduzir("sl_comp_titulo", idi).center(70),
         "=" * 70,
-        f"Assunto:   {titulo}",
-        f"Juntado em: {carimbo.astimezone().isoformat(timespec='seconds')}",
+        traduzir("sl_comp_assunto", idi, valor=titulo),
+        traduzir("sl_comp_juntado", idi,
+                 valor=carimbo.astimezone().isoformat(timespec='seconds')),
         "=" * 70,
         "",
         texto,
         "",
         "=" * 70,
-        "Este complemento NÃO altera as aquisições já seladas. O material",
-        "coletado permanece exatamente como estava no momento do exame.",
+    ] + traduzir("sl_comp_disclaimer", idi).split("\n") + [
         "=" * 70,
     ]
     caminho.write_text("\n".join(conteudo) + "\n", encoding="utf-8")
@@ -491,11 +494,7 @@ def juntar_complemento(pasta_caso: Path, titulo: str, texto: str) -> Path:
     novo = not indice.exists()
     with open(indice, "a", encoding="utf-8") as arquivo_indice:
         if novo:
-            arquivo_indice.write(
-                "# Índice dos complementos deste caso — listagem de conveniência.\n"
-                "# NÃO entra no manifesto: cresce a cada juntada. O que é selado\n"
-                "# é cada complemento, no arquivo próprio indicado abaixo.\n"
-            )
+            arquivo_indice.write(traduzir("sl_comp_indice_cabecalho", idi))
         arquivo_indice.write(
             f"{carimbo.astimezone().isoformat(timespec='seconds')}  {titulo}  ->  {caminho.name}\n"
         )

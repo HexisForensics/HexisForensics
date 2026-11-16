@@ -693,9 +693,26 @@ class TelaEntrada(QDialog):
 
     def _trocar_idioma(self, indice: int) -> None:
         cod = self.combo_idioma.itemData(indice)
-        if cod and cod != idioma_ativo():
+        if not cod or cod == idioma_ativo():
+            return
+        # Alerta de PERMANÊNCIA, no próprio idioma escolhido: o idioma do selado
+        # de cada caso é definitivo. Trocar a tela é livre; é na CRIAÇÃO do caso
+        # que o idioma é carimbado e o selado passa a não se retraduzir.
+        resposta = QMessageBox.question(
+            self,
+            traduzir("te_idioma_alerta_titulo", cod),
+            traduzir("te_idioma_alerta_texto", cod, lingua=nome_do_idioma(cod)),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if resposta == QMessageBox.StandardButton.Yes:
             definir_e_salvar(cod)
             self.done(REABRIR)
+        else:
+            # Desfaz a seleção sem disparar outra troca.
+            self.combo_idioma.blockSignals(True)
+            self.combo_idioma.setCurrentIndex(idiomas_disponiveis().index(idioma_ativo()))
+            self.combo_idioma.blockSignals(False)
 
     def _esqueci(self) -> None:
         if self._escolhido():

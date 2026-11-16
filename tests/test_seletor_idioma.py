@@ -76,6 +76,24 @@ with tempfile.TemporaryDirectory() as td:
         checar("segundo item é en", dlg.combo_idioma.itemData(1) == "en")
         checar("começa no idioma ativo (pt)",
                dlg.combo_idioma.itemData(dlg.combo_idioma.currentIndex()) == "pt")
+
+        # [3] Alerta de permanência: trocar o idioma pede confirmação.
+        from PySide6.QtWidgets import QMessageBox  # noqa: E402
+        orig = QMessageBox.question
+        try:
+            definir_idioma("pt")
+            QMessageBox.question = lambda *a, **k: QMessageBox.StandardButton.No
+            dlg._trocar_idioma(1)  # tenta en, mas RECUSA o alerta
+            checar("recusar o alerta mantém o idioma ativo", idioma_ativo() == "pt")
+            checar("recusar devolve o seletor ao idioma atual",
+                   dlg.combo_idioma.itemData(dlg.combo_idioma.currentIndex()) == "pt")
+
+            QMessageBox.question = lambda *a, **k: QMessageBox.StandardButton.Yes
+            dlg._trocar_idioma(1)  # tenta en e ACEITA
+            checar("aceitar o alerta troca o idioma", idioma_ativo() == "en")
+        finally:
+            QMessageBox.question = orig
+            definir_idioma("pt")
     finally:
         perfil_service.usar_perfil_em(None)
 

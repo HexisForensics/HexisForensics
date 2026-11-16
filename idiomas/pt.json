@@ -1108,5 +1108,17 @@
   "sl_reg_decisao": "Decisão: {valor}",
   "sl_reg_motivo": "Motivo: {valor}",
   "sl_reg_alteracao": "Alteração: {valor}",
-  "sl_reg_justificativa": "Justificativa: {valor}"
+  "sl_reg_justificativa": "Justificativa: {valor}",
+  "sl_info_titulo": "                 INFORMAÇÕES DO CASO",
+  "sl_info_l_caso": "Identificador do Caso:        {valor}",
+  "sl_info_l_plataforma": "Plataforma:                   {valor}",
+  "sl_info_l_dispositivo": "Identificador do Dispositivo: {valor}",
+  "sl_info_l_abertura": "Data/Hora de Abertura:        {valor}",
+  "sl_comp_titulo": "COMPLEMENTO AO CASO",
+  "sl_comp_assunto": "Assunto:   {valor}",
+  "sl_comp_juntado": "Juntado em: {valor}",
+  "sl_comp_disclaimer": "Este complemento NÃO altera as aquisições já seladas. O material\ncoletado permanece exatamente como estava no momento do exame.",
+  "sl_comp_indice_cabecalho": "# Índice dos complementos deste caso — listagem de conveniência.\n# NÃO entra no manifesto: cresce a cada juntada. O que é selado\n# é cada complemento, no arquivo próprio indicado abaixo.\n",
+  "te_idioma_alerta_titulo": "Idioma do material selado",
+  "te_idioma_alerta_texto": "O idioma que você escolher aqui é o idioma DEFINITIVO do material selado de cada perícia criada a partir de agora — a cadeia de custódia, o registro do procedimento e o manifesto saem nele e não podem ser retraduzidos depois, como uma folha lacrada não se rasura.\n\nTrocar o idioma da tela continua livre; o que fica definitivo é o idioma em que cada caso é selado, no momento em que é criado.\n\nUsar {lingua}?"
 }

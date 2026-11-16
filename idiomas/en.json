@@ -1108,5 +1108,17 @@
   "sl_reg_decisao": "Decision: {valor}",
   "sl_reg_motivo": "Reason: {valor}",
   "sl_reg_alteracao": "Change: {valor}",
-  "sl_reg_justificativa": "Justification: {valor}"
+  "sl_reg_justificativa": "Justification: {valor}",
+  "sl_info_titulo": "                     CASE INFORMATION",
+  "sl_info_l_caso": "Case identifier:              {valor}",
+  "sl_info_l_plataforma": "Platform:                     {valor}",
+  "sl_info_l_dispositivo": "Device identifier:            {valor}",
+  "sl_info_l_abertura": "Opened at:                    {valor}",
+  "sl_comp_titulo": "AMENDMENT TO THE CASE",
+  "sl_comp_assunto": "Subject:   {valor}",
+  "sl_comp_juntado": "Added on:  {valor}",
+  "sl_comp_disclaimer": "This amendment does NOT alter the already sealed acquisitions. The\nmaterial collected remains exactly as it was at the time of the examination.",
+  "sl_comp_indice_cabecalho": "# Index of this case's amendments — convenience listing.\n# NOT part of the manifest: it grows with each addition. What is sealed\n# is each amendment, in its own file indicated below.\n",
+  "te_idioma_alerta_titulo": "Language of sealed material",
+  "te_idioma_alerta_texto": "The language you choose here is the DEFINITIVE language of the sealed material of every examination created from now on — the chain of custody, the procedure record and the manifest are written in it and cannot be retranslated later, just as a sealed page is not erased.\n\nSwitching the screen language stays free; what becomes definitive is the language each case is sealed in, at the moment it is created.\n\nUse {lingua}?"
 }
