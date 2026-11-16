@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
 )
 
 from services.material_service import LIMITE_PARA_CONFERIR_SOZINHO, Material
+from services.idioma import traduzir
 
 from .entrega_dialog import EntregaDialog
 from .visualizador_pdf import abrir_pdf
@@ -66,21 +67,19 @@ class MaterialWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
         self.busca = QLineEdit()
-        self.busca.setPlaceholderText("Buscar arquivo pelo nome (Enter)… vazio volta à árvore")
+        self.busca.setPlaceholderText(traduzir("mt_ph_busca"))
         self.busca.returnPressed.connect(self._buscar)
         topo = QHBoxLayout()
         topo.addWidget(self.busca, 1)
-        self.botao_exportar = QPushButton("📤 Exportar selecionados…")
-        self.botao_exportar.setToolTip(
-            "Copia os arquivos e pastas selecionados (Ctrl/Shift para vários) para entrega, "
-            "com conferência do hash, recibo e registro no caso.")
+        self.botao_exportar = QPushButton(traduzir("mt_btn_exportar"))
+        self.botao_exportar.setToolTip(traduzir("mt_tt_exportar"))
         self.botao_exportar.clicked.connect(self._exportar)
         topo.addWidget(self.botao_exportar)
         layout.addLayout(topo)
 
         divisor = QSplitter(Qt.Horizontal)
         self.arvore = QTreeWidget()
-        self.arvore.setHeaderLabels(["Nome", "Tamanho"])
+        self.arvore.setHeaderLabels([traduzir("mt_col_nome"), traduzir("mt_col_tamanho")])
         self.arvore.setSelectionMode(QTreeWidget.ExtendedSelection)
         self.arvore.header().setSectionResizeMode(0, QHeaderView.Stretch)
         self.arvore.header().setSectionResizeMode(1, QHeaderView.ResizeToContents)
@@ -91,14 +90,14 @@ class MaterialWidget(QWidget):
         direita = QWidget()
         coluna = QVBoxLayout(direita)
         coluna.setContentsMargins(6, 0, 0, 0)
-        self.ficha = QLabel("Escolha um arquivo.")
+        self.ficha = QLabel(traduzir("mt_escolha"))
         self.ficha.setWordWrap(True)
         self.ficha.setTextInteractionFlags(Qt.TextSelectableByMouse)
         coluna.addWidget(self.ficha)
         botoes = QHBoxLayout()
-        self.botao_conferir = QPushButton("Conferir com o lacre")
+        self.botao_conferir = QPushButton(traduzir("mt_btn_conferir"))
         self.botao_conferir.clicked.connect(lambda: self._conferir(forcar=True))
-        self.botao_pdf = QPushButton("📄 Abrir no visualizador")
+        self.botao_pdf = QPushButton(traduzir("mt_btn_pdf"))
         self.botao_pdf.clicked.connect(self._abrir_pdf)
         botoes.addWidget(self.botao_conferir)
         botoes.addWidget(self.botao_pdf)
@@ -183,27 +182,27 @@ class MaterialWidget(QWidget):
             item.setData(0, PAPEL_RELATIVO, entrada.relativo)
             item.setData(0, PAPEL_PASTA, False)
             self.arvore.addTopLevelItem(item)
-        self.ficha.setText(
-            f"<b>{len(achados)}</b> arquivo(s) com “{termo}” no nome"
-            + (" — mostrando os primeiros; refine a busca." if cortado else ".")
-        )
+        self.ficha.setText(traduzir(
+            "mt_busca_resultado", n=len(achados), termo=termo,
+            sufixo=(traduzir("mt_busca_cortado") if cortado else traduzir("mt_busca_fim")),
+        ))
 
     # ------------------------------------------------------------------
     def _limpar_ficha(self) -> None:
         self._relativo = ""
-        self.ficha.setText("Escolha um arquivo na árvore." if self.material else
-                           "Escolha uma aquisição na lista de dispositivos.")
+        self.ficha.setText(traduzir("mt_escolha_arvore") if self.material else
+                           traduzir("mt_escolha_aquisicao"))
         self.botao_conferir.setVisible(False)
         self.botao_pdf.setVisible(False)
         self.previas.setCurrentIndex(VAZIO)
-        self.nota.setText("Somente leitura: nada é gravado dentro da aquisição lacrada.")
+        self.nota.setText(traduzir("mt_nota_somente_leitura"))
 
     def _escolher(self, item) -> None:
         if item is None or self.material is None or item.data(0, PAPEL_RELATIVO) is None:
             return
         if item.data(0, PAPEL_PASTA):
             self._limpar_ficha()
-            self.ficha.setText(f"<b>Pasta:</b> {item.data(0, PAPEL_RELATIVO)}")
+            self.ficha.setText(traduzir("mt_pasta", valor=item.data(0, PAPEL_RELATIVO)))
             return
         self._relativo = item.data(0, PAPEL_RELATIVO)
         self._conferir(forcar=False)
@@ -214,14 +213,16 @@ class MaterialWidget(QWidget):
         try:
             tamanho = self.material.tamanho(relativo)
         except OSError as erro:
-            self.ficha.setText(f"<b>{relativo}</b><br>Não foi possível ler: {erro}")
+            self.ficha.setText(traduzir("mt_nao_leu", relativo=relativo, erro=erro))
             return
-        base = f"<b>{Path(relativo).name}</b><br>{relativo}<br>Tamanho: {_tamanho(tamanho)}"
+        base = traduzir("mt_base", nome=Path(relativo).name, relativo=relativo,
+                        tamanho=_tamanho(tamanho))
         no_lacre = self.material.lacre().get(relativo, "")
         if not forcar and tamanho > LIMITE_PARA_CONFERIR_SOZINHO:
             self.ficha.setText(
-                base + f"<br>SHA-256 no lacre: <code>{no_lacre or 'não consta do lacre'}</code>"
-                "<br><i>Arquivo grande: clique em “Conferir com o lacre” para recalcular.</i>")
+                base
+                + traduzir("mt_sha_lacre", valor=(no_lacre or traduzir("mt_nao_consta_lacre")))
+                + traduzir("mt_arquivo_grande"))
             self.botao_conferir.setVisible(True)
             return
         QApplication.setOverrideCursor(Qt.WaitCursor)
@@ -230,13 +231,14 @@ class MaterialWidget(QWidget):
         finally:
             QApplication.restoreOverrideCursor()
         cor = {"confere": "#19c3a6", "DIVERGE": "#ff6b6b"}.get(conferencia.situacao, "#c77700")
-        sinal = {"confere": "✔ confere com o lacre", "DIVERGE": "✖ DIVERGE do lacre"}.get(
-            conferencia.situacao, "⚠ não consta do lacre")
+        sinal = {"confere": traduzir("mt_sinal_confere"),
+                 "DIVERGE": traduzir("mt_sinal_diverge")}.get(
+            conferencia.situacao, traduzir("mt_sinal_nao_consta"))
         self.ficha.setText(
-            base + f"<br>SHA-256 agora: <code>{conferencia.sha256_agora}</code>"
-            + (f"<br>SHA-256 no lacre: <code>{conferencia.sha256_no_lacre}</code>"
+            base + traduzir("mt_sha_agora", valor=conferencia.sha256_agora)
+            + (traduzir("mt_sha_lacre", valor=conferencia.sha256_no_lacre)
                if conferencia.sha256_no_lacre else "")
-            + f"<br><b style='color:{cor}'>{sinal}</b>"
+            + traduzir("mt_sinal_final", cor=cor, sinal=sinal)
         )
         self.botao_conferir.setVisible(False)
 
@@ -268,40 +270,41 @@ class MaterialWidget(QWidget):
                         self.tabela.setItem(i, j, QTableWidgetItem(valor))
                 self.previas.setCurrentIndex(TABELA)
                 if cortado:
-                    self.nota.setText(f"Prévia das primeiras {len(linhas)} linhas. Somente leitura.")
+                    self.nota.setText(traduzir("mt_previa_planilha", n=len(linhas)))
             elif tipo == "pdf":
                 self.botao_pdf.setVisible(True)
-                self.aviso.setText("Documento PDF. Use “Abrir no visualizador”.")
+                self.aviso.setText(traduzir("mt_aviso_pdf"))
                 self.previas.setCurrentIndex(AVISO)
             elif tipo == "banco":
                 tabelas, motivo = self.material.previa_banco(relativo)
                 self.tabela.clear()
                 self.tabela.setColumnCount(2)
-                self.tabela.setHorizontalHeaderLabels(["Tabela", "Registros"])
+                self.tabela.setHorizontalHeaderLabels(
+                    [traduzir("mt_col_tabela"), traduzir("mt_col_registros")])
                 self.tabela.setRowCount(len(tabelas))
                 for i, (nome, quantidade) in enumerate(tabelas):
                     self.tabela.setItem(i, 0, QTableWidgetItem(nome))
                     self.tabela.setItem(i, 1, QTableWidgetItem(
-                        str(quantidade) if quantidade >= 0 else "ilegível"))
+                        str(quantidade) if quantidade >= 0 else traduzir("mt_ilegivel")))
                 if tabelas:
                     self.previas.setCurrentIndex(TABELA)
-                    self.nota.setText("Banco de dados aberto sobre uma CÓPIA temporária; o "
-                                      "original não foi tocado." + (f" {motivo}" if motivo else ""))
+                    self.nota.setText(traduzir("mt_nota_banco")
+                                      + (f" {motivo}" if motivo else ""))
                 else:
-                    self.aviso.setText(f"O banco não pôde ser lido: {motivo}")
+                    self.aviso.setText(traduzir("mt_banco_falhou", motivo=motivo))
                     self.previas.setCurrentIndex(AVISO)
             elif tipo == "texto":
                 conteudo, cortado = self.material.previa_texto(relativo)
                 self.texto.setPlainText(conteudo)
                 self.previas.setCurrentIndex(TEXTO)
                 if cortado:
-                    self.nota.setText("Prévia do início do arquivo. Somente leitura.")
+                    self.nota.setText(traduzir("mt_previa_texto"))
             else:
                 self.texto.setPlainText(self.material.previa_hex(relativo))
                 self.previas.setCurrentIndex(TEXTO)
-                self.nota.setText("Sem prévia para este tipo; mostrando o início em hexadecimal.")
+                self.nota.setText(traduzir("mt_previa_hex"))
         except Exception as erro:  # prévia nunca derruba a tela
-            self.aviso.setText(f"Prévia indisponível: {erro}")
+            self.aviso.setText(traduzir("mt_previa_indisponivel", erro=erro))
             self.previas.setCurrentIndex(AVISO)
 
     def _exportar(self) -> None:
@@ -310,7 +313,7 @@ class MaterialWidget(QWidget):
         escolhidos = [item.data(0, PAPEL_RELATIVO) for item in self.arvore.selectedItems()
                       if item.data(0, PAPEL_RELATIVO)]
         if not escolhidos:
-            QMessageBox.information(self, "Exportar", "Selecione arquivos ou pastas na árvore.")
+            QMessageBox.information(self, traduzir("mt_exportar_titulo"), traduzir("mt_exportar_vazio"))
             return
         EntregaDialog(self.material.pasta, material=escolhidos, parent=self).exec()
 

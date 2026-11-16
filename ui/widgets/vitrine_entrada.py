@@ -30,6 +30,8 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
+from services.idioma import traduzir
+
 AZUL = QColor("#3f8dfd")
 VERDE = QColor("#19c3a6")
 MARINHO = QColor("#0f1b2d")
@@ -48,9 +50,9 @@ SEGUNDOS_POR_CENA = 6.0
 TRANSICAO = 0.5
 
 LEGENDAS = (
-    ("Aquisição sem alterar o dispositivo", "Cada comando preservado como evidência"),
-    ("Integridade comprovada por hash", "SHA-256 de cada arquivo, no momento da coleta"),
-    ("Cadeia de custódia do início ao fim", "Lacre, fotografias e registro de cada etapa"),
+    ("vit_cena1_titulo", "vit_cena1_sub"),
+    ("vit_cena2_titulo", "vit_cena2_sub"),
+    ("vit_cena3_titulo", "vit_cena3_sub"),
 )
 
 
@@ -139,10 +141,10 @@ class VitrineAnimada(QWidget):
 
         # --- legenda e indicador
         y = palco.bottom() + 22
-        titulo, subtitulo = LEGENDAS[cena]
+        titulo_key, sub_key = LEGENDAS[cena]
         p.setOpacity(opacidade)
-        _texto(p, 0, y, titulo, _fonte(15, QFont.DemiBold), QColor("#e8f0fb"))
-        _texto(p, 0, y + 19, subtitulo, _fonte(12), CINZA)
+        _texto(p, 0, y, traduzir(titulo_key), _fonte(15, QFont.DemiBold), QColor("#e8f0fb"))
+        _texto(p, 0, y + 19, traduzir(sub_key), _fonte(12), CINZA)
         p.setOpacity(1.0)
         x = 0.0
         for indice in range(len(LEGENDAS)):
@@ -195,7 +197,7 @@ class VitrineAnimada(QWidget):
         p.setBrush(QColor("#1d3352"))
         p.drawPolygon(QPolygonF([QPointF(184, 172), QPointF(348, 172),
                                  QPointF(338, 186), QPointF(194, 186)]))
-        _texto(p, 210, 102, "Aquisição em andamento", _fonte(10), TEXTO_TELA)
+        _texto(p, 210, 102, traduzir("vit_aquisicao_andamento"), _fonte(10), TEXTO_TELA)
         p.setPen(Qt.NoPen)
         p.setBrush(TRILHO)
         p.drawRoundedRect(QRectF(212, 116, 92, 8), 4, 4)
@@ -256,7 +258,7 @@ class VitrineAnimada(QWidget):
             visto.setCapStyle(Qt.RoundCap)
             p.setPen(visto)
             p.drawPolyline(QPolygonF([QPointF(326, 88), QPointF(331, 93), QPointF(340, 83)]))
-        _texto(p, 186, 206, "mesmo arquivo → mesmo hash · 1 bit alterado → hash diferente",
+        _texto(p, 186, 206, traduzir("vit_hash_explicacao"),
                _fonte(11), CINZA, centro=True)
 
     # ------------------------------------------------------------------
@@ -278,7 +280,7 @@ class VitrineAnimada(QWidget):
         p.drawRoundedRect(aparelho, 9, 9)
         fonte = _fonte(10, QFont.Bold)
         fonte.setLetterSpacing(QFont.AbsoluteSpacing, 2)
-        _texto(p, 109, 203, "EVIDÊNCIA", fonte, TEXTO_TELA, centro=True)
+        _texto(p, 109, 203, traduzir("vit_evidencia"), fonte, TEXTO_TELA, centro=True)
 
         p.save()
         p.translate(168, 92)
@@ -286,13 +288,13 @@ class VitrineAnimada(QWidget):
         p.setPen(Qt.NoPen)
         p.setBrush(VERDE)
         p.drawRoundedRect(QRectF(-28, -12, 62, 26), 4, 4)
-        _texto(p, 3, 5, "Nº 004517", _fonte(11, QFont.Bold, "Consolas"), QColor("#0b1626"),
-               centro=True)
+        _texto(p, 3, 5, traduzir("vit_lacre_num"), _fonte(11, QFont.Bold, "Consolas"),
+               QColor("#0b1626"), centro=True)
         p.restore()
 
         for cx, cy, angulo, x, y, legenda, camera in (
-            (262, 98, 7, 222, 58, "frente", False),
-            (278, 176, -5, 236, 138, "verso", True),
+            (262, 98, 7, 222, 58, "vit_frente", False),
+            (278, 176, -5, 236, 138, "vit_verso", True),
         ):
             p.save()
             p.translate(cx, cy)
@@ -310,18 +312,18 @@ class VitrineAnimada(QWidget):
                 p.setPen(Qt.NoPen)
                 p.setBrush(AZUL)
                 p.drawEllipse(QPointF(x + 41, y + 24), 4, 4)
-            _texto(p, x + 42, y + 77, legenda, _fonte(8), QColor("#5b6675"), centro=True)
+            _texto(p, x + 42, y + 77, traduzir(legenda), _fonte(8), QColor("#5b6675"), centro=True)
             p.restore()
 
         p.setPen(QPen(INATIVO, 2))
         p.drawLine(QPointF(52, 238), QPointF(308, 238))
-        for x, rotulo in ((52, "recebimento"), (137, "aquisição"), (222, "lacre")):
+        for x, rotulo in ((52, "vit_recebimento"), (137, "vit_aquisicao"), (222, "vit_lacre")):
             p.setPen(Qt.NoPen)
             p.setBrush(AZUL)
             p.drawEllipse(QPointF(x, 238), 5, 5)
-            _texto(p, x, 256, rotulo, _fonte(9.5), CINZA, centro=True)
+            _texto(p, x, 256, traduzir(rotulo), _fonte(9.5), CINZA, centro=True)
         self._piscar(p, t, QPointF(308, 238), 5)
-        _texto(p, 308, 256, "laudo", _fonte(9.5), CINZA, centro=True)
+        _texto(p, 308, 256, traduzir("vit_laudo"), _fonte(9.5), CINZA, centro=True)
 
     @staticmethod
     def _piscar(p: QPainter, t: float, centro: QPointF, raio: float) -> None:
