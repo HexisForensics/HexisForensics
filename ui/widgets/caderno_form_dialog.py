@@ -37,6 +37,7 @@ from services.laudo_service import (
     protocolo_exige_especificacao as exige_especificacao,
 )
 from .ajuste_de_tela import caber_na_tela
+from services.idioma import traduzir
 
 LAUDO = "laudo"
 CADERNO = "caderno"
@@ -67,8 +68,8 @@ class CadernoFormDialog(QDialog):
         self.finalidade = finalidade
 
         self.setWindowTitle(
-            "Dados para o Laudo Pericial" if finalidade == LAUDO
-            else "Dados para o Caderno de Extração"
+            traduzir("cf_titulo_laudo") if finalidade == LAUDO
+            else traduzir("cf_titulo_caderno")
         )
         self.setModal(True)
         caber_na_tela(self, 680, 780)
@@ -86,29 +87,27 @@ class CadernoFormDialog(QDialog):
         form_layout = QVBoxLayout(content_widget)
 
         # --- SEÇÃO 1: IDENTIFICAÇÃO (somente leitura) ---
-        grupo_id = QGroupBox("1. Caso e dispositivo (do cadastro, somente leitura)")
+        grupo_id = QGroupBox(traduzir("cf_grupo_id"))
         layout_id = QFormLayout(grupo_id)
         for rotulo, valor in self.dados_caso.items():
             if rotulo in ROTULOS_DA_PECA or rotulo in ROTULOS_DE_CONTROLE:
                 continue
-            layout_id.addRow(f"{rotulo}:", QLabel(valor or "(não informado)"))
+            layout_id.addRow(f"{rotulo}:", QLabel(valor or traduzir("cf_nao_informado")))
         for rotulo in ROTULOS_DA_PECA:
-            layout_id.addRow(f"{rotulo}:", QLabel(self.dados_disp.get(rotulo) or "(não informado)"))
+            layout_id.addRow(f"{rotulo}:", QLabel(self.dados_disp.get(rotulo) or traduzir("cf_nao_informado")))
         form_layout.addWidget(grupo_id)
 
         # --- SEÇÃO 2: O QUE É PRÓPRIO DO LAUDO ---
         self.campo_numero = QLineEdit()
-        self.campo_numero.setPlaceholderText("Opcional. Ex.: 012/2026")
+        self.campo_numero.setPlaceholderText(traduzir("cf_ph_numero"))
         self.campo_objetivo = QTextEdit()
-        self.campo_objetivo.setPlaceholderText(
-            "O que foi requisitado: finalidade do exame e quesitos, se houver."
-        )
+        self.campo_objetivo.setPlaceholderText(traduzir("cf_ph_objetivo"))
         self.campo_objetivo.setMaximumHeight(90)
         if self.finalidade == LAUDO:
-            grupo_laudo = QGroupBox("2. Laudo")
+            grupo_laudo = QGroupBox(traduzir("cf_grupo_laudo"))
             layout_laudo = QFormLayout(grupo_laudo)
-            layout_laudo.addRow("Número do laudo:", self.campo_numero)
-            layout_laudo.addRow("Objetivo do exame / quesitos:", self.campo_objetivo)
+            layout_laudo.addRow(traduzir("cf_label_numero"), self.campo_numero)
+            layout_laudo.addRow(traduzir("cf_label_objetivo"), self.campo_objetivo)
             form_layout.addWidget(grupo_laudo)
 
         # --- SEÇÃO 3: MODALIDADE DE ACESSO ---
@@ -116,7 +115,7 @@ class CadernoFormDialog(QDialog):
         # executado. Um campo com constante fixa sob o rótulo
         # "pré-detectado" já fez um documento descrever imagem bit-a-bit
         # como backup lógico via ADB.
-        grupo_metodo = QGroupBox("3. Modalidade de Acesso")
+        grupo_metodo = QGroupBox(traduzir("cf_grupo_metodo"))
         layout_metodo = QFormLayout(grupo_metodo)
 
         sugestao = (
@@ -124,26 +123,20 @@ class CadernoFormDialog(QDialog):
         )
         self.campo_tipo_extracao = QLineEdit(sugestao)
         if sugestao:
-            aviso_modalidade = (
-                "Preenchido com os módulos que esta aquisição registrou ter "
-                "executado. Pode ser reescrito."
-            )
+            aviso_modalidade = traduzir("cf_aviso_modalidade_sugerido")
         else:
             # Sem registro, o campo fica VAZIO. Oferecer um palpite plausível
             # é o defeito que este bloco corrige.
-            self.campo_tipo_extracao.setPlaceholderText("Descreva a modalidade empregada")
-            aviso_modalidade = (
-                "O método desta aquisição não pôde ser lido, e nada foi sugerido "
-                "aqui. Descreva a modalidade empregada."
-            )
-        layout_metodo.addRow("Modalidade:", self.campo_tipo_extracao)
+            self.campo_tipo_extracao.setPlaceholderText(traduzir("cf_ph_modalidade"))
+            aviso_modalidade = traduzir("cf_aviso_modalidade_vazio")
+        layout_metodo.addRow(traduzir("cf_label_modalidade"), self.campo_tipo_extracao)
         rotulo_modalidade = QLabel(f"<i>{aviso_modalidade}</i>")
         rotulo_modalidade.setWordWrap(True)
         layout_metodo.addRow(rotulo_modalidade)
         form_layout.addWidget(grupo_metodo)
 
         # --- SEÇÃO 4: PROTOCOLOS ---
-        grupo_check = QGroupBox("4. Protocolos Periciais (ABNT NBR ISO/IEC 27037)")
+        grupo_check = QGroupBox(traduzir("cf_grupo_protocolos"))
         layout_check = QVBoxLayout(grupo_check)
 
         self.grupos_botoes = []
@@ -155,16 +148,12 @@ class CadernoFormDialog(QDialog):
         self.perguntas_com_clausula = perguntas_dos_protocolos()
         self.perguntas = [pergunta for _, pergunta in self.perguntas_com_clausula]
 
-        aviso = QLabel(
-            "<i>Itens que dependem de quem realizou o exame. Os demais requisitos da "
-            "norma são verificados pela própria ferramenta e constam do documento com o "
-            "registro que os comprova.</i>"
-        )
+        aviso = QLabel(traduzir("cf_aviso_protocolos"))
         aviso.setWordWrap(True)
         layout_check.addWidget(aviso)
 
         for clausula, p in self.perguntas_com_clausula:
-            lbl = QLabel(f"<b>[{clausula}]</b> {p}")
+            lbl = QLabel(traduzir("cf_item", clausula=clausula, pergunta=p))
             lbl.setWordWrap(True)
             layout_check.addWidget(lbl)
 
@@ -174,7 +163,8 @@ class CadernoFormDialog(QDialog):
             # NENHUMA opção vem marcada. Pré-selecionar "Sim" fazia o
             # documento afirmar o que ninguém confirmou — e o examinador
             # que apenas clicasse em Gerar assinava tudo.
-            for indice, texto in enumerate(("Sim", "Não", "Não se aplica")):
+            for indice, texto in enumerate(
+                    (traduzir("cf_sim"), traduzir("cf_nao"), traduzir("cf_nao_aplica"))):
                 botao = QRadioButton(texto)
                 bg.addButton(botao, indice)
                 linha_radio.addWidget(botao)
@@ -183,7 +173,8 @@ class CadernoFormDialog(QDialog):
             # que pede "Especificar" só fica completa aqui.
             campo_obs = QLineEdit()
             campo_obs.setPlaceholderText(
-                "Especificar…" if exige_especificacao(p) else "Observação (opcional)"
+                traduzir("cf_ph_especificar") if exige_especificacao(p)
+                else traduzir("cf_ph_observacao")
             )
             linha_radio.addWidget(campo_obs, 1)
 
@@ -191,9 +182,7 @@ class CadernoFormDialog(QDialog):
             self.grupos_botoes.append(bg)
             self.campos_observacao.append(campo_obs)
 
-        layout_check.addWidget(QLabel(
-            "<b>Observações do examinador</b> (meio de isolamento empregado, ressalvas):"
-        ))
+        layout_check.addWidget(QLabel(traduzir("cf_label_observacoes")))
         self.campo_observacoes = QTextEdit()
         self.campo_observacoes.setMaximumHeight(70)
         layout_check.addWidget(self.campo_observacoes)
@@ -202,32 +191,24 @@ class CadernoFormDialog(QDialog):
         # --- SEÇÃO 5: CONSIDERAÇÕES (laudo) ---
         self.campo_consideracoes = QTextEdit()
         self.campo_consideracoes.setMaximumHeight(110)
-        self.campo_consideracoes.setPlaceholderText(
-            "Opcional. Entra na conclusão, identificado como considerações do examinador."
-        )
+        self.campo_consideracoes.setPlaceholderText(traduzir("cf_ph_consideracoes"))
         if self.finalidade == LAUDO:
-            grupo_conclusao = QGroupBox("5. Considerações do examinador")
+            grupo_conclusao = QGroupBox(traduzir("cf_grupo_consideracoes"))
             layout_conclusao = QVBoxLayout(grupo_conclusao)
-            nota = QLabel(
-                "<i>A conclusão do laudo é derivada do desfecho gravado na aquisição. "
-                "O texto abaixo é acrescentado a ela, como declaração sua.</i>"
-            )
+            nota = QLabel(traduzir("cf_nota_consideracoes"))
             nota.setWordWrap(True)
             layout_conclusao.addWidget(nota)
             layout_conclusao.addWidget(self.campo_consideracoes)
             form_layout.addWidget(grupo_conclusao)
 
         # --- FOTOS E INTEGRIDADE: só informam ---
-        grupo_fotos = QGroupBox("Fotografias e integridade")
+        grupo_fotos = QGroupBox(traduzir("cf_grupo_fotos"))
         layout_fotos = QVBoxLayout(grupo_fotos)
         fotos = self.dados_disp.get("fotos", [])
         texto_fotos = (
-            ", ".join(Path(f).name for f in fotos) if fotos else "Nenhuma foto anexada."
+            ", ".join(Path(f).name for f in fotos) if fotos else traduzir("cf_sem_fotos")
         )
-        rotulo_fotos = QLabel(
-            f"Fotografias: {texto_fotos}<br>O SHA-256 do manifesto desta aquisição é "
-            "calculado e impresso no documento automaticamente."
-        )
+        rotulo_fotos = QLabel(traduzir("cf_rotulo_fotos", fotos=texto_fotos))
         rotulo_fotos.setWordWrap(True)
         layout_fotos.addWidget(rotulo_fotos)
         form_layout.addWidget(grupo_fotos)
@@ -238,12 +219,12 @@ class CadernoFormDialog(QDialog):
         linha_botoes = QHBoxLayout()
         linha_botoes.addStretch()
 
-        btn_cancelar = QPushButton("Cancelar")
+        btn_cancelar = QPushButton(traduzir("cf_btn_cancelar"))
         btn_cancelar.clicked.connect(self.reject)
 
         btn_gerar = QPushButton(
-            "📄 Gerar Laudo Pericial (PDF)" if self.finalidade == LAUDO
-            else "💾 Salvar e Gerar Caderno"
+            traduzir("cf_btn_gerar_laudo") if self.finalidade == LAUDO
+            else traduzir("cf_btn_gerar_caderno")
         )
         btn_gerar.setDefault(True)
         btn_gerar.clicked.connect(self.accept)
