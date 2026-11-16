@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 
 from ..style import COR_FALHA
 from .ajuste_de_tela import caber_na_tela
+from services.idioma import traduzir
 
 
 class DeviceInfoDialog(QDialog):
@@ -42,7 +43,7 @@ class DeviceInfoDialog(QDialog):
     def __init__(self, parent=None, modo_edicao: bool = False):
         super().__init__(parent)
         self.modo_edicao = modo_edicao
-        self.setWindowTitle("Dispositivo e Cadeia de Custódia")
+        self.setWindowTitle(traduzir("di_titulo"))
         self.setModal(True)
         caber_na_tela(self, 500, 560)
 
@@ -58,30 +59,29 @@ class DeviceInfoDialog(QDialog):
         form.setSpacing(10)
 
         self.campo_marca_modelo = QLineEdit()
-        self.campo_marca_modelo.setPlaceholderText("Ex: Samsung Galaxy S23 / iPhone 14")
-        
+        self.campo_marca_modelo.setPlaceholderText(traduzir("di_ph_marca"))
+
         self.campo_cor = QLineEdit()
-        self.campo_cor.setPlaceholderText("Ex: Preto, Prata, Azul")
+        self.campo_cor.setPlaceholderText(traduzir("di_ph_cor"))
 
         self.campo_estado = QLineEdit()
-        self.campo_estado.setPlaceholderText("Ex: Ligado, com tela trincada, desligado")
+        self.campo_estado.setPlaceholderText(traduzir("di_ph_estado"))
 
         self.campo_lacre = QLineEdit()
-        self.campo_lacre.setPlaceholderText("Ex: Lacre nº 9876543")
+        self.campo_lacre.setPlaceholderText(traduzir("di_ph_lacre"))
 
 
-        form.addRow("Marca/modelo:", self.campo_marca_modelo)
-        form.addRow("Cor:", self.campo_cor)
-        form.addRow("Estado do dispositivo:", self.campo_estado)
-        form.addRow("Número do lacre:", self.campo_lacre)
+        form.addRow(traduzir("di_label_marca"), self.campo_marca_modelo)
+        form.addRow(traduzir("di_label_cor"), self.campo_cor)
+        form.addRow(traduzir("di_label_estado"), self.campo_estado)
+        form.addRow(traduzir("di_label_lacre"), self.campo_lacre)
 
         layout.addLayout(form)
 
         # Seção de Evidências Fotográficas
-        self.rotulo_fotos = QLabel(
-            f"<b>Fotografias da peça</b> ({self.MINIMO_DE_FOTOS} obrigatórias, "
-            f"por exemplo frente e verso; até {self.MAXIMO_DE_FOTOS}):"
-        )
+        self.rotulo_fotos = QLabel(traduzir(
+            "di_rotulo_fotos", min=self.MINIMO_DE_FOTOS, max=self.MAXIMO_DE_FOTOS
+        ))
         layout.addWidget(self.rotulo_fotos)
         
         self.lista_fotos = QListWidget()
@@ -90,10 +90,10 @@ class DeviceInfoDialog(QDialog):
 
         # Botões de gerenciamento de fotos (Adicionar e Remover)
         linha_botoes_fotos = QHBoxLayout()
-        btn_adicionar = QPushButton("📷 Adicionar Foto")
+        btn_adicionar = QPushButton(traduzir("di_btn_adicionar"))
         btn_adicionar.clicked.connect(self._adicionar_fotos)
-        
-        btn_remover = QPushButton("🗑️ Remover Foto Selecionada")
+
+        btn_remover = QPushButton(traduzir("di_btn_remover"))
         btn_remover.setStyleSheet(f"color: {COR_FALHA};")
         btn_remover.clicked.connect(self._remover_foto)
 
@@ -111,10 +111,10 @@ class DeviceInfoDialog(QDialog):
         linha_botoes = QHBoxLayout()
         linha_botoes.addStretch()
 
-        self.botao_cancelar = QPushButton("Cancelar")
+        self.botao_cancelar = QPushButton(traduzir("di_btn_cancelar"))
         self.botao_cancelar.clicked.connect(self.reject)
 
-        self.botao_ok = QPushButton("Salvar / Confirmar")
+        self.botao_ok = QPushButton(traduzir("di_btn_salvar"))
         self.botao_ok.setDefault(True)
         self.botao_ok.clicked.connect(self._confirmar)
 
@@ -124,7 +124,7 @@ class DeviceInfoDialog(QDialog):
 
     def _adicionar_fotos(self) -> None:
         arquivos, _ = QFileDialog.getOpenFileNames(
-            self, "Selecionar Fotos do Aparelho", "", "Imagens (*.png *.jpg *.jpeg)"
+            self, traduzir("di_selecionar_fotos"), "", traduzir("di_filtro_imagens")
         )
         for arq in arquivos:
             if len(self.caminhos_fotos) < self.MAXIMO_DE_FOTOS:
@@ -134,14 +134,15 @@ class DeviceInfoDialog(QDialog):
                     self.lista_fotos.addItem(QListWidgetItem(p.name))
             else:
                 QMessageBox.warning(
-                    self, "Limite", f"O limite máximo é de {self.MAXIMO_DE_FOTOS} fotos."
+                    self, traduzir("di_limite_titulo"),
+                    traduzir("di_limite_corpo", max=self.MAXIMO_DE_FOTOS)
                 )
                 break
 
     def _remover_foto(self) -> None:
         linha_selecionada = self.lista_fotos.currentRow()
         if linha_selecionada < 0:
-            QMessageBox.warning(self, "Aviso", "Selecione na lista acima a foto que deseja remover.")
+            QMessageBox.warning(self, traduzir("di_aviso"), traduzir("di_selecione_foto"))
             return
 
         # Remove da lista visual e da lista interna de caminhos
@@ -151,17 +152,16 @@ class DeviceInfoDialog(QDialog):
     def _confirmar(self) -> None:
         lacre = self.campo_lacre.text().strip()
         if not lacre:
-            QMessageBox.warning(self, "Aviso", "O número do lacre do dispositivo é obrigatório.")
+            QMessageBox.warning(self, traduzir("di_aviso"), traduzir("di_lacre_obrigatorio"))
             self.campo_lacre.setFocus()
             return
 
         if not self.modo_edicao and len(self.caminhos_fotos) < self.MINIMO_DE_FOTOS:
             QMessageBox.warning(
                 self,
-                "Aviso",
-                f"Anexe {self.MINIMO_DE_FOTOS} fotografias da peça (por exemplo, frente e "
-                f"verso): elas documentam o estado em que o dispositivo foi recebido. "
-                f"Há {len(self.caminhos_fotos)} anexada(s).",
+                traduzir("di_aviso"),
+                traduzir("di_fotos_obrigatorias", min=self.MINIMO_DE_FOTOS,
+                         n=len(self.caminhos_fotos)),
             )
             return
 
