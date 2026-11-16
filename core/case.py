@@ -44,6 +44,7 @@ from typing import Dict, Optional, Tuple
 # por isso nao entra em manifesto nenhum. Uma unica definicao -- duas ja
 # causaram defeito neste projeto.
 from .hashing import NOME_INDICE_COMPLEMENTOS, PASTA_COMPLEMENTOS
+from .idioma import IDIOMA_PADRAO, idioma_ativo, traduzir
 
 PREFIXO_PADRAO = "CASO"
 
@@ -68,6 +69,38 @@ CAMPOS_DO_DISPOSITIVO = (
 )
 
 NAO_INFORMADO = "não informado"
+
+# Rótulo de cada campo selado por chave de tradução. O VALOR nunca é
+# traduzido; só o rótulo, no idioma CARIMBADO no caso — e é por esse mesmo
+# idioma que o selado é LIDO de volta (ver `services.dossie_service`). O
+# valor PT de cada chave é idêntico ao rótulo acima, para o selado antigo
+# (todo PT) sair byte a byte igual.
+_CHAVE_DE_TRADUCAO = {
+    "referencia": "sl_campo_referencia",
+    "descricao": "sl_campo_descricao",
+    "solicitante": "sl_campo_solicitante",
+    "marca_modelo": "sl_campo_equipamento",
+    "cor": "sl_campo_cor",
+    "estado": "sl_campo_estado",
+    "lacre": "sl_campo_lacre",
+}
+
+
+def rotulos_do_caso(idioma: str = IDIOMA_PADRAO):
+    """(chave, rótulo no idioma) dos dados do caso no `cadeia_custodia.txt`."""
+    return [(chave, traduzir(_CHAVE_DE_TRADUCAO[chave], idioma)) for chave, _ in CAMPOS_DO_CASO]
+
+
+def rotulos_do_dispositivo(idioma: str = IDIOMA_PADRAO):
+    """(chave, rótulo no idioma) dos dados da peça no `cadeia_custodia.txt`."""
+    return [(chave, traduzir(_CHAVE_DE_TRADUCAO[chave], idioma))
+            for chave, _ in CAMPOS_DO_DISPOSITIVO]
+
+
+def nao_informado(idioma: str = IDIOMA_PADRAO) -> str:
+    """O marcador de campo vazio no idioma dado — o selado o grava por extenso."""
+    return traduzir("sl_nao_informado", idioma)
+
 
 # Material DECIFRADO a partir da aquisição (hoje, o backup do WhatsApp). É
 # derivado, produzido depois do selo, e por isso mora no nível do caso.
@@ -272,8 +305,16 @@ def tem_registro_do_caso(pasta_caso: Path) -> bool:
 
 def gravar_caso(pasta_caso: Path, dados: Dict[str, str]) -> Path:
     """
-    Grava o registro do caso. `aberto_em` é preservado entre regravações:
-    retificar a descrição não muda o dia em que o caso foi aberto.
+    Grava o registro do caso. `aberto_em` e `idioma` são preservados entre
+    regravações: retificar a descrição não muda o dia em que o caso foi
+    aberto, nem o idioma em que seu material selado foi — e será — escrito.
+
+    O `idioma` é CARIMBADO na criação, com o idioma ativo (o que o examinador
+    escolheu na entrada). É o idioma definitivo do selado deste caso: a
+    cadeia de custódia, o registro do procedimento e o manifesto saem nele, e
+    são LIDOS de volta por ele — por isso viaja com o caso, não com a sessão
+    de quem o abre depois. Retraduzir o selado invalidaria o manifesto; por
+    isso aqui ele nunca é reescrito depois da criação.
     """
     pasta_caso = Path(pasta_caso)
     pasta_caso.mkdir(parents=True, exist_ok=True)
@@ -281,17 +322,40 @@ def gravar_caso(pasta_caso: Path, dados: Dict[str, str]) -> Path:
 
     agora = datetime.now().astimezone().isoformat(timespec="seconds")
     aberto_em = agora
+    idioma = idioma_ativo()
     if caminho.is_file():
         try:
-            aberto_em = json.loads(caminho.read_text(encoding="utf-8")).get("aberto_em") or agora
+            anterior = json.loads(caminho.read_text(encoding="utf-8"))
+            aberto_em = anterior.get("aberto_em") or agora
+            idioma = anterior.get("idioma") or idioma
         except (OSError, ValueError):
             pass
 
-    registro = {"identificador": pasta_caso.name, "aberto_em": aberto_em, "atualizado_em": agora}
+    registro = {
+        "identificador": pasta_caso.name, "aberto_em": aberto_em,
+        "atualizado_em": agora, "idioma": idioma,
+    }
     for chave, _ in CAMPOS_DO_CASO:
         registro[chave] = str(dados.get(chave, "") or "").strip()
     caminho.write_text(json.dumps(registro, ensure_ascii=False, indent=2), encoding="utf-8")
     return caminho
+
+
+def idioma_do_caso(pasta: Path) -> str:
+    """
+    O idioma CARIMBADO no caso — o idioma definitivo do seu material selado.
+
+    Aceita a pasta do caso ou a de uma aquisição (sobe ao caso). Caso antigo,
+    sem o carimbo, é português: todo o selado escrito antes desta frente é PT,
+    e assim continua sendo lido corretamente.
+    """
+    try:
+        dados = json.loads(
+            (pasta_do_caso(pasta) / NOME_ARQUIVO_CASO).read_text(encoding="utf-8"))
+        idioma = dados.get("idioma")
+    except (OSError, ValueError):
+        idioma = None
+    return idioma or IDIOMA_PADRAO
 
 
 def montar_cadeia_custodia(
@@ -299,7 +363,8 @@ def montar_cadeia_custodia(
     dados_caso: Dict[str, str],
     dispositivo: Dict[str, str],
     fotos: Optional[list] = None,
-    titulo: str = "CADEIA DE CUSTÓDIA",
+    titulo: Optional[str] = None,
+    idioma: str = IDIOMA_PADRAO,
 ) -> str:
     """
     Texto do `cadeia_custodia.txt` de uma aquisição — a única montagem dele.
@@ -307,24 +372,39 @@ def montar_cadeia_custodia(
     Traz os dados do caso COMO ESTAVAM no momento da aquisição (copiados de
     `caso.json`) e os do dispositivo. Campo em branco sai como "não
     informado": o registro diz que ninguém preencheu, em vez de calar.
-    """
-    def valor(dados, chave):
-        return str(dados.get(chave, "") or "").strip() or NAO_INFORMADO
 
-    linhas = [f"=== {titulo} ===", f"Caso: {identificador_caso}"]
-    linhas += [f"{rotulo}: {valor(dados_caso, chave)}" for chave, rotulo in CAMPOS_DO_CASO]
+    `idioma` é o CARIMBADO no caso — o idioma definitivo deste selado. Os
+    rótulos saem nele; os VALORES, nunca traduzidos. É pelo mesmo idioma que
+    o arquivo é lido de volta, então rótulo e leitura não se desencontram.
+    """
+    vazio = nao_informado(idioma)
+
+    def valor(dados, chave):
+        return str(dados.get(chave, "") or "").strip() or vazio
+
+    cabecalho = titulo if titulo is not None else traduzir("sl_cadeia_titulo", idioma)
+    linhas = [f"=== {cabecalho} ===", f"{traduzir('sl_caso', idioma)}: {identificador_caso}"]
+    linhas += [f"{rotulo}: {valor(dados_caso, chave)}" for chave, rotulo in rotulos_do_caso(idioma)]
     linhas.append("")
-    linhas += [f"{rotulo}: {valor(dispositivo, chave)}" for chave, rotulo in CAMPOS_DO_DISPOSITIVO]
-    linhas.append(f"Fotos Anexas: {', '.join(str(f) for f in fotos or []) or 'nenhuma'}")
+    linhas += [f"{rotulo}: {valor(dispositivo, chave)}"
+               for chave, rotulo in rotulos_do_dispositivo(idioma)]
+    anexas = ", ".join(str(f) for f in fotos or []) or traduzir("sl_nenhuma", idioma)
+    linhas.append(f"{traduzir('sl_fotos_anexas', idioma)}: {anexas}")
     return "\n".join(linhas) + "\n"
 
 
-def substituir_campos_da_cadeia(texto: str, novos: Dict[str, str], titulo: str) -> str:
+def substituir_campos_da_cadeia(
+    texto: str, novos: Dict[str, str], titulo: str, idioma: str = IDIOMA_PADRAO
+) -> str:
     """
     Reescreve, num `cadeia_custodia.txt` já existente, só os rótulos dados
     em `novos` — as demais linhas saem como estavam, inclusive as de
     registros antigos, cujos campos não são mais os de hoje.
+
+    `novos` é indexado pelos rótulos JÁ no idioma do arquivo (o carimbado no
+    caso): retificar não troca o idioma do selado, só os valores.
     """
+    vazio = nao_informado(idioma)
     linhas = []
     for linha in texto.splitlines():
         if linha.startswith("==="):
@@ -332,7 +412,7 @@ def substituir_campos_da_cadeia(texto: str, novos: Dict[str, str], titulo: str) 
             continue
         rotulo = linha.split(":", 1)[0].strip() if ":" in linha else ""
         if rotulo in novos:
-            linhas.append(f"{rotulo}: {str(novos[rotulo]).strip() or NAO_INFORMADO}")
+            linhas.append(f"{rotulo}: {str(novos[rotulo]).strip() or vazio}")
         else:
             linhas.append(linha)
     return "\n".join(linhas) + "\n"

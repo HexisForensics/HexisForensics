@@ -1075,5 +1075,18 @@
   "pr_l_por_que_zero": "  Por que zero:      {valor}",
   "pr_l_nao_interpretado": "  NÃO interpretado:  {n} trecho(s) — ver {arquivo}",
   "pr_alcance_titulo": "ALCANCE DESTE RELATÓRIO",
-  "pr_alcance": "  Este documento APRESENTA a evidência; não a substitui. Cada linha\n  das planilhas traz o arquivo e a linha de origem, e o original\n  permanece na aquisição selada, onde pode ser conferido.\n\n  Normalizar é interpretar: datas foram convertidas do formato do\n  aparelho para o fuso declarado acima, e códigos numéricos foram\n  traduzidos. Código não reconhecido é apresentado como tal, nunca\n  adivinhado.\n\n  Contagem zero NUNCA significa, por si só, ausência de dado no\n  aparelho. O motivo de cada zero está declarado acima."
+  "pr_alcance": "  Este documento APRESENTA a evidência; não a substitui. Cada linha\n  das planilhas traz o arquivo e a linha de origem, e o original\n  permanece na aquisição selada, onde pode ser conferido.\n\n  Normalizar é interpretar: datas foram convertidas do formato do\n  aparelho para o fuso declarado acima, e códigos numéricos foram\n  traduzidos. Código não reconhecido é apresentado como tal, nunca\n  adivinhado.\n\n  Contagem zero NUNCA significa, por si só, ausência de dado no\n  aparelho. O motivo de cada zero está declarado acima.",
+  "sl_cadeia_titulo": "CADEIA DE CUSTÓDIA",
+  "sl_cadeia_titulo_retificado": "CADEIA DE CUSTÓDIA (DISPOSITIVO RETIFICADO)",
+  "sl_caso": "Caso",
+  "sl_campo_referencia": "Referência",
+  "sl_campo_descricao": "Descrição",
+  "sl_campo_solicitante": "Solicitante",
+  "sl_campo_equipamento": "Equipamento",
+  "sl_campo_cor": "Cor",
+  "sl_campo_estado": "Estado",
+  "sl_campo_lacre": "Lacre",
+  "sl_fotos_anexas": "Fotos Anexas",
+  "sl_nenhuma": "nenhuma",
+  "sl_nao_informado": "não informado"
 }

@@ -18,18 +18,20 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from core.android.extractors.base import PASTA_AQUISICAO
 from core.aparelho import ler_caracteristicas
 from core.categorias import Categoria, classificar
 from core.case import (
-    CAMPOS_DO_DISPOSITIVO,
     NOME_CADEIA_CUSTODIA,
     PASTA_FOTOS,
     descrever_aquisicao,
+    idioma_do_caso,
     pasta_do_caso,
+    rotulos_do_dispositivo,
 )
+from core.idioma import traduzir
 from core.desfecho import PASTA_DESFECHO, DesfechoDaColeta, ler_desfecho
 from core.fundamento import PASTA_AUTORIZACAO, Autorizacao, ler_autorizacao_da_aquisicao
 from core.hashing import (
@@ -42,7 +44,7 @@ from core.metodo import PASTA_METODO, MetodoDeclarado, ler_metodo
 from core.operador import ler_da_aquisicao as ler_operador
 from core.procedimento import NOME_ARQUIVO as NOME_REGISTRO
 from core.relogio import ler_desvio_registrado
-from services.case_service import ROTULOS_FORA_DO_CASO, VALORES_VAZIOS, ler_cadeia_custodia
+from services.case_service import VALORES_VAZIOS, ler_cadeia_custodia
 
 _INICIO_DE_EVENTO = re.compile(r"^\[([^\]]+)\]\s+(.*)$")
 
@@ -79,6 +81,9 @@ class Dossie:
     # Cadeia de custódia: o que foi DECLARADO no cadastro.
     dados_do_caso: List[Tuple[str, str]] = field(default_factory=list)
     peca: List[Tuple[str, str]] = field(default_factory=list)
+    # A peça por CHAVE canônica ({"lacre": ...}), para ler o campo certo seja
+    # qual for o idioma em que o selado foi escrito.
+    peca_por_chave: Dict[str, str] = field(default_factory=dict)
     tem_cadeia_de_custodia: bool = False
     fotos: List[Path] = field(default_factory=list)
 
@@ -120,11 +125,11 @@ class Dossie:
 
     @property
     def lacre(self) -> str:
-        return dict(self.peca).get("Lacre", "")
+        return self.peca_por_chave.get("lacre", "")
 
     @property
     def equipamento(self) -> str:
-        return dict(self.peca).get("Equipamento", "")
+        return self.peca_por_chave.get("marca_modelo", "")
 
     @property
     def identificador_do_dispositivo(self) -> str:
@@ -225,13 +230,21 @@ def _ler_cadeia(dossie: Dossie) -> None:
     dossie.tem_cadeia_de_custodia = True
     dados = ler_cadeia_custodia(arquivo)
 
+    # Os rótulos do arquivo estão no idioma CARIMBADO no caso. É por ele que
+    # se sabe qual rótulo corresponde a cada chave — e assim o lacre e o
+    # equipamento são lidos certos, mesmo num caso selado em inglês.
+    idioma = idioma_do_caso(dossie.pasta)
+    pares_disp = rotulos_do_dispositivo(idioma)
+
     def limpo(valor: str) -> str:
         return "" if valor in VALORES_VAZIOS else valor
 
-    dossie.peca = [(rotulo, limpo(dados.get(rotulo, ""))) for _, rotulo in CAMPOS_DO_DISPOSITIVO]
+    dossie.peca = [(rotulo, limpo(dados.get(rotulo, ""))) for _, rotulo in pares_disp]
+    dossie.peca_por_chave = {chave: limpo(dados.get(rotulo, "")) for chave, rotulo in pares_disp}
+    fora = {rotulo for _, rotulo in pares_disp} | {
+        traduzir("sl_caso", idioma), "Tipo Projeto", traduzir("sl_fotos_anexas", idioma)}
     dossie.dados_do_caso = [
-        (rotulo, limpo(valor)) for rotulo, valor in dados.items()
-        if rotulo not in ROTULOS_FORA_DO_CASO
+        (rotulo, limpo(valor)) for rotulo, valor in dados.items() if rotulo not in fora
     ]
 
     pasta_fotos = dossie.pasta / PASTA_FOTOS

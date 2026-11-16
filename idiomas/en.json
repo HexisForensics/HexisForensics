@@ -1075,5 +1075,18 @@
   "pr_l_por_que_zero": "  Why zero:           {valor}",
   "pr_l_nao_interpretado": "  NOT interpreted:    {n} segment(s) — see {arquivo}",
   "pr_alcance_titulo": "SCOPE OF THIS REPORT",
-  "pr_alcance": "  This document PRESENTS the evidence; it does not replace it. Each line\n  of the spreadsheets carries the source file and line, and the original\n  remains in the sealed acquisition, where it can be checked.\n\n  To normalize is to interpret: dates were converted from the device\n  format to the time zone declared above, and numeric codes were\n  translated. An unrecognized code is presented as such, never\n  guessed.\n\n  A count of zero NEVER means, by itself, an absence of data on the\n  device. The reason for each zero is stated above."
+  "pr_alcance": "  This document PRESENTS the evidence; it does not replace it. Each line\n  of the spreadsheets carries the source file and line, and the original\n  remains in the sealed acquisition, where it can be checked.\n\n  To normalize is to interpret: dates were converted from the device\n  format to the time zone declared above, and numeric codes were\n  translated. An unrecognized code is presented as such, never\n  guessed.\n\n  A count of zero NEVER means, by itself, an absence of data on the\n  device. The reason for each zero is stated above.",
+  "sl_cadeia_titulo": "CHAIN OF CUSTODY",
+  "sl_cadeia_titulo_retificado": "CHAIN OF CUSTODY (DEVICE AMENDED)",
+  "sl_caso": "Case",
+  "sl_campo_referencia": "Reference",
+  "sl_campo_descricao": "Description",
+  "sl_campo_solicitante": "Requester",
+  "sl_campo_equipamento": "Equipment",
+  "sl_campo_cor": "Color",
+  "sl_campo_estado": "Condition",
+  "sl_campo_lacre": "Seal",
+  "sl_fotos_anexas": "Attached photos",
+  "sl_nenhuma": "none",
+  "sl_nao_informado": "not provided"
 }

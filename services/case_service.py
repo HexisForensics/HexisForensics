@@ -23,15 +23,19 @@ from core.case import (
     descrever_aquisicao,
     e_pasta_de_aquisicao,
     gravar_caso,
+    idioma_do_caso,
     juntar_complemento,
     ler_caso,
     montar_cadeia_custodia,
+    pasta_do_caso,
     registrar_info_caso,
+    rotulos_do_dispositivo,
     sanitizar_nome,
     substituir_campos_da_cadeia,
     sugerir_proximo_identificador,
     tem_registro_do_caso,
 )
+from core.idioma import IDIOMA_PADRAO, idiomas_disponiveis, traduzir
 from core.fundamento import (
     TipoDocumento,
     anexar_documento,
@@ -64,8 +68,13 @@ ROTULOS_FORA_DO_CASO = frozenset(
     [rotulo for _, rotulo in CAMPOS_DO_DISPOSITIVO] + ["Caso", "Tipo Projeto", "Fotos Anexas"]
 )
 
-# Valores que significam "ninguém preencheu", nos registros de hoje e nos antigos.
-VALORES_VAZIOS = frozenset(["", "N/A", NAO_INFORMADO])
+# Valores que significam "ninguém preencheu", nos registros de hoje e nos
+# antigos — em qualquer idioma com catálogo, porque um caso selado em inglês
+# grava o vazio por extenso no idioma dele ("not provided").
+VALORES_VAZIOS = frozenset(
+    ["", "N/A", NAO_INFORMADO]
+    + [traduzir("sl_nao_informado", cod) for cod in idiomas_disponiveis()]
+)
 
 
 def campos_do_caso() -> list:
@@ -85,18 +94,22 @@ class ResumoAquisicao:
     dados: Dict[str, str] = field(default_factory=dict)
     # Quem executou, como ficou gravado na aquisição (ver `examinador_da_aquisicao`).
     examinador: str = ""
+    # Idioma CARIMBADO no caso: os rótulos em `dados` estão nele, e é por ele
+    # que a peça é lida (chave canônica -> rótulo no idioma do caso).
+    idioma: str = IDIOMA_PADRAO
 
-    def _campo(self, rotulo: str) -> str:
+    def _campo(self, chave: str) -> str:
+        rotulo = dict(rotulos_do_dispositivo(self.idioma)).get(chave, chave)
         valor = self.dados.get(rotulo, "")
         return "Não informado" if valor in VALORES_VAZIOS else valor
 
     @property
     def equipamento(self) -> str:
-        return self._campo("Equipamento")
+        return self._campo("marca_modelo")
 
     @property
     def lacre(self) -> str:
-        return self._campo("Lacre")
+        return self._campo("lacre")
 
     @property
     def rotulo(self) -> str:
@@ -409,6 +422,7 @@ class CaseService:
                     arquivo_custodia=arquivo,
                     dados=ler_cadeia_custodia(arquivo) if arquivo else {},
                     examinador=examinador_da_aquisicao(sub),
+                    idioma=idioma_do_caso(sub),
                 )
             )
 
@@ -542,11 +556,13 @@ class CaseService:
                 shutil.copy2(origem, destino)
                 fotos_gravadas.append(destino.name)
 
+        idioma = idioma_do_caso(pasta_do_caso(pasta_aquisicao))
         texto = montar_cadeia_custodia(
             sanitizar_nome(identificador),
             self.dados_do_caso(identificador),
             dispositivo,
             fotos_gravadas,
+            idioma=idioma,
         )
         caminho = pasta_aquisicao / NOME_CADEIA_CUSTODIA
         caminho.write_text(texto, encoding="utf-8")
@@ -554,14 +570,20 @@ class CaseService:
 
     @staticmethod
     def cadeia_com_dispositivo_retificado(arquivo_custodia: Path, dispositivo: dict) -> str:
-        """Texto da cadeia de custódia com os dados da peça trocados, e só eles."""
+        """Texto da cadeia de custódia com os dados da peça trocados, e só eles.
+
+        Retificar preserva o idioma do selado: os rótulos trocados saem no
+        idioma carimbado no caso, nunca no da sessão de quem retifica.
+        """
+        idioma = idioma_do_caso(pasta_do_caso(Path(arquivo_custodia)))
         novos = {
-            rotulo: dispositivo.get(chave, "") for chave, rotulo in CAMPOS_DO_DISPOSITIVO
+            rotulo: dispositivo.get(chave, "") for chave, rotulo in rotulos_do_dispositivo(idioma)
         }
         return substituir_campos_da_cadeia(
             Path(arquivo_custodia).read_text(encoding="utf-8"),
             novos,
-            "CADEIA DE CUSTÓDIA (DISPOSITIVO RETIFICADO)",
+            traduzir("sl_cadeia_titulo_retificado", idioma),
+            idioma=idioma,
         )
 
     def sugerir_identificador(self) -> str:
