@@ -35,6 +35,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from core.idioma import traduzir
 from core.agente_android import PASTA as PASTA_DO_AGENTE
 from core.agente_android import ler_chamadas as ler_chamadas_do_agente
 from core.agente_android import ler_contatos as ler_contatos_do_agente
@@ -84,14 +85,14 @@ LARGURA = 70
 # da mesma tabela: incluir os quatro faria o relatório contar cada mensagem
 # duas vezes e sugerir o dobro do volume real.
 FONTES = (
-    ("sms", "Mensagens SMS", "sms/sms_todas.txt", normalizar_sms,
+    ("sms", "rs_art_sms", "sms/sms_todas.txt", normalizar_sms,
      ("momento", "direcao", "numero", "conteudo", "lida")),
-    ("mms", "Mensagens MMS", "sms/mms_cabecalhos.txt", normalizar_mms,
+    ("mms", "rs_art_mms", "sms/mms_cabecalhos.txt", normalizar_mms,
      ("momento", "direcao", "numero", "assunto", "conteudo", "anexo", "lida")),
-    ("chamada", "Registro de Chamadas", "contacts_calls/registro_chamadas_bruto.txt",
+    ("chamada", "rs_art_chamada", "contacts_calls/registro_chamadas_bruto.txt",
      normalizar_chamadas,
      ("momento", "direcao", "numero", "contato", "duracao_segundos")),
-    ("contato", "Agenda de Contatos", "contacts_calls/agenda_contatos_bruta.txt",
+    ("contato", "rs_art_contato", "contacts_calls/agenda_contatos_bruta.txt",
      normalizar_contatos, ("contato", "numero")),
 )
 
@@ -100,13 +101,13 @@ FONTES = (
 # existir: é via alternativa, e a recusa do provider já está dita no
 # artefato correspondente logo acima.
 FONTES_BACKUP = (
-    ("sms_backup", "Mensagens SMS — via backup do sistema",
+    ("sms_backup", "rs_art_sms_backup",
      f"sms/backup_{PACOTE_TELEFONIA}.ab", ler_sms_do_backup,
      ("momento", "direcao", "numero", "conteudo", "lida")),
-    ("mms_backup", "Mensagens MMS — via backup do sistema",
+    ("mms_backup", "rs_art_mms_backup",
      f"sms/backup_{PACOTE_TELEFONIA}.ab", ler_mms_do_backup,
      ("momento", "direcao", "numero", "assunto", "conteudo", "anexo", "lida")),
-    ("chamada_backup", "Registro de Chamadas — via backup do sistema",
+    ("chamada_backup", "rs_art_chamada_backup",
      f"contacts_calls/backup_{PACOTE_CHAMADAS}.ab", ler_chamadas_do_backup,
      ("momento", "direcao", "numero", "duracao_segundos", "apresentacao", "linha_utilizada")),
 )
@@ -116,15 +117,15 @@ FONTES_BACKUP = (
 # arquivo existe: é via alternativa à consulta direta, cuja recusa já está
 # dita no artefato correspondente.
 FONTES_AGENTE = (
-    ("contato_agente", "Agenda de Contatos — via aplicativo agente",
+    ("contato_agente", "rs_art_contato_agente",
      f"{PASTA_DO_AGENTE}/contatos.jsonl", ler_contatos_do_agente, ("contato", "numero")),
-    ("chamada_agente", "Registro de Chamadas — via aplicativo agente",
+    ("chamada_agente", "rs_art_chamada_agente",
      f"{PASTA_DO_AGENTE}/chamadas.jsonl", ler_chamadas_do_agente,
      ("momento", "direcao", "numero", "contato", "duracao_segundos")),
-    ("sms_agente", "Mensagens SMS — via aplicativo agente",
+    ("sms_agente", "rs_art_sms_agente",
      f"{PASTA_DO_AGENTE}/sms.jsonl", ler_sms_do_agente,
      ("momento", "direcao", "numero", "conteudo", "lida")),
-    ("mms_agente", "Mensagens MMS — via aplicativo agente",
+    ("mms_agente", "rs_art_mms_agente",
      f"{PASTA_DO_AGENTE}/mms.jsonl", ler_mms_do_agente,
      ("momento", "direcao", "numero", "assunto", "conteudo", "anexo", "lida")),
 )
@@ -136,7 +137,7 @@ FONTES_AGENTE = (
 FONTES_BANCO = (
     (
         "whatsapp",
-        "WhatsApp — Mensagens",
+        "rs_art_whatsapp",
         (
             "**/com.whatsapp/databases/msgstore.db",
             "**/com.whatsapp.w4b/databases/msgstore.db",
@@ -146,7 +147,7 @@ FONTES_BANCO = (
     ),
     (
         "email",
-        "Correio eletrônico — acervo local",
+        "rs_art_email",
         (
             "**/com.google.android.gm/databases/mailstore*.db",
             "**/databases/mailstore*.db",
@@ -166,45 +167,53 @@ FONTES_BANCO = (
 # `core.backup_ios.ARQUIVOS_DE_INTERESSE`, colunas). Numa aquisição de
 # iPhone substituem os do Android, que lá não teriam onde estar.
 FONTES_IOS = (
-    ("sms_ios", "Mensagens (iMessage e SMS) — backup do iPhone", "sms",
+    ("sms_ios", "rs_art_sms_ios", "sms",
      mensagens_ios.COLUNAS_SMS),
-    ("chamada_ios", "Registro de Chamadas — backup do iPhone", "chamadas",
+    ("chamada_ios", "rs_art_chamada_ios", "chamadas",
      mensagens_ios.COLUNAS_CHAMADAS),
-    ("contato_ios", "Agenda de Contatos — backup do iPhone", "contatos",
+    ("contato_ios", "rs_art_contato_ios", "contatos",
      mensagens_ios.COLUNAS_CONTATOS),
-    ("whatsapp_ios", "WhatsApp — Mensagens (backup do iPhone)", "whatsapp",
+    ("whatsapp_ios", "rs_art_whatsapp_ios", "whatsapp",
      mensagens_ios.COLUNAS_WHATSAPP),
 )
 
+# Coluna -> chave de tradução do rótulo. O dado da célula nunca é
+# traduzido; só o cabeçalho da coluna, que é cromo do documento.
 ROTULOS = {
-    "momento": "Data e hora",
+    "momento": "rs_col_momento",
     # "Tipo" ficava ao lado de "Tipo de mensagem" na planilha do WhatsApp,
     # duas colunas quase homonimas dizendo coisas diferentes. O que esta
     # coluna informa e o sentido: recebida, enviada, perdida.
-    "direcao": "Sentido",
-    "numero": "Número",
-    "contato": "Contato",
-    "conteudo": "Conteúdo",
-    "lida": "Lida",
-    "duracao_segundos": "Duração (s)",
-    "apresentacao": "Apresentação do número",
-    "linha_utilizada": "Linha utilizada (ICCID)",
-    "conversa": "Conversa",
-    "tipo": "Tipo de mensagem",
-    "de": "De",
-    "para": "Para",
-    "assunto": "Assunto",
-    "anexo": "Anexo",
-    "servico": "Serviço",
-    "email": "E-mail",
-    "hora_gps_utc": "Hora do GPS (UTC, satélite)",
-    "latitude": "Latitude",
-    "longitude": "Longitude",
-    "altitude": "Altitude (m)",
-    "camera": "Câmera (EXIF)",
-    "foto": "Foto",
-    "mapa": "Mapa",
+    "direcao": "rs_col_direcao",
+    "numero": "rs_col_numero",
+    "contato": "rs_col_contato",
+    "conteudo": "rs_col_conteudo",
+    "lida": "rs_col_lida",
+    "duracao_segundos": "rs_col_duracao",
+    "apresentacao": "rs_col_apresentacao",
+    "linha_utilizada": "rs_col_linha",
+    "conversa": "rs_col_conversa",
+    "tipo": "rs_col_tipo",
+    "de": "rs_col_de",
+    "para": "rs_col_para",
+    "assunto": "rs_col_assunto",
+    "anexo": "rs_col_anexo",
+    "servico": "rs_col_servico",
+    "email": "rs_col_email",
+    "hora_gps_utc": "rs_col_hora_gps",
+    "latitude": "rs_col_latitude",
+    "longitude": "rs_col_longitude",
+    "altitude": "rs_col_altitude",
+    "camera": "rs_col_camera",
+    "foto": "rs_col_foto",
+    "mapa": "rs_col_mapa",
 }
+
+
+def rotulo_da_coluna(coluna: str) -> str:
+    """Cabeçalho da coluna no idioma ativo; a própria chave se não houver rótulo."""
+    chave = ROTULOS.get(coluna)
+    return traduzir(chave) if chave else coluna
 
 COLUNAS_LOCAIS = ("momento", "foto", "hora_gps_utc", "latitude", "longitude", "altitude", "camera",
                   "mapa")
@@ -422,7 +431,7 @@ class RelatorioService:
         artefatos = []
         for chave, titulo, relativo, normalizar, colunas in FONTES:
             artefato = Artefato(
-                chave=chave, titulo=titulo, caminho_relativo=relativo, colunas=colunas
+                chave=chave, titulo=traduzir(titulo), caminho_relativo=relativo, colunas=colunas
             )
             caminho = pasta_aquisicao / relativo
             if caminho.is_file():
@@ -443,7 +452,7 @@ class RelatorioService:
             if not caminho.is_file():
                 continue
             artefato = Artefato(
-                chave=chave, titulo=titulo, caminho_relativo=relativo, colunas=colunas
+                chave=chave, titulo=traduzir(titulo), caminho_relativo=relativo, colunas=colunas
             )
             artefato.presente = True
             artefato.sha256 = calcular_sha256(caminho)
@@ -481,7 +490,7 @@ class RelatorioService:
         if not backups:
             for chave, titulo, fonte, colunas in FONTES_IOS:
                 artefatos.append(Artefato(
-                    chave=chave, titulo=titulo, colunas=colunas,
+                    chave=chave, titulo=traduzir(titulo), colunas=colunas,
                     caminho_relativo=f"{backup_ios.PASTA}/<UDID>/ — "
                     + backup_ios.ARQUIVOS_DE_INTERESSE[fonte][0].rotulo,
                 ))
@@ -513,7 +522,7 @@ class RelatorioService:
                             f"_b{numero}" if len(backups) > 1 else "")
                         artefato = Artefato(
                             chave=chave + sufixo,
-                            titulo=titulo + (f" ({arquivo.dominio})" if indice else ""),
+                            titulo=traduzir(titulo) + (f" ({arquivo.dominio})" if indice else ""),
                             caminho_relativo=f"{relativo} [{arquivo.rotulo}]",
                             colunas=colunas,
                         )
@@ -626,7 +635,7 @@ class RelatorioService:
         inaproveitável vira descarte, com o motivo — nunca some.
         """
         artefato = Artefato(chave="locais_fotos",
-                            titulo="Locais das fotos (GPS gravado nas imagens)",
+                            titulo=traduzir("rs_art_locais"),
                             caminho_relativo="(imagens da aquisição)",
                             colunas=COLUNAS_LOCAIS)
         resultado = ResultadoNormalizacao(tipo="locais_fotos",
@@ -761,7 +770,7 @@ class RelatorioService:
                     artefatos.append(
                         Artefato(
                             chave=chave,
-                            titulo=titulo,
+                            titulo=traduzir(titulo),
                             caminho_relativo=padroes[0],
                             colunas=colunas,
                         )
@@ -777,7 +786,7 @@ class RelatorioService:
                         arquivo_de_origem = pasta_aquisicao / origem
                         artefato = Artefato(
                             chave=chave if len(encontrados) == 1 else f"{chave}_{indice}",
-                            titulo=f"{titulo} (backup decifrado)",
+                            titulo=traduzir("rs_art_backup_decifrado", titulo=traduzir(titulo)),
                             caminho_relativo=f"{origem} [decifrado]",
                             colunas=colunas,
                         )
@@ -798,7 +807,9 @@ class RelatorioService:
                     # cada `mailstore` e um acervo distinto. Juntar tudo numa
                     # planilha so misturaria caixas de titulares diferentes.
                     sufixo = "" if len(encontrados) == 1 else f"_{indice}"
-                    rotulo = titulo if len(encontrados) == 1 else f"{titulo} ({caminho.name})"
+                    rotulo = (traduzir(titulo) if len(encontrados) == 1
+                              else traduzir("rs_art_com_arquivo", titulo=traduzir(titulo),
+                                            arquivo=caminho.name))
                     artefato = Artefato(
                         chave=f"{chave}{sufixo}",
                         titulo=rotulo,
@@ -839,8 +850,8 @@ class RelatorioService:
         with open(caminho, "w", encoding="utf-8-sig", newline="") as arquivo:
             escritor = csv.writer(arquivo, delimiter=";")
             escritor.writerow(
-                [ROTULOS.get(coluna, coluna) for coluna in artefato.colunas]
-                + ["Arquivo de origem", "Linha de origem"]
+                [rotulo_da_coluna(coluna) for coluna in artefato.colunas]
+                + [traduzir("rs_csv_h_arquivo_origem"), traduzir("rs_csv_h_linha_origem")]
             )
             for registro in artefato.resultado.registros:
                 linha = []
@@ -1097,7 +1108,7 @@ class RelatorioService:
         for artefato in artefatos:
             if not artefato.presente or not artefato.resultado:
                 continue
-            cabecalho = [ROTULOS.get(c, c) for c in artefato.colunas] + ["Origem"]
+            cabecalho = [rotulo_da_coluna(c) for c in artefato.colunas] + ["Origem"]
             linhas = []
             for registro in artefato.resultado.registros:
                 celulas = []
@@ -1221,16 +1232,20 @@ class RelatorioService:
         selo = calcular_sha256(manifesto) if manifesto else ""
 
         historia = [
-            Paragraph("RELATÓRIO DE CONTEÚDO", e["titulo"]),
+            Paragraph(traduzir("rs_pdf_titulo"), e["titulo"]),
             Paragraph(
-                f"Aquisição {RelatorioService._escapar(pasta_aquisicao.name)}", e["subtitulo"]
+                traduzir("rs_pdf_subtitulo",
+                         aquisicao=RelatorioService._escapar(pasta_aquisicao.name)),
+                e["subtitulo"],
             ),
             identidade.tabela_de_pares([
-                ("Aquisição", identidade.escapar(pasta_aquisicao.name)),
-                ("Gerado em", datetime.now().astimezone().strftime("%d/%m/%Y %H:%M:%S %z")),
-                ("Fuso das datas", identidade.escapar(
+                (traduzir("rs_pdf_l_aquisicao"), identidade.escapar(pasta_aquisicao.name)),
+                (traduzir("rs_pdf_l_gerado"),
+                 datetime.now().astimezone().strftime("%d/%m/%Y %H:%M:%S %z")),
+                (traduzir("rs_pdf_l_fuso"), identidade.escapar(
                     RelatorioService._nome_do_fuso(artefatos, fuso))),
-                ("Normalizador", f"versão {VERSAO_NORMALIZADOR}"),
+                (traduzir("rs_pdf_l_normalizador"),
+                 traduzir("rs_pdf_versao", v=VERSAO_NORMALIZADOR)),
             ], largura_util, proporcao=0.2),
             Spacer(1, 8),
         ]
@@ -1238,10 +1253,8 @@ class RelatorioService:
         divergentes = [a for a in artefatos if a.confere_com_o_selo is False]
         if divergentes:
             historia.append(Paragraph(
-                "ATENÇÃO: os arquivos de origem abaixo NÃO conferem mais com o hash "
-                "selado no dia da coleta. O conteúdo aqui apresentado não corresponde "
-                "ao que foi selado: "
-                + RelatorioService._escapar(", ".join(a.caminho_relativo for a in divergentes)),
+                traduzir("rs_pdf_divergencia", lista=RelatorioService._escapar(
+                    ", ".join(a.caminho_relativo for a in divergentes))),
                 e["alerta"],
             ))
             historia.append(Spacer(1, 8))
@@ -1250,33 +1263,29 @@ class RelatorioService:
             historia.append(Paragraph(RelatorioService._escapar(artefato.titulo), e["secao"]))
 
             if not artefato.presente:
-                historia.append(Paragraph(
-                    "Arquivo não encontrado nesta aquisição — o módulo correspondente "
-                    "provavelmente não foi executado. <b>Isso não é ausência de dado no "
-                    "dispositivo: é ausência de coleta.</b>",
-                    e["corpo"],
-                ))
+                historia.append(Paragraph(traduzir("rs_pdf_nao_encontrado"), e["corpo"]))
                 continue
 
             if not artefato.total:
                 historia.append(Paragraph(
-                    "Nenhum registro. "
-                    + RelatorioService._escapar(artefato.explicacao),
+                    traduzir("rs_pdf_nenhum_registro",
+                             explicacao=RelatorioService._escapar(artefato.explicacao)),
                     e["corpo"],
                 ))
                 continue
 
+            origem = RelatorioService._escapar(artefato.caminho_relativo)
             historia.append(Paragraph(
-                f"{artefato.total} registro(s). Origem: "
-                f"{RelatorioService._escapar(artefato.caminho_relativo)} "
-                + (f"(SHA-256 {artefato.sha256})." if artefato.sha256
-                   else "(cada arquivo conferido com o selo)."),
+                traduzir("rs_pdf_origem_sha", n=artefato.total, origem=origem,
+                         sha=artefato.sha256) if artefato.sha256
+                else traduzir("rs_pdf_origem_selo", n=artefato.total, origem=origem),
                 e["esquerda"],
             ))
             if artefato.nota_da_fonte:
                 historia.append(Paragraph(
-                    "<b>Nota da fonte:</b> "
-                    + RelatorioService._escapar(artefato.nota_da_fonte), e["alerta"]))
+                    traduzir("rs_pdf_nota_fonte",
+                             valor=RelatorioService._escapar(artefato.nota_da_fonte)),
+                    e["alerta"]))
             historia.append(Spacer(1, 4))
 
             if RelatorioService._vai_como_indice(artefato):
@@ -1289,7 +1298,7 @@ class RelatorioService:
                         for coluna in artefato.colunas
                     ])
                 historia.append(identidade.tabela(
-                    [ROTULOS.get(c, c) for c in artefato.colunas],
+                    [rotulo_da_coluna(c) for c in artefato.colunas],
                     linhas,
                     RelatorioService._larguras(artefato.colunas, largura_util),
                 ))
@@ -1297,27 +1306,21 @@ class RelatorioService:
             if artefato.resultado.descartes:
                 historia.append(Spacer(1, 4))
                 historia.append(Paragraph(
-                    f"<b>{len(artefato.resultado.descartes)} trecho(s) do arquivo bruto não "
-                    f"foram interpretados</b> e não constam desta tabela. Ver "
-                    f"{NOME_DESCARTES}, na mesma pasta. Este relatório está incompleto em "
-                    "relação à evidência.",
+                    traduzir("rs_pdf_descartes", n=len(artefato.resultado.descartes),
+                             arquivo=NOME_DESCARTES),
                     e["corpo"],
                 ))
 
         historia.append(Spacer(1, 12))
         historia.append(Paragraph(
-            "Este documento apresenta a evidência; não a substitui. As planilhas na "
-            "mesma pasta trazem, para cada linha, o arquivo e a linha de origem. O "
-            "material original permanece na aquisição selada. Contagem zero não "
-            "significa, por si só, ausência de dado no dispositivo — o motivo de cada zero "
-            "está declarado acima e em " + NOME_PROCEDENCIA + ".",
+            traduzir("rs_pdf_rodape_nota", procedencia=NOME_PROCEDENCIA),
             e["nota"],
         ))
 
         try:
             identidade.montar_documento(
                 caminho,
-                "Relatório de Conteúdo",
+                traduzir("rs_pdf_titulo_doc"),
                 historia,
                 rastreio=f"{pasta_do_caso(pasta_aquisicao).name}  ·  {pasta_aquisicao.name}",
                 selo=selo,
@@ -1361,16 +1364,15 @@ class RelatorioService:
         ]
         return [
             Paragraph(
-                f"<b>{artefato.total} mensagens em {len(conversas)} conversa(s).</b> Acima de "
-                f"{LIMITE_INTEGRA_NO_PDF} mensagens, este PDF traz o ÍNDICE das conversas, e "
-                f"não a íntegra. A íntegra está em {artefato.chave}.csv e em "
-                f"{NOME_CADERNO}, nesta mesma pasta; o PDF completo de conversas escolhidas "
-                "é gerado em 'PDF de conversas selecionadas', no gerenciador de casos.",
+                traduzir("rs_idx_resumo", total=artefato.total, n=len(conversas),
+                         limite=LIMITE_INTEGRA_NO_PDF, planilha=artefato.chave,
+                         caderno=NOME_CADERNO),
                 e["esquerda"],
             ),
             Spacer(1, 4),
             identidade.tabela(
-                ["Conversa / número", "Nome", "Mensagens", "Período"],
+                [traduzir("rs_idx_h_conversa"), traduzir("rs_idx_h_nome"),
+                 traduzir("rs_idx_h_mensagens"), traduzir("rs_idx_h_periodo")],
                 linhas,
                 [largura_util * 0.38, largura_util * 0.3, largura_util * 0.1,
                  largura_util * 0.22],
