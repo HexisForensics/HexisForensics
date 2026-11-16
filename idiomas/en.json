@@ -280,5 +280,18 @@
   "mw_btn_termos": "Terms of use",
   "mw_btn_fechar": "Close",
   "mw_executando": "Running: {nome}",
-  "mw_extracao_finalizada": "Extraction finished."
+  "mw_extracao_finalizada": "Extraction finished.",
+
+  "sb_menu_principal": "MAIN MENU",
+  "sb_android": "🤖  Android",
+  "sb_iphone": "📱  iPhone",
+  "sb_armazenamento": "💾  Storage",
+  "sb_ferramentas": "TOOLS",
+  "sb_cadeia": "🔐  Chain of Custody",
+  "sb_casos": "📂  Cases and Documents",
+  "sb_examinadores": "👥  Examiners",
+  "sb_sobre": "ℹ️  About",
+  "sb_trocar": "🔄  Switch examiner",
+  "sb_sair": "🚪  Sign out",
+  "sb_sessao_desde": "session since {valor}"
 }

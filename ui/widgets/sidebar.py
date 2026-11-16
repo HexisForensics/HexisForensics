@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from services.branding_service import BrandConfig
+from services.idioma import traduzir
 
 LARGURA_SIDEBAR = 260
 
@@ -115,9 +116,9 @@ class Sidebar(QWidget):
         return cabecalho
 
     def _montar_itens(self) -> None:
-        self._adicionar_secao("MENU PRINCIPAL", primeira=True)
-        self._adicionar_item("android", "🤖  Android", navegavel=True)
-        self._adicionar_item("iphone", "📱  iPhone", navegavel=True)
+        self._adicionar_secao(traduzir("sb_menu_principal"), primeira=True)
+        self._adicionar_item("android", traduzir("sb_android"), navegavel=True)
+        self._adicionar_item("iphone", traduzir("sb_iphone"), navegavel=True)
         # "Armazenamento", e não "Computador", porque o alvo desta
         # plataforma nunca é uma máquina: é uma unidade montada pelo
         # Windows. No procedimento adotado, o disco do computador
@@ -131,15 +132,15 @@ class Sidebar(QWidget):
         # A CHAVE segue "computador". Rótulo é apresentação; a nomenclatura
         # da evidência (pasta `computador_AAAAMMDD_HHMMSS`, laudo) vem só de
         # core/case.py, que também LÊ as aquisições já gravadas em disco.
-        self._adicionar_item("computador", "💾  Armazenamento", navegavel=True)
+        self._adicionar_item("computador", traduzir("sb_armazenamento"), navegavel=True)
 
-        self._adicionar_secao("FERRAMENTAS")
-        self._adicionar_item("hash", "🔐  Cadeia de Custódia")
-        self._adicionar_item("abrir_pasta", "📂  Casos e Documentos")
-        self._adicionar_item("examinadores", "👥  Examinadores")
+        self._adicionar_secao(traduzir("sb_ferramentas"))
+        self._adicionar_item("hash", traduzir("sb_cadeia"))
+        self._adicionar_item("abrir_pasta", traduzir("sb_casos"))
+        self._adicionar_item("examinadores", traduzir("sb_examinadores"))
 
         self._adicionar_separador()
-        self._adicionar_item("sobre", "ℹ️  Sobre")
+        self._adicionar_item("sobre", traduzir("sb_sobre"))
 
     def _montar_sessao(self) -> QWidget:
         rodape = QFrame()
@@ -172,7 +173,8 @@ class Sidebar(QWidget):
         linha.addWidget(self._avatar)
         linha.addLayout(textos, 1)
         layout.addLayout(linha)
-        for chave, rotulo in (("trocar_examinador", "🔄  Trocar examinador"), ("sair", "🚪  Sair")):
+        for chave, rotulo in (("trocar_examinador", traduzir("sb_trocar")),
+                              ("sair", traduzir("sb_sair"))):
             botao = QPushButton(rotulo)
             botao.setObjectName("SidebarItem")
             botao.setFlat(True)
@@ -188,7 +190,7 @@ class Sidebar(QWidget):
         self._avatar.setText(iniciais)
         self._nome_sessao.setText(nome or "—")
         self._nome_sessao.setToolTip(nome)
-        self._desde.setText(f"sessão desde {desde}" if desde else "")
+        self._desde.setText(traduzir("sb_sessao_desde", valor=desde) if desde else "")
 
     def _adicionar_secao(self, titulo: str, primeira: bool = False) -> None:
         label = QLabel(titulo)

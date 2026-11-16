@@ -280,5 +280,18 @@
   "mw_btn_termos": "Termos de uso",
   "mw_btn_fechar": "Fechar",
   "mw_executando": "Executando: {nome}",
-  "mw_extracao_finalizada": "Extração finalizada."
+  "mw_extracao_finalizada": "Extração finalizada.",
+
+  "sb_menu_principal": "MENU PRINCIPAL",
+  "sb_android": "🤖  Android",
+  "sb_iphone": "📱  iPhone",
+  "sb_armazenamento": "💾  Armazenamento",
+  "sb_ferramentas": "FERRAMENTAS",
+  "sb_cadeia": "🔐  Cadeia de Custódia",
+  "sb_casos": "📂  Casos e Documentos",
+  "sb_examinadores": "👥  Examinadores",
+  "sb_sobre": "ℹ️  Sobre",
+  "sb_trocar": "🔄  Trocar examinador",
+  "sb_sair": "🚪  Sair",
+  "sb_sessao_desde": "sessão desde {valor}"
 }
