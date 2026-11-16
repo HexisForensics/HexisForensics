@@ -46,13 +46,14 @@ from services.hash_service import (
     listar_pastas_custodia,
     tem_manifesto,
 )
+from services.idioma import traduzir
 from .ajuste_de_tela import caber_na_tela
 
 
 class HashDialog(QDialog):
     def __init__(self, raiz_extracoes: Path, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Cadeia de Custódia — Conferir e Gerar Manifestos")
+        self.setWindowTitle(traduzir("hd_titulo"))
         caber_na_tela(self, 700, 560)
 
         self.raiz_extracoes = Path(raiz_extracoes)
@@ -60,14 +61,7 @@ class HashDialog(QDialog):
         self._servico = None
 
         layout = QVBoxLayout(self)
-        layout.addWidget(
-            QLabel(
-                "<b>Conferir</b> verifica se o material continua idêntico ao manifesto. "
-                "<b>Gerar</b> sela uma pasta ainda sem manifesto.<br>"
-                "Cada <b>caso</b> pode conter várias <b>aquisições</b>: selar a aquisição "
-                "cobre aquela coleta; selar o caso cobre o projeto inteiro."
-            )
-        )
+        layout.addWidget(QLabel(traduzir("hd_intro")))
 
         self.lista_pastas = QListWidget()
         for item in self._itens:
@@ -76,23 +70,23 @@ class HashDialog(QDialog):
         layout.addWidget(self.lista_pastas)
 
         if not self._itens:
-            layout.addWidget(QLabel("Nenhuma pasta de extração encontrada em 'extracoes/'."))
+            layout.addWidget(QLabel(traduzir("hd_nenhuma_pasta")))
 
         self.area_resultado = QTextEdit()
         self.area_resultado.setReadOnly(True)
-        self.area_resultado.setPlaceholderText("O resultado da operação aparece aqui.")
+        self.area_resultado.setPlaceholderText(traduzir("hd_ph_resultado"))
         layout.addWidget(self.area_resultado)
 
         self.barra_progresso = QProgressBar()
         layout.addWidget(self.barra_progresso)
 
         linha_botoes = QHBoxLayout()
-        self.botao_conferir = QPushButton("🔍 Conferir Integridade")
+        self.botao_conferir = QPushButton(traduzir("hd_btn_conferir"))
         self.botao_conferir.setDefault(True)
         self.botao_conferir.clicked.connect(self._conferir)
-        self.botao_gerar = QPushButton("Gerar Manifesto")
+        self.botao_gerar = QPushButton(traduzir("hd_btn_gerar"))
         self.botao_gerar.clicked.connect(self._gerar)
-        self.botao_fechar = QPushButton("Fechar")
+        self.botao_fechar = QPushButton(traduzir("hd_btn_fechar"))
         self.botao_fechar.clicked.connect(self.close)
 
         linha_botoes.addStretch()
@@ -115,28 +109,29 @@ class HashDialog(QDialog):
         nomes soltos — e a leitura natural era de que a mesma pasta estava
         repetida.
         """
-        selo = "🔒 selada" if item.selada else "○ sem manifesto"
+        selo = traduzir("hd_selada") if item.selada else traduzir("hd_sem_manifesto")
 
         if item.e_aquisicao:
             quando = item.momento.strftime("%d/%m/%Y %H:%M") if item.momento else item.nome
-            plataforma = item.plataforma or "Aquisição"
-            return f"        └─  {plataforma} · {quando}  ·  {selo}"
+            plataforma = item.plataforma or traduzir("hd_aquisicao_fallback")
+            return traduzir("hd_rotulo_aquisicao", plataforma=plataforma, quando=quando, selo=selo)
 
         if item.aquisicoes:
-            plural = "aquisição" if item.aquisicoes == 1 else "aquisições"
-            escopo = f"{item.aquisicoes} {plural}"
-            selo = "🔒 caso selado" if item.selada else "○ caso ainda não selado"
+            plural = (traduzir("hd_aquisicao_sing") if item.aquisicoes == 1
+                      else traduzir("hd_aquisicao_plur"))
+            escopo = traduzir("hd_escopo", n=item.aquisicoes, plural=plural)
+            selo = traduzir("hd_caso_selado") if item.selada else traduzir("hd_caso_nao_selado")
         else:
             # Pasta única, sem subpastas de aquisição: são os casos criados
             # antes de a estrutura em dois níveis existir.
-            escopo = "pasta única (formato antigo)"
+            escopo = traduzir("hd_pasta_unica")
 
-        return f"📁  {item.nome}    —    {escopo}  ·  {selo}"
+        return traduzir("hd_rotulo_caso", nome=item.nome, escopo=escopo, selo=selo)
 
     def _item_selecionado(self) -> Optional[PastaDeCustodia]:
         indice = self.lista_pastas.currentRow()
         if indice < 0:
-            QMessageBox.warning(self, "Aviso", "Selecione um caso ou uma aquisição na lista.")
+            QMessageBox.warning(self, traduzir("hd_aviso"), traduzir("hd_selecione"))
             return None
         return self._itens[indice]
 
@@ -187,18 +182,16 @@ class HashDialog(QDialog):
         if integro:
             QMessageBox.information(
                 self,
-                "Integridade confirmada",
-                f"{resumo}\n\nO relatório da conferência foi gravado na pasta.",
+                traduzir("hd_integro_titulo"),
+                traduzir("hd_integro_corpo", resumo=resumo),
             )
         else:
             # Divergência não é erro da ferramenta: é achado, e precisa de
             # destaque proporcional ao que significa para o exame.
             QMessageBox.warning(
                 self,
-                "DIVERGÊNCIA DE INTEGRIDADE",
-                f"{resumo}\n\nO material NÃO está idêntico ao manifesto. "
-                "Consulte o relatório de conferência gravado na pasta para ver "
-                "exatamente quais arquivos divergem.",
+                traduzir("hd_divergencia_titulo"),
+                traduzir("hd_divergencia_corpo", resumo=resumo),
             )
 
     def _gerar(self) -> None:
@@ -209,12 +202,8 @@ class HashDialog(QDialog):
         if item.selada:
             resposta = QMessageBox.question(
                 self,
-                "Esta pasta já está selada",
-                "Já existe um manifesto nesta pasta.\n\n"
-                "Para saber se o material continua íntegro, use CONFERIR — gerar de novo "
-                "não verifica nada.\n\n"
-                "Se prosseguir, o manifesto original será PRESERVADO e um novo será "
-                "gravado ao lado, com data e hora no nome.\n\nDeseja gerar assim mesmo?",
+                traduzir("hd_selada_titulo"),
+                traduzir("hd_selada_corpo"),
             )
             if resposta != QMessageBox.Yes:
                 return
@@ -231,6 +220,10 @@ class HashDialog(QDialog):
         self.botao_gerar.setEnabled(True)
 
         if sucesso:
-            QMessageBox.information(self, "Concluído", f"Manifesto gerado em:\n{mensagem}")
+            QMessageBox.information(
+                self, traduzir("hd_concluido_titulo"),
+                traduzir("hd_concluido_corpo", valor=mensagem))
         else:
-            QMessageBox.critical(self, "Erro", f"Falha ao gerar manifesto:\n{mensagem}")
+            QMessageBox.critical(
+                self, traduzir("hd_erro_titulo"),
+                traduzir("hd_erro_corpo", valor=mensagem))
