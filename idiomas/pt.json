@@ -343,5 +343,27 @@
   "cd_informe_identificador": "Informe um identificador de caso válido.",
   "cd_caso_existe_titulo": "Caso já existe",
   "cd_caso_existe_corpo": "Já existe um caso '{valor}'. Para acrescentar um dispositivo a ele, use a aba 'Caso Existente'.",
-  "cd_selecione_caso_existente": "Selecione um caso existente válido."
+  "cd_selecione_caso_existente": "Selecione um caso existente válido.",
+
+  "fd_titulo": "Autorização de Acesso aos Dados",
+  "fd_ja_anexado_titulo": "Já anexado a este caso — vale também para este dispositivo",
+  "fd_anexar_titulo": "Anexar documento de autorização",
+  "fd_tipo_decisao_judicial": "Decisão judicial",
+  "fd_tipo_termo_de_declaracoes": "Termo de consentimento do titular",
+  "fd_tipo_requisicao": "Requisição ou contrato do exame",
+  "fd_tipo_outro": "Outro documento",
+  "fd_ph_descricao": "Descrição (opcional) — ex.: aditamento",
+  "fd_btn_escolher": "Escolher arquivo...",
+  "fd_label_tipo": "Tipo:",
+  "fd_btn_remover": "Remover selecionado",
+  "fd_nota_multiplos": "<i>Pode-se anexar mais de um documento — a autorização e um aditamento, por exemplo. Cada um recebe seu próprio SHA-256.</i>",
+  "fd_alcance": "<b>O que este anexo registra:</b> que o arquivo, com o hash calculado aqui, estava anexado ao caso no momento desta aquisição.<br><b>O que ele não registra:</b> autenticidade, assinatura, competência ou as datas constantes do documento — isso se apura na origem do documento, onde o original tramita.",
+  "fd_btn_confirmar": "Confirmar e Prosseguir",
+  "fd_btn_cancelar": "Cancelar",
+  "fd_selecione_arquivo": "Selecione o documento de autorização",
+  "fd_filtro": "Documentos (*.pdf *.jpg *.jpeg *.png);;Todos os arquivos (*)",
+  "fd_ja_na_lista_titulo": "Já na lista",
+  "fd_ja_na_lista_corpo": "Este arquivo já foi escolhido para anexar.",
+  "fd_sem_doc_titulo": "Prosseguir sem documento anexado?",
+  "fd_sem_doc_corpo": "Nenhum documento de autorização foi anexado a este caso.\n\nA extração pode prosseguir — a autorização existe independentemente de o documento estar aqui —, mas o caso vai registrar por extenso que nada foi anexado, e o documento poderá ser juntado depois pelo gerenciador de casos.\n\nProsseguir assim mesmo?"
 }

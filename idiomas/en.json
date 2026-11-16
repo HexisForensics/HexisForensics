@@ -343,5 +343,27 @@
   "cd_informe_identificador": "Enter a valid case identifier.",
   "cd_caso_existe_titulo": "Case already exists",
   "cd_caso_existe_corpo": "A case '{valor}' already exists. To add a device to it, use the 'Existing Case' tab.",
-  "cd_selecione_caso_existente": "Select a valid existing case."
+  "cd_selecione_caso_existente": "Select a valid existing case.",
+
+  "fd_titulo": "Data Access Authorization",
+  "fd_ja_anexado_titulo": "Already attached to this case — also applies to this device",
+  "fd_anexar_titulo": "Attach authorization document",
+  "fd_tipo_decisao_judicial": "Court order",
+  "fd_tipo_termo_de_declaracoes": "Consent form from the data subject",
+  "fd_tipo_requisicao": "Examination request or contract",
+  "fd_tipo_outro": "Other document",
+  "fd_ph_descricao": "Description (optional) — e.g. addendum",
+  "fd_btn_escolher": "Choose file...",
+  "fd_label_tipo": "Type:",
+  "fd_btn_remover": "Remove selected",
+  "fd_nota_multiplos": "<i>More than one document can be attached — the authorization and an addendum, for example. Each one gets its own SHA-256.</i>",
+  "fd_alcance": "<b>What this attachment records:</b> that the file, with the hash computed here, was attached to the case at the time of this acquisition.<br><b>What it does not record:</b> authenticity, signature, competence or the dates stated in the document — that is established at the document's source, where the original is processed.",
+  "fd_btn_confirmar": "Confirm and Continue",
+  "fd_btn_cancelar": "Cancel",
+  "fd_selecione_arquivo": "Select the authorization document",
+  "fd_filtro": "Documents (*.pdf *.jpg *.jpeg *.png);;All files (*)",
+  "fd_ja_na_lista_titulo": "Already in the list",
+  "fd_ja_na_lista_corpo": "This file has already been chosen to attach.",
+  "fd_sem_doc_titulo": "Continue without an attached document?",
+  "fd_sem_doc_corpo": "No authorization document was attached to this case.\n\nThe extraction can continue — the authorization exists regardless of whether the document is here —, but the case will record in full that nothing was attached, and the document can be filed later via the case manager.\n\nContinue anyway?"
 }

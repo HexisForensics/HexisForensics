@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (
 )
 
 from services.case_service import opcoes_tipo_documento
+from services.idioma import traduzir
 from .ajuste_de_tela import caber_na_tela
 
 
@@ -49,7 +50,7 @@ class AutorizacaoDialog(QDialog):
 
     def __init__(self, documentos_do_caso: Optional[list] = None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Autorização de Acesso aos Dados")
+        self.setWindowTitle(traduzir("fd_titulo"))
         self.setModal(True)
         caber_na_tela(self, 640, 520)
 
@@ -71,7 +72,7 @@ class AutorizacaoDialog(QDialog):
         Existe para o examinador não reanexar o mesmo PDF: o documento já
         anexado cobre este dispositivo tanto quanto cobria o anterior.
         """
-        caixa = QGroupBox("Já anexado a este caso — vale também para este dispositivo")
+        caixa = QGroupBox(traduzir("fd_ja_anexado_titulo"))
         layout = QVBoxLayout(caixa)
 
         lista = QListWidget()
@@ -83,21 +84,21 @@ class AutorizacaoDialog(QDialog):
         return caixa
 
     def _montar_anexar(self) -> QGroupBox:
-        caixa = QGroupBox("Anexar documento de autorização")
+        caixa = QGroupBox(traduzir("fd_anexar_titulo"))
         layout = QVBoxLayout(caixa)
 
         linha = QHBoxLayout()
         self.combo_tipo = QComboBox()
-        for chave, rotulo in opcoes_tipo_documento():
-            self.combo_tipo.addItem(rotulo, chave)
+        for chave, _rotulo in opcoes_tipo_documento():
+            self.combo_tipo.addItem(traduzir(f"fd_tipo_{chave.lower()}"), chave)
 
         self.campo_descricao = QLineEdit()
-        self.campo_descricao.setPlaceholderText("Descrição (opcional) — ex.: aditamento")
+        self.campo_descricao.setPlaceholderText(traduzir("fd_ph_descricao"))
 
-        botao_anexar = QPushButton("Escolher arquivo...")
+        botao_anexar = QPushButton(traduzir("fd_btn_escolher"))
         botao_anexar.clicked.connect(self._escolher_arquivo)
 
-        linha.addWidget(QLabel("Tipo:"))
+        linha.addWidget(QLabel(traduzir("fd_label_tipo")))
         linha.addWidget(self.combo_tipo)
         linha.addWidget(self.campo_descricao, 1)
         linha.addWidget(botao_anexar)
@@ -106,16 +107,11 @@ class AutorizacaoDialog(QDialog):
         self.lista_pendentes = QListWidget()
         layout.addWidget(self.lista_pendentes, 1)
 
-        botao_remover = QPushButton("Remover selecionado")
+        botao_remover = QPushButton(traduzir("fd_btn_remover"))
         botao_remover.clicked.connect(self._remover_selecionado)
         layout.addWidget(botao_remover)
 
-        layout.addWidget(
-            QLabel(
-                "<i>Pode-se anexar mais de um documento — a autorização e um aditamento, "
-                "por exemplo. Cada um recebe seu próprio SHA-256.</i>"
-            )
-        )
+        layout.addWidget(QLabel(traduzir("fd_nota_multiplos")))
         return caixa
 
     def _montar_alcance(self) -> QLabel:
@@ -125,22 +121,16 @@ class AutorizacaoDialog(QDialog):
         Fica na tela, e não só no arquivo gravado, porque é aqui que o
         examinador forma a expectativa do que o sistema está atestando.
         """
-        rotulo = QLabel(
-            "<b>O que este anexo registra:</b> que o arquivo, com o hash calculado "
-            "aqui, estava anexado ao caso no momento desta aquisição.<br>"
-            "<b>O que ele não registra:</b> autenticidade, assinatura, competência "
-            "ou as datas constantes do documento — isso se apura na origem do documento, onde o "
-            "original tramita."
-        )
+        rotulo = QLabel(traduzir("fd_alcance"))
         rotulo.setWordWrap(True)
         return rotulo
 
     def _montar_botoes(self) -> QHBoxLayout:
         botoes = QHBoxLayout()
-        self.botao_ok = QPushButton("Confirmar e Prosseguir")
+        self.botao_ok = QPushButton(traduzir("fd_btn_confirmar"))
         self.botao_ok.setDefault(True)
         self.botao_ok.clicked.connect(self._confirmar)
-        botao_cancelar = QPushButton("Cancelar")
+        botao_cancelar = QPushButton(traduzir("fd_btn_cancelar"))
         botao_cancelar.clicked.connect(self.reject)
         botoes.addStretch()
         botoes.addWidget(self.botao_ok)
@@ -151,9 +141,9 @@ class AutorizacaoDialog(QDialog):
     def _escolher_arquivo(self) -> None:
         caminho, _ = QFileDialog.getOpenFileName(
             self,
-            "Selecione o documento de autorização",
+            traduzir("fd_selecione_arquivo"),
             "",
-            "Documentos (*.pdf *.jpg *.jpeg *.png);;Todos os arquivos (*)",
+            traduzir("fd_filtro"),
         )
         if not caminho:
             return
@@ -161,7 +151,7 @@ class AutorizacaoDialog(QDialog):
         arquivo = Path(caminho)
         if any(Path(item["arquivo"]) == arquivo for item in self._pendentes):
             QMessageBox.information(
-                self, "Já na lista", "Este arquivo já foi escolhido para anexar."
+                self, traduzir("fd_ja_na_lista_titulo"), traduzir("fd_ja_na_lista_corpo")
             )
             return
 
@@ -198,13 +188,8 @@ class AutorizacaoDialog(QDialog):
         if not self._pendentes and not self._documentos_do_caso:
             resposta = QMessageBox.question(
                 self,
-                "Prosseguir sem documento anexado?",
-                "Nenhum documento de autorização foi anexado a este caso.\n\n"
-                "A extração pode prosseguir — a autorização existe independentemente "
-                "de o documento estar aqui —, mas o caso vai registrar por "
-                "extenso que nada foi anexado, e o documento poderá ser juntado "
-                "depois pelo gerenciador de casos.\n\n"
-                "Prosseguir assim mesmo?",
+                traduzir("fd_sem_doc_titulo"),
+                traduzir("fd_sem_doc_corpo"),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
