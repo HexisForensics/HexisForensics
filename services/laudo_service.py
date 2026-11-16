@@ -29,6 +29,7 @@ from reportlab.lib import colors
 from reportlab.platypus import KeepTogether, PageBreak, Paragraph, Spacer, Table
 
 from core import exame_sem_extracao
+from core.idioma import traduzir
 from core.normalizacao import nome_do_fuso
 from core.operador import de_dicionario
 from core.protocolos import exige_especificacao, perguntas_do_examinador
@@ -177,13 +178,13 @@ def gerar(
         # --- 1. PREÂMBULO -------------------------------------------------
         pares = [("Caso", identidade.escapar(dossie.caso))]
         pares += [
-            (rotulo, identidade.escapar(valor) if valor else blocos.NAO_INFORMADO)
+            (rotulo, identidade.escapar(valor) if valor else traduzir("bl_nao_informado"))
             for rotulo, valor in dossie.dados_do_caso
         ]
         pares += [
             ("Aquisição examinada", identidade.escapar(pasta_aquisicao.name)),
             ("Data da aquisição",
-             identidade.escapar(carimbo_legivel(dossie.abertura)) or blocos.NAO_INFORMADO),
+             identidade.escapar(carimbo_legivel(dossie.abertura)) or traduzir("bl_nao_informado")),
             ("Operador da aquisição", identidade.escapar(blocos.texto_do_operador(dossie))),
             ("Examinador que subscreve",
              identidade.escapar(subscritor.resumo()) if subscritor.declarado
@@ -346,13 +347,13 @@ def gerar(
 def _preambulo(dossie, pasta_aquisicao, subscritor, agora, largura, e) -> list:
     pares = [("Caso", identidade.escapar(dossie.caso))]
     pares += [
-        (rotulo, identidade.escapar(valor) if valor else blocos.NAO_INFORMADO)
+        (rotulo, identidade.escapar(valor) if valor else traduzir("bl_nao_informado"))
         for rotulo, valor in dossie.dados_do_caso
     ]
     pares += [
         ("Registro examinado", identidade.escapar(pasta_aquisicao.name)),
         ("Data do exame",
-         identidade.escapar(carimbo_legivel(dossie.abertura)) or blocos.NAO_INFORMADO),
+         identidade.escapar(carimbo_legivel(dossie.abertura)) or traduzir("bl_nao_informado")),
         ("Operador do exame", identidade.escapar(blocos.texto_do_operador(dossie))),
         ("Examinador que subscreve",
          identidade.escapar(subscritor.resumo()) if subscritor.declarado
@@ -437,7 +438,7 @@ def _gerar_sem_extracao(
 
         def valor(chave):
             texto = str(exame.get(chave) or "").strip()
-            return identidade.escapar(texto) if texto else blocos.NAO_INFORMADO
+            return identidade.escapar(texto) if texto else traduzir("bl_nao_informado")
 
         acrescentar("4. Estado do aparelho", [
             identidade.tabela_de_pares([
@@ -465,7 +466,7 @@ def _gerar_sem_extracao(
         if tentativa.get("realizada"):
             registro.append(identidade.tabela_de_pares([
                 ("Momento", identidade.escapar(carimbo_legivel(tentativa.get("momento", "")))
-                 or blocos.NAO_INFORMADO),
+                 or traduzir("bl_nao_informado")),
                 ("Resultado", identidade.escapar(tentativa.get("resultado", ""))),
                 ("Resposta integral", identidade.escapar(relativo)
                  + (f"<br/>SHA-256 {selado}" if selado else "")),

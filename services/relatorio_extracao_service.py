@@ -26,6 +26,7 @@ from typing import Optional
 from reportlab.platypus import PageBreak, Paragraph, Spacer
 
 from core.case import pasta_do_caso
+from core.idioma import traduzir
 from core.normalizacao import nome_do_fuso
 from services import blocos_pdf as blocos
 from services import identidade_pdf as identidade
@@ -101,10 +102,13 @@ def gerar(pasta_aquisicao: Path, destino: Optional[Path] = None, fuso="estacao")
         largura = identidade.largura_util()
         historia = [
             Spacer(1, 6),
-            Paragraph("RELATÓRIO DE EXTRAÇÃO", e["titulo"]),
+            Paragraph(traduzir("re_titulo_pdf"), e["titulo"]),
             Paragraph(
-                f"Caso {identidade.escapar(dossie.caso)} — aquisição "
-                f"{identidade.escapar(pasta_aquisicao.name)}",
+                traduzir(
+                    "fha_subtitulo",
+                    caso=identidade.escapar(dossie.caso),
+                    aquisicao=identidade.escapar(pasta_aquisicao.name),
+                ),
                 e["subtitulo"],
             ),
         ]
@@ -112,55 +116,41 @@ def gerar(pasta_aquisicao: Path, destino: Optional[Path] = None, fuso="estacao")
         def acrescentar(titulo, elementos):
             historia.extend(blocos.secao(titulo, elementos))
 
-        acrescentar("1. Identificação", blocos.bloco_identificacao(dossie, largura))
-        acrescentar("2. Dispositivo examinado", blocos.bloco_peca(dossie, largura))
-        acrescentar("3. Fotografias da peça", blocos.bloco_fotos(dossie, largura))
-        acrescentar("4. Ambiente da aquisição", blocos.bloco_ambiente(dossie, largura))
-        acrescentar("5. Autorização de acesso aos dados", blocos.bloco_autorizacao(dossie, largura))
-        acrescentar("6. Método empregado", blocos.bloco_metodo(dossie, largura))
-        acrescentar("7. Limitações do método", blocos.bloco_limitacoes(dossie, largura))
-        acrescentar(
-            "8. Alterações e decisões registradas",
-            blocos.bloco_alteracoes_ocorridas(dossie, largura),
-        )
-        acrescentar("9. Desfecho por módulo", blocos.bloco_desfecho(dossie, largura))
+        acrescentar(traduzir("re_sec_1"), blocos.bloco_identificacao(dossie, largura))
+        acrescentar(traduzir("re_sec_2"), blocos.bloco_peca(dossie, largura))
+        acrescentar(traduzir("re_sec_3"), blocos.bloco_fotos(dossie, largura))
+        acrescentar(traduzir("re_sec_4"), blocos.bloco_ambiente(dossie, largura))
+        acrescentar(traduzir("re_sec_5"), blocos.bloco_autorizacao(dossie, largura))
+        acrescentar(traduzir("re_sec_6"), blocos.bloco_metodo(dossie, largura))
+        acrescentar(traduzir("re_sec_7"), blocos.bloco_limitacoes(dossie, largura))
+        acrescentar(traduzir("re_sec_8"), blocos.bloco_alteracoes_ocorridas(dossie, largura))
+        acrescentar(traduzir("re_sec_9"), blocos.bloco_desfecho(dossie, largura))
 
         if erro_do_conteudo:
             conteudo = [Paragraph(
-                "O conteúdo desta aquisição NÃO pôde ser interpretado para este relatório "
-                f"({identidade.escapar(erro_do_conteudo)}). O material bruto permanece na "
-                "aquisição; nada se afirma aqui sobre o que ele contém.",
+                traduzir("re_conteudo_erro", erro=identidade.escapar(erro_do_conteudo)),
                 e["alerta"],
             )]
         else:
             conteudo = blocos.bloco_conteudo(artefatos, largura, nome_do_fuso(fuso))
-        acrescentar("10. Conteúdo interpretado — resumo", conteudo)
+        acrescentar(traduzir("re_sec_10"), conteudo)
 
-        acrescentar(
-            "11. Arquivos adquiridos, por categoria",
-            blocos.bloco_arquivos_por_categoria(dossie, largura),
-        )
-        acrescentar("12. Inventário do material adquirido", blocos.bloco_inventario(dossie, largura))
-        acrescentar("13. Integridade", blocos.bloco_integridade(dossie, largura))
-        acrescentar(
-            "14. Requisitos da norma verificados pela ferramenta",
-            blocos.bloco_protocolos_da_ferramenta(dossie, largura),
-        )
+        acrescentar(traduzir("re_sec_11"), blocos.bloco_arquivos_por_categoria(dossie, largura))
+        acrescentar(traduzir("re_sec_12"), blocos.bloco_inventario(dossie, largura))
+        acrescentar(traduzir("re_sec_13"), blocos.bloco_integridade(dossie, largura))
+        acrescentar(traduzir("re_sec_14"), blocos.bloco_protocolos_da_ferramenta(dossie, largura))
 
         historia.append(PageBreak())
-        acrescentar(
-            "Anexo A — Linha do tempo do procedimento",
-            blocos.bloco_linha_do_tempo(dossie, largura),
-        )
+        acrescentar(traduzir("re_anexo_a"), blocos.bloco_linha_do_tempo(dossie, largura))
         historia.append(PageBreak())
-        acrescentar("Anexo B — Manifesto de hashes", blocos.bloco_manifesto(dossie, largura))
+        acrescentar(traduzir("re_anexo_b"), blocos.bloco_manifesto(dossie, largura))
 
         caminho = destino or destino_livre(
             pasta_de_documentos(pasta_aquisicao), f"{PREFIXO}_{pasta_aquisicao.name}"
         )
         identidade.montar_documento(
             caminho,
-            "Relatório de Extração",
+            traduzir("re_titulo_doc"),
             historia,
             rastreio=dossie.rastreio,
             selo=dossie.sha256_do_manifesto,
