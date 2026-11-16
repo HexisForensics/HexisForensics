@@ -867,15 +867,10 @@ class RelatorioService:
         """O que o normalizador não compreendeu, por extenso."""
         linhas = [
             "=" * LARGURA,
-            "TRECHOS NÃO INTERPRETADOS".center(LARGURA),
+            traduzir("pr_desc_titulo").center(LARGURA),
             "=" * LARGURA,
             "",
-            "  O normalizador não compreendeu os trechos abaixo. Eles NÃO",
-            "  entraram nas planilhas nem no PDF, e precisam ser examinados",
-            "  no arquivo bruto original, dentro da aquisição selada.",
-            "",
-            "  A existência desta lista significa que o relatório está",
-            "  INCOMPLETO em relação à evidência.",
+            traduzir("pr_desc_intro"),
             "",
         ]
         for artefato in artefatos:
@@ -884,7 +879,7 @@ class RelatorioService:
             linhas += ["-" * LARGURA, f"{artefato.titulo} — {artefato.caminho_relativo}", ""]
             for descarte in artefato.resultado.descartes:
                 linhas += [
-                    f"  Linha {descarte.linha_de_origem}: {descarte.motivo}",
+                    traduzir("pr_desc_linha", n=descarte.linha_de_origem, motivo=descarte.motivo),
                     f"    {descarte.texto}",
                     "",
                 ]
@@ -898,12 +893,13 @@ class RelatorioService:
     def _linhas_procedencia(pasta_aquisicao: Path, artefatos: list, fuso) -> list:
         linhas = [
             "=" * LARGURA,
-            "PROCEDÊNCIA DESTE RELATÓRIO".center(LARGURA),
+            traduzir("pr_titulo").center(LARGURA),
             "=" * LARGURA,
-            f"Aquisição de origem: {pasta_aquisicao.name}",
-            f"Gerado em:           {datetime.now().astimezone().isoformat(timespec='seconds')}",
-            f"Normalizador:        versão {VERSAO_NORMALIZADOR}",
-            f"Fuso das datas:      {RelatorioService._nome_do_fuso(artefatos, fuso)}",
+            traduzir("pr_l_aquisicao", valor=pasta_aquisicao.name),
+            traduzir("pr_l_gerado",
+                     valor=datetime.now().astimezone().isoformat(timespec='seconds')),
+            traduzir("pr_l_normalizador", v=VERSAO_NORMALIZADOR),
+            traduzir("pr_l_fuso", valor=RelatorioService._nome_do_fuso(artefatos, fuso)),
             "=" * LARGURA,
             "",
         ]
@@ -912,12 +908,10 @@ class RelatorioService:
         if divergentes:
             linhas += [
                 "!" * LARGURA,
-                "ATENÇÃO: ORIGEM DIVERGENTE DO SELO".center(LARGURA),
+                traduzir("pr_div_titulo").center(LARGURA),
                 "!" * LARGURA,
                 "",
-                "  Os arquivos abaixo NÃO conferem mais com o hash registrado no",
-                "  manifesto da aquisição. O conteúdo apresentado neste relatório",
-                "  não corresponde ao que foi selado no dia da coleta.",
+                traduzir("pr_div_intro"),
                 "",
             ]
             linhas += [f"  - {a.caminho_relativo}" for a in divergentes]
@@ -925,57 +919,38 @@ class RelatorioService:
 
         for artefato in artefatos:
             linhas.append(f"[{artefato.titulo}]")
-            linhas.append(f"  Arquivo de origem: {artefato.caminho_relativo}")
+            linhas.append(traduzir("pr_l_arquivo_origem", valor=artefato.caminho_relativo))
 
             if not artefato.presente:
-                linhas += [
-                    "  NÃO ENCONTRADO nesta aquisição — o módulo correspondente",
-                    "  provavelmente não foi executado. Isso não é ausência de dado",
-                    "  no aparelho: é ausência de coleta.",
-                    "",
-                ]
+                linhas += [traduzir("pr_nao_encontrado"), ""]
                 continue
 
-            linhas.append(f"  SHA-256 agora:     {artefato.sha256}")
+            linhas.append(traduzir("pr_l_sha_agora", valor=artefato.sha256))
             if artefato.sha256_no_manifesto:
                 confere = artefato.confere_com_o_selo
-                linhas.append(f"  SHA-256 no selo:   {artefato.sha256_no_manifesto}")
-                linhas.append(
-                    f"  Conferência:       {'CONFERE com o selo da coleta' if confere else 'DIVERGE DO SELO'}"
-                )
+                linhas.append(traduzir("pr_l_sha_selo", valor=artefato.sha256_no_manifesto))
+                linhas.append(traduzir(
+                    "pr_l_conferencia",
+                    valor=traduzir("pr_conf_confere") if confere else traduzir("pr_conf_diverge"),
+                ))
             else:
-                linhas.append(
-                    "  Conferência:       não há manifesto cobrindo este arquivo; "
-                    "não foi possível confrontá-lo com o selo."
-                )
+                linhas.append(traduzir("pr_sem_manifesto"))
 
-            linhas.append(f"  Registros:         {artefato.total}")
+            linhas.append(traduzir("pr_l_registros", n=artefato.total))
             if artefato.nota_da_fonte:
-                linhas.append(f"  Nota da fonte:     {artefato.nota_da_fonte}")
+                linhas.append(traduzir("pr_l_nota_fonte", valor=artefato.nota_da_fonte))
             if not artefato.total:
-                linhas.append(f"  Por que zero:      {artefato.explicacao}")
+                linhas.append(traduzir("pr_l_por_que_zero", valor=artefato.explicacao))
             if artefato.resultado.descartes:
-                linhas.append(
-                    f"  NÃO interpretado:  {len(artefato.resultado.descartes)} trecho(s) "
-                    f"— ver {NOME_DESCARTES}"
-                )
+                linhas.append(traduzir("pr_l_nao_interpretado",
+                                       n=len(artefato.resultado.descartes), arquivo=NOME_DESCARTES))
             linhas.append("")
 
         linhas += [
             "-" * LARGURA,
-            "ALCANCE DESTE RELATÓRIO",
+            traduzir("pr_alcance_titulo"),
             "",
-            "  Este documento APRESENTA a evidência; não a substitui. Cada linha",
-            "  das planilhas traz o arquivo e a linha de origem, e o original",
-            "  permanece na aquisição selada, onde pode ser conferido.",
-            "",
-            "  Normalizar é interpretar: datas foram convertidas do formato do",
-            "  aparelho para o fuso declarado acima, e códigos numéricos foram",
-            "  traduzidos. Código não reconhecido é apresentado como tal, nunca",
-            "  adivinhado.",
-            "",
-            "  Contagem zero NUNCA significa, por si só, ausência de dado no",
-            "  aparelho. O motivo de cada zero está declarado acima.",
+            traduzir("pr_alcance"),
             "-" * LARGURA,
             "=" * LARGURA,
         ]
