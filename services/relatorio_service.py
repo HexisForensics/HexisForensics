@@ -297,20 +297,18 @@ def linhas_de_resumo(artefatos) -> list:
     linhas = []
     for artefato in artefatos:
         if not artefato.presente:
-            linhas.append(
-                f"{artefato.titulo}: NÃO COLETADO — o módulo correspondente não foi "
-                "executado nesta aquisição. Não é ausência de dado no aparelho."
-            )
+            linhas.append(traduzir("lr_nao_coletado", titulo=artefato.titulo))
         elif artefato.total:
             linhas.append(
-                f"{artefato.titulo}: {artefato.total} registro(s) — planilha "
-                f"{artefato.chave}.csv"
-                + (f". ATENÇÃO: {artefato.nota_da_fonte}" if artefato.nota_da_fonte else "")
+                traduzir("lr_com_registros", titulo=artefato.titulo, n=artefato.total,
+                         planilha=artefato.chave)
+                + (traduzir("lr_atencao", nota=artefato.nota_da_fonte)
+                   if artefato.nota_da_fonte else "")
             )
         else:
             linhas.append(
-                f"{artefato.titulo}: nenhum registro — "
-                f"{artefato.explicacao}"
+                traduzir("lr_sem_registros", titulo=artefato.titulo,
+                         explicacao=artefato.explicacao)
             )
     return linhas
 
@@ -1021,57 +1019,45 @@ class RelatorioService:
         manifesto = localizar_manifesto(pasta_aquisicao)
         hash_manifesto = calcular_sha256(manifesto) if manifesto else ""
         if hash_manifesto:
-            rastreio = (
-                f"Extraído de <b>{escapar(pasta_aquisicao.name)}</b> — SHA-256 do "
-                f"manifesto: <span class='mono'>{escapar(hash_manifesto)}</span> | "
-                f"Normalizador versão {escapar(VERSAO_NORMALIZADOR)}"
-            )
+            rastreio = traduzir(
+                "cc_rastreio_com", nome=escapar(pasta_aquisicao.name),
+                hash=escapar(hash_manifesto), v=escapar(VERSAO_NORMALIZADOR))
         else:
-            rastreio = (
-                f"Extraído de <b>{escapar(pasta_aquisicao.name)}</b> — esta aquisição "
-                "<b>não possui manifesto de integridade</b>, e a origem deste conteúdo "
-                "não pôde ser confrontada com selo algum."
-            )
+            rastreio = traduzir("cc_rastreio_sem", nome=escapar(pasta_aquisicao.name))
 
         divergentes = [a for a in artefatos if a.confere_com_o_selo is False]
-        alerta_divergencia = (
-            "<p class='alerta'><b>ATENÇÃO: a origem deste conteúdo NÃO confere mais "
-            "com o hash selado no dia da coleta.</b> O que está apresentado aqui não "
-            "corresponde ao que foi selado, e não deve ser usado sem que a divergência "
-            "seja esclarecida.</p>"
-        )
+        alerta_divergencia = traduzir("cc_alerta_divergencia")
 
         secoes = []
 
         # --- identificação -------------------------------------------------
         secoes.append((
-            "Identificação do relatório de conteúdo",
+            traduzir("cc_sec_identificacao"),
             tabela(
-                ["Parâmetro", "Valor"],
+                [traduzir("cc_h_parametro"), traduzir("cc_h_valor")],
                 [
-                    ["Aquisição de origem", escapar(pasta_aquisicao.name)],
-                    ["Fuso das datas", escapar(nome_fuso)],
-                    ["Versão do normalizador", escapar(VERSAO_NORMALIZADOR)],
-                    ["Planilhas geradas", escapar(f"{len(artefatos)} artefato(s)")],
+                    [traduzir("cc_l_aquisicao_origem"), escapar(pasta_aquisicao.name)],
+                    [traduzir("cc_l_fuso"), escapar(nome_fuso)],
+                    [traduzir("cc_l_versao_norm"), escapar(VERSAO_NORMALIZADOR)],
+                    [traduzir("cc_l_planilhas"),
+                     escapar(traduzir("cc_planilhas_valor", n=len(artefatos)))],
                 ],
                 ["35%", "65%"],
             )
-            + "<p class='nota'>Duas leituras do mesmo material com versões diferentes "
-            "do normalizador podem divergir legitimamente. Sem esse número, ninguém "
-            "saberia por quê.</p>",
+            + traduzir("cc_nota_identificacao"),
         ))
 
         # --- conferência da origem -----------------------------------------
         linhas = []
         for artefato in artefatos:
             if not artefato.presente:
-                situacao = "Não coletado"
+                situacao = traduzir("cc_sit_nao_coletado")
             elif artefato.confere_com_o_selo is True:
-                situacao = "<b>Confere com o selo</b>"
+                situacao = traduzir("cc_sit_confere")
             elif artefato.confere_com_o_selo is False:
-                situacao = "<b>NÃO CONFERE</b>"
+                situacao = traduzir("cc_sit_nao_confere")
             else:
-                situacao = "Sem selo a comparar"
+                situacao = traduzir("cc_sit_sem_selo")
             linhas.append([
                 escapar(artefato.titulo),
                 escapar(artefato.caminho_relativo),
@@ -1079,17 +1065,15 @@ class RelatorioService:
                 f"<span class='mono'>{escapar(artefato.sha256[:32] or '—')}</span>",
             ])
         corpo = tabela(
-            ["Artefato", "Arquivo de origem", "Conferência", "SHA-256 (início)"],
+            [traduzir("cc_conf_h_artefato"), traduzir("cc_conf_h_arquivo"),
+             traduzir("cc_conf_h_conferencia"), traduzir("cc_conf_h_sha")],
             linhas,
             ["22%", "33%", "20%", "25%"],
         )
         if divergentes:
             corpo = alerta_divergencia + corpo
-        corpo += (
-            "<p class='nota'>“Sem selo a comparar” não é o mesmo que conferir: "
-            "significa que não havia hash daquele arquivo no manifesto.</p>"
-        )
-        secoes.append(("Conferência da origem contra o selo", corpo))
+        corpo += traduzir("cc_nota_sem_selo")
+        secoes.append((traduzir("cc_sec_conferencia"), corpo))
 
         # --- resumo ----------------------------------------------------------
         itens = "".join(
@@ -1097,18 +1081,15 @@ class RelatorioService:
             for linha in linhas_de_resumo(artefatos)
         )
         secoes.append((
-            "Resumo por artefato",
-            f"<ul>{itens}</ul>"
-            "<p class='nota'><b>“Não coletado” não é ausência de dado no aparelho</b> — "
-            "é ausência de coleta: o módulo correspondente não foi executado nesta "
-            "aquisição.</p>",
+            traduzir("cc_sec_resumo"),
+            f"<ul>{itens}</ul>" + traduzir("cc_nota_resumo"),
         ))
 
         # --- um bloco por artefato -------------------------------------------
         for artefato in artefatos:
             if not artefato.presente or not artefato.resultado:
                 continue
-            cabecalho = [rotulo_da_coluna(c) for c in artefato.colunas] + ["Origem"]
+            cabecalho = [rotulo_da_coluna(c) for c in artefato.colunas] + [traduzir("cc_h_origem")]
             linhas = []
             for registro in artefato.resultado.registros:
                 celulas = []
@@ -1125,24 +1106,17 @@ class RelatorioService:
             if linhas:
                 corpo = tabela(cabecalho, linhas)
             else:
-                corpo = (
-                    "<p><b>Nenhum registro.</b> "
-                    f"{escapar(artefato.explicacao)}</p>"
-                )
+                corpo = traduzir("cc_nenhum_registro", explicacao=escapar(artefato.explicacao))
 
             if artefato.nota_da_fonte:
-                corpo = (f"<p class=\"alerta\"><b>Nota da fonte:</b> "
-                         f"{escapar(artefato.nota_da_fonte)}</p>") + corpo
+                corpo = traduzir("cc_nota_fonte",
+                                 valor=escapar(artefato.nota_da_fonte)) + corpo
             if artefato.confere_com_o_selo is False:
                 corpo = alerta_divergencia + corpo
 
-            corpo += (
-                f"<p class='nota'>A relação completa, para cruzar e filtrar, está em "
-                f"<b>{escapar(artefato.chave)}.csv</b>, na mesma pasta. Cada registro "
-                "carrega o arquivo e a linha de onde veio.</p>"
-            )
+            corpo += traduzir("cc_nota_planilha", planilha=escapar(artefato.chave))
             secoes.append((
-                f"{artefato.titulo} — {artefato.total} registro(s)",
+                traduzir("cc_sec_artefato", titulo=artefato.titulo, total=artefato.total),
                 corpo,
             ))
 
@@ -1151,12 +1125,7 @@ class RelatorioService:
             a for a in artefatos if a.resultado and a.resultado.descartes
         ]
         if com_descarte:
-            partes = [
-                "<p class='alerta'><b>A existência desta lista significa que o "
-                "relatório está INCOMPLETO em relação à evidência.</b> Os trechos "
-                "abaixo não entraram em planilha alguma e precisam ser examinados no "
-                "arquivo bruto original, dentro da aquisição selada.</p>"
-            ]
+            partes = [traduzir("cc_descarte_alerta")]
             for artefato in com_descarte:
                 linhas = [
                     [
@@ -1168,36 +1137,18 @@ class RelatorioService:
                 ]
                 partes.append(f"<h3>{escapar(artefato.titulo)}</h3>")
                 partes.append(
-                    tabela(["Linha", "Motivo", "Trecho"], linhas, ["10%", "30%", "60%"])
+                    tabela([traduzir("cc_descarte_h_linha"), traduzir("cc_descarte_h_motivo"),
+                            traduzir("cc_descarte_h_trecho")], linhas, ["10%", "30%", "60%"])
                 )
             corpo = "".join(partes)
         else:
-            corpo = (
-                "<p>Todos os trechos dos arquivos de origem foram interpretados. "
-                "Nenhum registro foi descartado em silêncio.</p>"
-            )
-        secoes.append(("Trechos não interpretados", corpo))
+            corpo = traduzir("cc_descarte_nenhum")
+        secoes.append((traduzir("cc_sec_descartes"), corpo))
 
         caminho = destino / NOME_CADERNO
         documento = montar_documento(
-            titulo=f"Caderno de conteúdo — {pasta_aquisicao.name}",
-            capa="""
-    <h1>Caderno de conteúdo</h1>
-    <p><b>Aquisição:</b> """ + escapar(pasta_aquisicao.name) + """<br>
-       <b>Caderno emitido em:</b> {emitido}</p>
-    <p>Este caderno apresenta o que foi normalizado a partir da aquisição, em
-       blocos prontos para copiar. <b>Ele não substitui as planilhas</b>: os
-       arquivos <b>.csv</b> ao lado são o dado para cruzar, filtrar e trabalhar
-       a investigação.</p>
-    <p><b>Copiar bloco</b> leva o trecho para o editor de texto com as tabelas
-       inteiras. <b>Gerar PDF deste bloco</b> abre a impressão apenas daquele
-       bloco.</p>
-    <p class="alerta"><b>No destino da impressão, escolha “Salvar como PDF”, do
-       próprio navegador — não “Microsoft Print to PDF”.</b> A impressora do
-       Windows converte cada letra em desenho: o PDF sai sem texto e não pode
-       ser pesquisado.</p>
-    <p>Cada bloco termina com a aquisição de origem, o SHA-256 do manifesto e a
-       versão do normalizador. <b>Mantenha essa linha ao colar.</b></p>""",
+            titulo=traduzir("cc_titulo_doc", nome=pasta_aquisicao.name),
+            capa=traduzir("cc_capa", nome=escapar(pasta_aquisicao.name)),
             secoes=secoes,
             rastreio=rastreio,
         )
