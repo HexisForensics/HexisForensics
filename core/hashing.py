@@ -232,12 +232,19 @@ def gerar_manifesto(
 
     log(f"[*] Calculando hashes SHA-256 de {total} arquivo(s) em '{pasta_alvo.name}'... Aguarde...")
 
+    # O cabeçalho sai no idioma carimbado no caso; o corpo (hash *caminho) é
+    # universal e nunca muda — é o que `sha256sum -c` e a conferência leem.
+    from core.case import idioma_para_selar
+    from core.idioma import traduzir
+    idi = idioma_para_selar(pasta_alvo)
+
     with open(caminho_manifesto, "w", encoding="utf-8") as manifesto:
         manifesto.write("=" * 58 + "\n")
-        manifesto.write("       MANIFESTO FORENSE DE HASHES (SHA-256)\n")
+        manifesto.write(traduzir("sl_man_titulo", idi) + "\n")
         manifesto.write("=" * 58 + "\n")
-        manifesto.write(f"Pasta Analisada: {pasta_alvo.name}\n")
-        manifesto.write(f"Gerado em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        manifesto.write(traduzir("sl_man_pasta", idi, valor=pasta_alvo.name) + "\n")
+        manifesto.write(traduzir("sl_man_gerado", idi,
+                                 valor=datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + "\n\n")
 
         for indice, caminho in enumerate(arquivos, 1):
             # `as_posix()` é deliberado: o manifesto usa barra normal em
