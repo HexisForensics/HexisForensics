@@ -9,7 +9,8 @@ inatividade e da troca de examinador.
 Na versão de desenvolvimento, e só nela, aparece o acesso à conta de
 testes (Forensic Admin).
 
-Fala só com `services.sessao_service`.
+Fala só com `services.sessao_service`. Todo texto de tela vem do catálogo
+(`services.idioma.traduzir`).
 """
 
 from __future__ import annotations
@@ -38,6 +39,7 @@ from PySide6.QtWidgets import (
 from services import sessao_service
 from services.branding_service import BrandConfig
 from services.extraction_service import identificacao_da_ferramenta
+from services.idioma import traduzir
 
 from .termos_dialog import TermosDialog
 from .vitrine_entrada import VitrineAnimada
@@ -103,14 +105,15 @@ class _Cartao(QWidget):
         nome = QLabel(examinador["nome"])
         nome.setObjectName("NomeCartao")
         if not examinador["tem_senha"]:
-            detalhe = "primeiro acesso — criará a senha ao entrar"
+            detalhe = traduzir("te_cartao_primeiro_acesso")
         elif examinador["bloqueado_ate"]:
-            detalhe = f"travado por senhas erradas até {examinador['bloqueado_ate']}"
+            detalhe = traduzir("te_cartao_travado", ate=examinador['bloqueado_ate'])
         else:
             detalhe = " · ".join(p for p in (
-                f"Reg. {examinador['registro_funcional']}" if examinador["registro_funcional"] else "",
+                traduzir("te_cartao_reg", valor=examinador['registro_funcional'])
+                if examinador["registro_funcional"] else "",
                 examinador["unidade"],
-            ) if p) or "examinador"
+            ) if p) or traduzir("te_cartao_examinador")
         rotulo = QLabel(detalhe)
         rotulo.setObjectName("DetalheCartao")
         textos.addWidget(nome)
@@ -125,12 +128,16 @@ class TelaEntrada(QDialog):
     """
 
     def __init__(self, marca: BrandConfig, parent=None, bloqueio: bool = False,
-                 preselecionar: str = "", texto_sair: str = "⏻  Sair do sistema",
+                 preselecionar: str = "", texto_sair: str = None,
                  abrir_cadastro: bool = False):
         super().__init__(parent)
         self.marca = marca
         self.bloqueio = bloqueio
-        self.setWindowTitle(marca.nome_exibicao + (" — sessão bloqueada" if bloqueio else ""))
+        if texto_sair is None:
+            texto_sair = traduzir("te_sair")
+        self.setWindowTitle(
+            marca.nome_exibicao + (traduzir("te_sufixo_bloqueada") if bloqueio else "")
+        )
         self.setModal(True)
         # Diálogo, no Windows, vem só com o X: a entrada é a primeira tela da
         # suíte e precisa minimizar e maximizar como uma janela comum.
@@ -203,11 +210,11 @@ class TelaEntrada(QDialog):
         self.vitrine = VitrineAnimada()
         layout.addWidget(self.vitrine, 1)
         layout.addSpacing(14)
-        self.rodape_marca = QLabel(
-            f"<b style='color:#c8d6e6'>{identificacao_da_ferramenta()}</b><br>"
-            f"Estação: {platform.node() or 'não identificada'}<br>"
-            "Orientado pela ABNT NBR ISO/IEC 27037"
-        )
+        self.rodape_marca = QLabel(traduzir(
+            "te_rodape_marca",
+            ferramenta=identificacao_da_ferramenta(),
+            estacao=platform.node() or traduzir("te_estacao_nao_identificada"),
+        ))
         self.rodape_marca.setObjectName("RodapeMarca")
         layout.addWidget(self.rodape_marca)
         return painel
@@ -247,9 +254,9 @@ class TelaEntrada(QDialog):
         layout = QVBoxLayout(pagina)
         layout.setContentsMargins(0, 0, 0, 0)
         self.sub_entrar = self._titulo(
-            layout, "Sessão bloqueada" if self.bloqueio else "Entrar",
-            "Digite a senha para continuar. Uma extração em andamento segue rodando."
-            if self.bloqueio else "Escolha seu nome e digite sua senha.",
+            layout,
+            traduzir("te_titulo_bloqueada") if self.bloqueio else traduzir("te_titulo_entrar"),
+            traduzir("te_sub_bloqueada") if self.bloqueio else traduzir("te_sub_entrar"),
         )
         self.lista = QListWidget()
         self.lista.setObjectName("ListaExaminadores")
@@ -260,20 +267,20 @@ class TelaEntrada(QDialog):
         self.rotulo_senha = QLabel()
         self.rotulo_senha.setObjectName("Sub")
         layout.addWidget(self.rotulo_senha)
-        self.campo_senha = self._senha("Senha")
+        self.campo_senha = self._senha(traduzir("te_ph_senha"))
         self.campo_senha.returnPressed.connect(self._entrar)
         layout.addWidget(self.campo_senha)
-        self.campo_repetir = self._senha("Repita a senha")
+        self.campo_repetir = self._senha(traduzir("te_ph_repita"))
         self.campo_repetir.returnPressed.connect(self._entrar)
         layout.addWidget(self.campo_repetir)
         self.erro_entrar = self._erro()
         layout.addWidget(self.erro_entrar)
 
         acoes = QHBoxLayout()
-        self.botao_entrar = self._botao("Entrar  →", primario=True)
+        self.botao_entrar = self._botao(traduzir("te_btn_entrar"), primario=True)
         self.botao_entrar.clicked.connect(self._entrar)
         acoes.addWidget(self.botao_entrar)
-        self.link_esqueci = QPushButton("Esqueci minha senha")
+        self.link_esqueci = QPushButton(traduzir("te_esqueci"))
         self.link_esqueci.setObjectName("Link")
         self.link_esqueci.setCursor(Qt.PointingHandCursor)
         self.link_esqueci.clicked.connect(self._esqueci)
@@ -282,23 +289,22 @@ class TelaEntrada(QDialog):
         acoes.addStretch()
         layout.addLayout(acoes)
 
-        self.botao_novo = self._botao("＋  Novo examinador")
+        self.botao_novo = self._botao(traduzir("te_btn_novo"))
         self.botao_novo.clicked.connect(lambda: self._ir_para_novo())
         if not self.bloqueio:
             layout.addSpacing(14)
-            separador = QLabel("ou")
+            separador = QLabel(traduzir("te_ou"))
             separador.setAlignment(Qt.AlignCenter)
             separador.setObjectName("Nota")
             layout.addWidget(separador)
             layout.addWidget(self.botao_novo, 0, Qt.AlignLeft)
-        nota = QLabel("A sessão identifica quem opera: o nome entra no registro de cada "
-                      "aquisição como “sessão aberta com a senha do examinador nesta estação”.")
+        nota = QLabel(traduzir("te_nota_sessao"))
         nota.setObjectName("Nota")
         nota.setWordWrap(True)
         layout.addSpacing(10)
         layout.addWidget(nota)
         if sessao_service.forensic_admin_disponivel() and not self.bloqueio:
-            link_admin = QPushButton("Forensic Admin — conta de testes (versão de desenvolvimento)")
+            link_admin = QPushButton(traduzir("te_link_admin"))
             link_admin.setObjectName("Link")
             link_admin.setCursor(Qt.PointingHandCursor)
             link_admin.clicked.connect(self._ir_para_admin)
@@ -309,29 +315,25 @@ class TelaEntrada(QDialog):
         pagina = QWidget()
         layout = QVBoxLayout(pagina)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.sub_admin = self._titulo(layout, "Forensic Admin", "")
-        aviso = QLabel(
-            "Conta de testes de quem desenvolve a suíte. Existe só na versão de "
-            "desenvolvimento. Tudo o que ela produz sai marcado como <b>TESTE — SEM VALOR "
-            "PERICIAL</b>, dentro do selo da aquisição e em cada página dos documentos."
-        )
+        self.sub_admin = self._titulo(layout, traduzir("te_admin_titulo"), "")
+        aviso = QLabel(traduzir("te_admin_aviso"))
         aviso.setWordWrap(True)
         aviso.setObjectName("Sub")
         layout.addWidget(aviso)
         layout.addSpacing(10)
-        self.admin_senha = self._senha("Senha do Forensic Admin")
+        self.admin_senha = self._senha(traduzir("te_ph_senha_admin"))
         self.admin_senha.returnPressed.connect(self._entrar_admin)
-        self.admin_repetir = self._senha("Repita a senha")
+        self.admin_repetir = self._senha(traduzir("te_ph_repita"))
         self.admin_repetir.returnPressed.connect(self._entrar_admin)
         layout.addWidget(self.admin_senha)
         layout.addWidget(self.admin_repetir)
         self.erro_admin = self._erro()
         layout.addWidget(self.erro_admin)
         acoes = QHBoxLayout()
-        self.botao_admin = self._botao("Entrar  →", primario=True)
+        self.botao_admin = self._botao(traduzir("te_btn_entrar"), primario=True)
         self.botao_admin.clicked.connect(self._entrar_admin)
         acoes.addWidget(self.botao_admin)
-        self.link_esqueci_admin = QPushButton("Esqueci a senha")
+        self.link_esqueci_admin = QPushButton(traduzir("te_esqueci_admin"))
         self.link_esqueci_admin.setObjectName("Link")
         self.link_esqueci_admin.setCursor(Qt.PointingHandCursor)
         self.link_esqueci_admin.clicked.connect(lambda: self._ir_para_recuperar(admin=True))
@@ -340,7 +342,7 @@ class TelaEntrada(QDialog):
         acoes.addStretch()
         layout.addLayout(acoes)
         layout.addStretch()
-        self.botao_voltar_admin = self._botao("Voltar")
+        self.botao_voltar_admin = self._botao(traduzir("te_voltar"))
         self.botao_voltar_admin.clicked.connect(
             lambda: self._carregar(sessao_service.ultimo()))
         layout.addWidget(self.botao_voltar_admin, 0, Qt.AlignLeft)
@@ -349,13 +351,14 @@ class TelaEntrada(QDialog):
     def _ir_para_admin(self) -> None:
         configurado = sessao_service.forensic_admin_configurado()
         self.sub_admin.setText(
-            "Digite a senha para continuar." if configurado else
-            f"Primeiro uso nesta máquina: crie a senha (mínimo "
-            f"{sessao_service.TAMANHO_MINIMO_DA_SENHA} caracteres)."
+            traduzir("te_admin_sub_entrar") if configurado else
+            traduzir("te_admin_sub_criar", min=sessao_service.TAMANHO_MINIMO_DA_SENHA)
         )
         self.admin_repetir.setVisible(not configurado)
         self.link_esqueci_admin.setVisible(configurado)
-        self.botao_admin.setText("Entrar  →" if configurado else "Criar senha e entrar  →")
+        self.botao_admin.setText(
+            traduzir("te_btn_entrar") if configurado else traduzir("te_btn_criar_entrar")
+        )
         self.botao_voltar_admin.setVisible(not self.bloqueio)
         self.admin_senha.clear()
         self.admin_repetir.clear()
@@ -370,7 +373,7 @@ class TelaEntrada(QDialog):
                 codigo = ""
             else:
                 if self.admin_senha.text() != self.admin_repetir.text():
-                    self._mostrar_erro(self.erro_admin, "As senhas não conferem.")
+                    self._mostrar_erro(self.erro_admin, traduzir("te_senhas_nao_conferem"))
                     return
                 codigo = sessao_service.configurar_forensic_admin(self.admin_senha.text())
         except sessao_service.ErroDeAcesso as erro:
@@ -383,32 +386,32 @@ class TelaEntrada(QDialog):
         pagina = QWidget()
         layout = QVBoxLayout(pagina)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.sub_novo = self._titulo(layout, "Novo examinador",
-                                     "Preencha como deve constar nos documentos.")
+        self.sub_novo = self._titulo(layout, traduzir("te_novo_titulo"),
+                                     traduzir("te_novo_sub"))
         form = QFormLayout()
         form.setSpacing(10)
         form.setLabelAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.campos_novo = {}
-        for chave, rotulo, exemplo in (
-            ("nome", "Nome", "Como deve constar nos relatórios e laudos"),
-            ("registro_funcional", "Registro profissional", "Conselho, matrícula, certificação"),
-            ("unidade", "Instituição / laboratório", "Nome do laboratório ou da empresa"),
-            ("email", "Contato (e-mail)", "Opcional"),
+        for chave, rotulo_key, exemplo_key in (
+            ("nome", "te_novo_nome", "te_novo_nome_ex"),
+            ("registro_funcional", "te_novo_registro", "te_novo_registro_ex"),
+            ("unidade", "te_novo_unidade", "te_novo_unidade_ex"),
+            ("email", "te_novo_email", "te_novo_email_ex"),
         ):
             campo = QLineEdit()
-            campo.setPlaceholderText(exemplo)
+            campo.setPlaceholderText(traduzir(exemplo_key))
             self.campos_novo[chave] = campo
-            form.addRow(rotulo, campo)
+            form.addRow(traduzir(rotulo_key), campo)
         self.novo_senha = self._senha(
-            f"mínimo {sessao_service.TAMANHO_MINIMO_DA_SENHA} caracteres")
-        self.novo_repetir = self._senha("repita a senha")
+            traduzir("te_ph_min", min=sessao_service.TAMANHO_MINIMO_DA_SENHA))
+        self.novo_repetir = self._senha(traduzir("te_ph_repita_min"))
         self.novo_repetir.returnPressed.connect(self._cadastrar)
-        form.addRow("Senha", self.novo_senha)
-        form.addRow("Repita a senha", self.novo_repetir)
+        form.addRow(traduzir("te_label_senha"), self.novo_senha)
+        form.addRow(traduzir("te_label_repita"), self.novo_repetir)
         layout.addLayout(form)
         linha_termos = QHBoxLayout()
-        self.aceite_termos = QCheckBox("Li e aceito os termos de uso")
-        ler_termos = QPushButton("Ler os termos")
+        self.aceite_termos = QCheckBox(traduzir("te_aceite_termos"))
+        ler_termos = QPushButton(traduzir("te_ler_termos"))
         ler_termos.setObjectName("Link")
         ler_termos.setCursor(Qt.PointingHandCursor)
         ler_termos.clicked.connect(
@@ -421,16 +424,16 @@ class TelaEntrada(QDialog):
         layout.addWidget(self.erro_novo)
         layout.addStretch()
         acoes = QHBoxLayout()
-        self.botao_voltar_novo = self._botao("Voltar")
+        self.botao_voltar_novo = self._botao(traduzir("te_voltar"))
         self.botao_voltar_novo.clicked.connect(lambda: self.paginas.setCurrentIndex(ENTRAR))
-        cadastrar = self._botao("Cadastrar e entrar", primario=True)
+        cadastrar = self._botao(traduzir("te_cadastrar"), primario=True)
         cadastrar.clicked.connect(self._cadastrar)
         acoes.addWidget(self.botao_voltar_novo)
         acoes.addStretch()
         acoes.addWidget(cadastrar)
         layout.addLayout(acoes)
         if sessao_service.forensic_admin_disponivel() and not self.bloqueio:
-            link_admin = QPushButton("Forensic Admin — conta de testes (versão de desenvolvimento)")
+            link_admin = QPushButton(traduzir("te_link_admin"))
             link_admin.setObjectName("Link")
             link_admin.setCursor(Qt.PointingHandCursor)
             link_admin.clicked.connect(self._ir_para_admin)
@@ -442,30 +445,28 @@ class TelaEntrada(QDialog):
         layout = QVBoxLayout(pagina)
         layout.setContentsMargins(0, 0, 0, 0)
         self.sub_recuperar = self._titulo(
-            layout, "Recuperar a senha",
-            "Digite o código de recuperação de 16 caracteres que a suíte mostrou quando "
-            "você criou a senha, e escolha a nova senha.",
+            layout, traduzir("te_recuperar_titulo"), traduzir("te_recuperar_sub"),
         )
         form = QFormLayout()
         form.setSpacing(10)
         form.setLabelAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.campo_codigo = QLineEdit()
-        self.campo_codigo.setPlaceholderText("XXXX-XXXX-XXXX-XXXX")
-        self.recuperar_senha = self._senha("nova senha")
-        self.recuperar_repetir = self._senha("repita a nova senha")
+        self.campo_codigo.setPlaceholderText(traduzir("te_ph_codigo"))
+        self.recuperar_senha = self._senha(traduzir("te_ph_nova_senha"))
+        self.recuperar_repetir = self._senha(traduzir("te_ph_repita_nova"))
         self.recuperar_repetir.returnPressed.connect(self._recuperar)
-        form.addRow("Código de recuperação", self.campo_codigo)
-        form.addRow("Nova senha", self.recuperar_senha)
-        form.addRow("Repita a nova senha", self.recuperar_repetir)
+        form.addRow(traduzir("te_label_codigo"), self.campo_codigo)
+        form.addRow(traduzir("te_label_nova_senha"), self.recuperar_senha)
+        form.addRow(traduzir("te_label_repita_nova"), self.recuperar_repetir)
         layout.addLayout(form)
         self.erro_recuperar = self._erro()
         layout.addWidget(self.erro_recuperar)
         layout.addStretch()
         acoes = QHBoxLayout()
-        voltar = self._botao("Voltar")
+        voltar = self._botao(traduzir("te_voltar"))
         voltar.clicked.connect(lambda: self.paginas.setCurrentIndex(
             ADMIN if self._recuperando_admin else ENTRAR))
-        confirmar = self._botao("Redefinir e entrar", primario=True)
+        confirmar = self._botao(traduzir("te_redefinir"), primario=True)
         confirmar.clicked.connect(self._recuperar)
         acoes.addWidget(voltar)
         acoes.addStretch()
@@ -478,10 +479,7 @@ class TelaEntrada(QDialog):
         layout = QVBoxLayout(pagina)
         layout.setContentsMargins(0, 0, 0, 0)
         self._titulo(
-            layout, "Código de recuperação",
-            "Guarde este código: é o único jeito de entrar se esquecer a sua senha — "
-            "ninguém, nem o fabricante, consegue redefini-la. Ele aparece só agora; "
-            "usado, é trocado por outro.",
+            layout, traduzir("te_codigo_titulo"), traduzir("te_codigo_sub"),
         )
         self.rotulo_codigo = QLabel()
         self.rotulo_codigo.setObjectName("Codigo")
@@ -489,9 +487,9 @@ class TelaEntrada(QDialog):
         self.rotulo_codigo.setTextInteractionFlags(Qt.TextSelectableByMouse)
         layout.addWidget(self.rotulo_codigo)
         botoes = QHBoxLayout()
-        imprimir = self._botao("🖨  Imprimir")
+        imprimir = self._botao(traduzir("te_imprimir"))
         imprimir.clicked.connect(self._imprimir_codigo)
-        copiar = self._botao("Copiar")
+        copiar = self._botao(traduzir("te_copiar"))
         copiar.clicked.connect(
             lambda: QGuiApplication.clipboard().setText(self._codigo_mostrado))
         botoes.addWidget(imprimir)
@@ -499,12 +497,12 @@ class TelaEntrada(QDialog):
         botoes.addStretch()
         layout.addLayout(botoes)
         layout.addSpacing(10)
-        self.confirmacao_codigo = QCheckBox("Anotei ou imprimi o código e vou guardá-lo em local seguro.")
+        self.confirmacao_codigo = QCheckBox(traduzir("te_codigo_confirmo"))
         layout.addWidget(self.confirmacao_codigo)
         layout.addStretch()
         acoes = QHBoxLayout()
         acoes.addStretch()
-        self.botao_continuar = self._botao("Continuar  →", primario=True)
+        self.botao_continuar = self._botao(traduzir("te_continuar"), primario=True)
         self.botao_continuar.setEnabled(False)
         self.confirmacao_codigo.toggled.connect(self.botao_continuar.setEnabled)
         self.botao_continuar.clicked.connect(self.accept)
@@ -546,12 +544,14 @@ class TelaEntrada(QDialog):
             return
         primeiro_acesso = not examinador["tem_senha"]
         self.rotulo_senha.setText(
-            f"Primeiro acesso de {examinador['nome']}: crie sua senha "
-            f"(mínimo {sessao_service.TAMANHO_MINIMO_DA_SENHA} caracteres)"
-            if primeiro_acesso else f"Senha de {examinador['nome']}"
+            traduzir("te_primeiro_acesso_de", nome=examinador['nome'],
+                     min=sessao_service.TAMANHO_MINIMO_DA_SENHA)
+            if primeiro_acesso else traduzir("te_senha_de", nome=examinador['nome'])
         )
         self.campo_repetir.setVisible(primeiro_acesso)
-        self.botao_entrar.setText("Criar senha e entrar  →" if primeiro_acesso else "Entrar  →")
+        self.botao_entrar.setText(
+            traduzir("te_btn_criar_entrar") if primeiro_acesso else traduzir("te_btn_entrar")
+        )
         self.link_esqueci.setVisible(not primeiro_acesso)
         self.campo_senha.clear()
         self.campo_repetir.clear()
@@ -582,7 +582,7 @@ class TelaEntrada(QDialog):
                 codigo = ""
             else:
                 if senha != self.campo_repetir.text():
-                    self._mostrar_erro(self.erro_entrar, "As senhas não conferem.")
+                    self._mostrar_erro(self.erro_entrar, traduzir("te_senhas_nao_conferem"))
                     return
                 codigo = sessao_service.criar_senha_e_entrar(examinador["nome"], senha)
         except sessao_service.ErroDeAcesso as erro:
@@ -603,8 +603,7 @@ class TelaEntrada(QDialog):
         self.erro_novo.hide()
         self.botao_voltar_novo.setVisible(not primeiro)
         self.sub_novo.setText(
-            "Primeiro examinador desta estação. Preencha como deve constar nos documentos."
-            if primeiro else "Preencha como deve constar nos documentos."
+            traduzir("te_novo_primeiro") if primeiro else traduzir("te_novo_sub")
         )
         self.paginas.setCurrentIndex(NOVO)
         self.campos_novo["nome"].setFocus()
@@ -612,10 +611,10 @@ class TelaEntrada(QDialog):
     def _cadastrar(self) -> None:
         dados = {chave: campo.text().strip() for chave, campo in self.campos_novo.items()}
         if self.novo_senha.text() != self.novo_repetir.text():
-            self._mostrar_erro(self.erro_novo, "As senhas não conferem.")
+            self._mostrar_erro(self.erro_novo, traduzir("te_senhas_nao_conferem"))
             return
         if not self.aceite_termos.isChecked():
-            self._mostrar_erro(self.erro_novo, "Para se cadastrar, leia e aceite os termos de uso.")
+            self._mostrar_erro(self.erro_novo, traduzir("te_aceite_obrigatorio"))
             return
         try:
             codigo = sessao_service.cadastrar_e_entrar(dados, self.novo_senha.text())
@@ -641,7 +640,7 @@ class TelaEntrada(QDialog):
             try:
                 sessao_service.aceitar_termos()
             except sessao_service.ErroDeAcesso as erro:
-                QMessageBox.warning(self, "Termos de uso", str(erro))
+                QMessageBox.warning(self, traduzir("te_termos_titulo"), str(erro))
                 sessao_service.encerrar()
                 return
         super().accept()
@@ -661,7 +660,7 @@ class TelaEntrada(QDialog):
 
     def _recuperar(self) -> None:
         if self.recuperar_senha.text() != self.recuperar_repetir.text():
-            self._mostrar_erro(self.erro_recuperar, "As senhas não conferem.")
+            self._mostrar_erro(self.erro_recuperar, traduzir("te_senhas_nao_conferem"))
             return
         try:
             if self._recuperando_admin:
@@ -680,17 +679,19 @@ class TelaEntrada(QDialog):
         try:
             from PySide6.QtPrintSupport import QPrintDialog, QPrinter
         except ImportError:
-            QMessageBox.warning(self, "Imprimir", "Impressão indisponível nesta estação.")
+            QMessageBox.warning(
+                self, traduzir("te_imprimir_titulo"), traduzir("te_impressao_indisponivel")
+            )
             return
         impressora = QPrinter()
         if QPrintDialog(impressora, self).exec() != QDialog.Accepted:
             return
         documento = QTextDocument()
-        documento.setHtml(
-            f"<h2>{self.marca.nome_exibicao} — código de recuperação</h2>"
-            f"<p>Examinador: <b>{sessao_service.nome()}</b><br>"
-            f"Estação: {platform.node()}</p>"
-            f"<p style='font-size:22pt; font-family:Consolas'>{self._codigo_mostrado}</p>"
-            "<p>Guarde em local seguro. Usado, o código é substituído por outro.</p>"
-        )
+        documento.setHtml(traduzir(
+            "te_codigo_impresso",
+            marca=self.marca.nome_exibicao,
+            examinador=sessao_service.nome(),
+            estacao=platform.node(),
+            codigo=self._codigo_mostrado,
+        ))
         documento.print_(impressora)
