@@ -29,6 +29,7 @@ from services.branding_service import PASTA_EXTRACOES, BrandConfig
 from services.case_service import CaseService
 from services.device_service import ANDROID, COMPUTADOR, IOS, DeviceService
 from services import sessao_service
+from services.idioma import traduzir
 from services.exame_service import criar_registro
 from services.extraction_service import identificacao_da_ferramenta as sessao_da_ferramenta
 from services.extraction_service import (
@@ -79,9 +80,9 @@ class _VigiaDeUso(QObject):
 
 
 TITULOS_SECAO = {
-    "android": ("Extração", "Início › Extração › Android"),
-    "iphone": ("Extração", "Início › Extração › iPhone"),
-    "computador": ("Extração", "Início › Extração › Armazenamento"),
+    "android": ("mw_secao_extracao", "mw_bc_android"),
+    "iphone": ("mw_secao_extracao", "mw_bc_iphone"),
+    "computador": ("mw_secao_extracao", "mw_bc_computador"),
 }
 
 
@@ -109,10 +110,10 @@ class PlataformaPage(QWidget):
         self.nome_plataforma = nome_plataforma
         layout = QVBoxLayout(self)
         self.painel_superior = painel_superior or DevicePanel(
-            f"Status do Dispositivo — {nome_plataforma}"
+            traduzir("mw_status_dispositivo", plataforma=nome_plataforma)
         )
         self.painel_extracao = ExtractionPanel(
-            extratores, f"Tipos de Extração — {nome_plataforma}"
+            extratores, traduzir("mw_tipos_extracao", plataforma=nome_plataforma)
         )
         layout.addWidget(self.painel_superior)
         layout.addWidget(self.painel_extracao, stretch=1)
@@ -131,7 +132,7 @@ class MainWindow(QMainWindow):
     def __init__(self, marca: BrandConfig):
         super().__init__()
         self.marca = marca
-        self.setWindowTitle(f"{marca.nome_exibicao} — Suíte de Extração Forense")
+        self.setWindowTitle(traduzir("mw_titulo_janela", marca=marca.nome_exibicao))
         caber_na_tela(self, 1200, 800)
         PASTA_EXTRACOES.mkdir(parents=True, exist_ok=True)
         self.device_service = DeviceService()
@@ -199,7 +200,7 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(central)
         self.setStatusBar(QStatusBar())
-        self.statusBar().showMessage("Pronto.")
+        self.statusBar().showMessage(traduzir("mw_pronto"))
         self.label_examinador = QLabel(sessao_service.resumo())
         self.statusBar().addPermanentWidget(self.label_examinador)
         self._atualizar_unidades_computador()
@@ -220,19 +221,15 @@ class MainWindow(QMainWindow):
         painel_execucao = QWidget()
         layout_execucao = QVBoxLayout(painel_execucao)
         linha_botoes = QHBoxLayout()
-        self.botao_iniciar = QPushButton("▶ Iniciar Extração")
+        self.botao_iniciar = QPushButton(traduzir("mw_btn_iniciar"))
         self.botao_iniciar.clicked.connect(self._iniciar_extracao)
-        self.botao_cancelar = QPushButton("■ Cancelar")
+        self.botao_cancelar = QPushButton(traduzir("mw_btn_cancelar"))
         self.botao_cancelar.setEnabled(False)
         self.botao_cancelar.clicked.connect(self._cancelar_extracao)
         # Aparelho bloqueado, que não liga, quebrado: o exame existe mesmo
         # sem extração, e o laudo negativo precisa da mesma cadeia de custódia.
-        self.botao_sem_extracao = QPushButton("📝 Exame sem extração")
-        self.botao_sem_extracao.setToolTip(
-            "Para aparelho bloqueado por credencial, que não liga ou está danificado: "
-            "registra a peça, o estado e a tentativa de conexão, e permite emitir o laudo "
-            "negativo. Nenhum dado do conteúdo é obtido."
-        )
+        self.botao_sem_extracao = QPushButton(traduzir("mw_btn_sem_extracao"))
+        self.botao_sem_extracao.setToolTip(traduzir("mw_tt_sem_extracao"))
         self.botao_sem_extracao.clicked.connect(
             lambda: self._iniciar_extracao(sem_extracao=True)
         )
@@ -244,7 +241,7 @@ class MainWindow(QMainWindow):
         self.console_log = LogConsole()
         layout_execucao.addLayout(linha_botoes)
         layout_execucao.addWidget(self.barra_progresso)
-        layout_execucao.addWidget(QLabel("Console de Execução:"))
+        layout_execucao.addWidget(QLabel(traduzir("mw_console_titulo")))
         layout_execucao.addWidget(self.console_log)
         return painel_execucao
 
@@ -274,7 +271,8 @@ class MainWindow(QMainWindow):
         resumo_operador = self.case_service.registrar_operador(
             pasta_caso, sessao_service.perfil_para_a_aquisicao()
         )
-        self.console_log.adicionar_linha(f"[*] Operador: {resumo_operador}", com_timestamp=True)
+        self.console_log.adicionar_linha(
+            traduzir("mw_log_operador", valor=resumo_operador), com_timestamp=True)
 
         # A autorização é a primeira entrada substantiva do diário: é a
         # primeira coisa que se questiona sobre uma extração. Roda mesmo sem
@@ -284,10 +282,11 @@ class MainWindow(QMainWindow):
             resumo = self.case_service.registrar_autorizacao(
                 pasta_caso, documentos_autorizacao or []
             )
-            self.console_log.adicionar_linha(f"[*] Autorização: {resumo}", com_timestamp=True)
+            self.console_log.adicionar_linha(
+                traduzir("mw_log_autorizacao", valor=resumo), com_timestamp=True)
         except (ValueError, OSError) as exc:
             self.console_log.adicionar_linha(
-                f"[ERRO] Não foi possível registrar a autorização: {exc}", com_timestamp=True
+                traduzir("mw_log_erro_autorizacao", erro=exc), com_timestamp=True
             )
 
         e_android = nome_plataforma == ANDROID
@@ -301,9 +300,11 @@ class MainWindow(QMainWindow):
 
         resumo_relogio, alerta_relogio = self.device_service.obter_relogio_android()
         self.case_service.registrar_relogio(resumo_relogio)
-        self.console_log.adicionar_linha(f"[*] {resumo_relogio}", com_timestamp=True)
+        self.console_log.adicionar_linha(
+            traduzir("mw_log_relogio", valor=resumo_relogio), com_timestamp=True)
         if alerta_relogio:
-            self.console_log.adicionar_linha(f"[ATENÇÃO] {alerta_relogio}", com_timestamp=True)
+            self.console_log.adicionar_linha(
+                traduzir("mw_log_atencao", valor=alerta_relogio), com_timestamp=True)
 
         self.case_service.registrar_alteracao(
             "Depuração USB ativada no aparelho e chave RSA desta estação autorizada.",
@@ -321,14 +322,14 @@ class MainWindow(QMainWindow):
 
     def _iniciar_extracao(self, sem_extracao: bool = False) -> None:
         if self._servico_extracao is not None and self._servico_extracao.isRunning():
-            QMessageBox.warning(self, "Aviso", "Já existe uma extração em andamento.")
+            QMessageBox.warning(self, traduzir("mw_aviso"), traduzir("mw_ja_em_andamento"))
             return
 
         aba = self._aba_atual()
         if sem_extracao and aba.nome_plataforma == COMPUTADOR:
             QMessageBox.information(
-                self, "Exame sem extração",
-                "O exame sem extração é para aparelho celular (Android ou iPhone).",
+                self, traduzir("mw_sem_extracao_titulo"),
+                traduzir("mw_sem_extracao_so_celular"),
             )
             return
         classes_selecionadas = (
@@ -336,7 +337,7 @@ class MainWindow(QMainWindow):
         )
         if not classes_selecionadas and not sem_extracao:
             QMessageBox.warning(
-                self, "Aviso", "Selecione ao menos um tipo de extração."
+                self, traduzir("mw_aviso"), traduzir("mw_selecione_tipo")
             )
             return
 
@@ -350,7 +351,7 @@ class MainWindow(QMainWindow):
             caminho_unidade_computador = self.painel_disco.unidade_selecionada()
             if not caminho_unidade_computador:
                 QMessageBox.warning(
-                    self, "Aviso", "Selecione uma unidade de disco antes de iniciar."
+                    self, traduzir("mw_aviso"), traduzir("mw_selecione_unidade")
                 )
                 return
 
@@ -360,13 +361,12 @@ class MainWindow(QMainWindow):
         # Passo 0: QUEM executa — o examinador da sessão, confirmado. Custa um
         # clique e evita extração no nome de quem esqueceu de trocar.
         if not self._confirmar_examinador(
-            "Confirmar examinador",
-            ("Este exame sem extração será registrado como feito por " if sem_extracao
-             else "Esta extração será registrada como feita por ")
-            + f"<b>{sessao_service.nome()}</b>.<br>Se não é você, troque de examinador antes."
-            + ("<br><br><b style='color:#ff6b6b'>MODO DE TESTE:</b> a aquisição e todos os "
-               "documentos dela sairão marcados como TESTE, sem valor pericial."
-               if sessao_service.e_forensic_admin() else ""),
+            traduzir("mw_confirmar_examinador_titulo"),
+            traduzir(
+                "mw_confirmar_sem_extracao" if sem_extracao else "mw_confirmar_extracao",
+                nome=sessao_service.nome(),
+            )
+            + (traduzir("mw_confirmar_teste") if sessao_service.e_forensic_admin() else ""),
         ):
             return
 
@@ -449,9 +449,8 @@ class MainWindow(QMainWindow):
             udid = self.device_service.obter_udid_ios()
             if not udid:
                 QMessageBox.warning(
-                    self, "iPhone não autorizado",
-                    "Nenhum iPhone conectado que confie nesta estação. Conecte o cabo, "
-                    "desbloqueie a tela, toque em 'Confiar' e clique em 'Verificar'.",
+                    self, traduzir("mw_iphone_nao_autorizado_titulo"),
+                    traduzir("mw_iphone_nao_autorizado_corpo"),
                 )
                 return
             self._serial_do_caso = udid
@@ -481,7 +480,7 @@ class MainWindow(QMainWindow):
             )
         except OSError as erro:
             self.console_log.adicionar_linha(
-                f"[!] Erro ao salvar cadeia de custódia: {erro}", com_timestamp=True
+                traduzir("mw_log_erro_cadeia", erro=erro), com_timestamp=True
             )
         self._abrir_registro_procedimento(
             pasta_caso,
@@ -499,7 +498,7 @@ class MainWindow(QMainWindow):
                 "à estação durante o procedimento.",
             )
         self.console_log.adicionar_linha(
-            f"[*] Pasta de destino: {pasta_caso}", com_timestamp=True
+            traduzir("mw_log_pasta_destino", valor=pasta_caso), com_timestamp=True
         )
 
         self.barra_progresso.setValue(0)
@@ -549,9 +548,9 @@ class MainWindow(QMainWindow):
         self._pagina_atual = chave
         self.paginas.setCurrentWidget(self._paginas_por_chave[chave])
         self.botao_sem_extracao.setVisible(chave != "computador")
-        titulo, breadcrumb = TITULOS_SECAO[chave]
-        self.label_titulo_secao.setText(titulo)
-        self.label_breadcrumb.setText(breadcrumb)
+        titulo_key, breadcrumb_key = TITULOS_SECAO[chave]
+        self.label_titulo_secao.setText(traduzir(titulo_key))
+        self.label_breadcrumb.setText(traduzir(breadcrumb_key))
         self.sidebar.selecionar(chave)
 
     def _aba_atual(self) -> PlataformaPage:
@@ -567,12 +566,12 @@ class MainWindow(QMainWindow):
         self.painel_disco.atualizar_lista(unidades)
         if unidades:
             self.console_log.adicionar_linha(
-                f"[Computador] {len(unidades)} unidade(s) de disco detectada(s).",
+                traduzir("mw_log_unidades", n=len(unidades)),
                 com_timestamp=True,
             )
         else:
             self.console_log.adicionar_linha(
-                "[Computador] Nenhuma unidade detectada (fora do Windows, ou nenhum disco conectado).",
+                traduzir("mw_log_sem_unidades"),
                 com_timestamp=True,
             )
 
@@ -590,7 +589,7 @@ class MainWindow(QMainWindow):
             self._servico_extracao.cancelar()
 
     def _ao_iniciar_extrator(self, id_e, nome) -> None:
-        self.statusBar().showMessage(f"Executando: {nome}")
+        self.statusBar().showMessage(traduzir("mw_executando", nome=nome))
         self._aba_execucao_atual.painel_extracao.marcar_em_execucao(id_e)
 
     def _ao_concluir_extrator(self, id_e, nome, sucesso, msg, det) -> None:
@@ -604,7 +603,7 @@ class MainWindow(QMainWindow):
         self.botao_cancelar.setEnabled(False)
         servico = self._servico_extracao
         self.statusBar().showMessage(
-            servico.texto_da_barra_de_status() if servico else "Extração finalizada.")
+            servico.texto_da_barra_de_status() if servico else traduzir("mw_extracao_finalizada"))
 
     def _conferir_aparelho_ao_final(self):
         """
@@ -659,9 +658,9 @@ class MainWindow(QMainWindow):
         caixa.setWindowTitle(titulo)
         caixa.setTextFormat(Qt.RichText)
         caixa.setText(texto)
-        trocar = caixa.addButton("Trocar examinador", QMessageBox.ActionRole)
-        confirmar = caixa.addButton("Confirmar", QMessageBox.AcceptRole)
-        caixa.addButton("Cancelar", QMessageBox.RejectRole)
+        trocar = caixa.addButton(traduzir("mw_btn_trocar"), QMessageBox.ActionRole)
+        confirmar = caixa.addButton(traduzir("mw_btn_confirmar"), QMessageBox.AcceptRole)
+        caixa.addButton(traduzir("mw_btn_cancelar_dialogo"), QMessageBox.RejectRole)
         caixa.setDefaultButton(confirmar)
         caixa.exec()
         if caixa.clickedButton() is trocar:
@@ -672,13 +671,12 @@ class MainWindow(QMainWindow):
     def _trocar_examinador(self, abrir_cadastro: bool = False) -> None:
         if self._extracao_em_andamento():
             QMessageBox.information(
-                self, "Extração em andamento",
-                "Aguarde o fim da extração para trocar de examinador: ela está registrada "
-                f"em nome de {sessao_service.nome()}.",
+                self, traduzir("mw_extracao_andamento_titulo"),
+                traduzir("mw_trocar_bloqueado", nome=sessao_service.nome()),
             )
             return
         self.hide()
-        entrada = TelaEntrada(self.marca, texto_sair="←  Voltar à sessão atual",
+        entrada = TelaEntrada(self.marca, texto_sair=traduzir("mw_voltar_sessao"),
                               abrir_cadastro=abrir_cadastro)
         if entrada.exec() == QDialog.Accepted:
             self._atualizar_sessao()
@@ -723,13 +721,13 @@ class MainWindow(QMainWindow):
                     return
                 if self._extracao_em_andamento():
                     QMessageBox.information(
-                        None, "Extração em andamento",
-                        "Há uma extração em andamento: a suíte não pode ser fechada agora. "
-                        "Digite a senha para voltar.",
+                        None, traduzir("mw_extracao_andamento_titulo"),
+                        traduzir("mw_bloqueio_extracao"),
                     )
                     continue
                 if QMessageBox.question(
-                    None, "Sair", f"Deseja sair do {self.marca.nome_exibicao}?",
+                    None, traduzir("mw_sair_titulo"),
+                    traduzir("mw_sair_pergunta", marca=self.marca.nome_exibicao),
                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
                 ) == QMessageBox.Yes:
                     self._sair_sem_perguntar = True
@@ -750,17 +748,15 @@ class MainWindow(QMainWindow):
         """
         if self._servico_extracao is not None and self._servico_extracao.isRunning():
             QMessageBox.warning(
-                self, "Extração em andamento",
-                "Há uma extração em andamento. Sair agora deixaria a aquisição sem o "
-                "lacre (manifesto) e sem o registro de encerramento.\n\n"
-                "Clique em 'Cancelar', aguarde a mensagem de extração finalizada e "
-                "então saia.",
+                self, traduzir("mw_extracao_andamento_titulo"),
+                traduzir("mw_fechar_extracao"),
             )
             evento.ignore()
             return
         if not self._sair_sem_perguntar:
             resposta = QMessageBox.question(
-                self, "Sair", f"Deseja sair do {self.marca.nome_exibicao}?",
+                self, traduzir("mw_sair_titulo"),
+                traduzir("mw_sair_pergunta", marca=self.marca.nome_exibicao),
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
             )
             if resposta != QMessageBox.Yes:
@@ -777,22 +773,11 @@ class MainWindow(QMainWindow):
 
     def _mostrar_sobre(self) -> None:
         caixa = QMessageBox(self)
-        caixa.setWindowTitle(f"Sobre o {self.marca.nome_exibicao}")
+        caixa.setWindowTitle(traduzir("mw_sobre_titulo", marca=self.marca.nome_exibicao))
         caixa.setIconPixmap(self.windowIcon().pixmap(64, 64))
-        caixa.setText(
-            f"<b>{sessao_da_ferramenta()}</b><br><br>"
-            "Suíte de aquisição e preservação de evidência digital para "
-            "Android, iPhone e mídias de armazenamento, orientada pela "
-            "ABNT NBR ISO/IEC 27037.<br><br>"
-            "A ferramenta nunca afirma o que não verificou: ausência de dado "
-            "no material adquirido não autoriza concluir ausência do dado no "
-            "dispositivo.<br><br>"
-            "Copyright © 2026 Hexis Forensics. Software livre, distribuído nos "
-            "termos da GNU General Public License, versão 3 (GPL-3.0), <b>sem "
-            "nenhuma garantia</b>. O texto da licença está no arquivo LICENSE."
-        )
-        termos = caixa.addButton("Termos de uso", QMessageBox.HelpRole)
-        caixa.addButton("Fechar", QMessageBox.AcceptRole)
+        caixa.setText(traduzir("mw_sobre_corpo", ferramenta=sessao_da_ferramenta()))
+        termos = caixa.addButton(traduzir("mw_btn_termos"), QMessageBox.HelpRole)
+        caixa.addButton(traduzir("mw_btn_fechar"), QMessageBox.AcceptRole)
         caixa.exec()
         if caixa.clickedButton() is termos:
             TermosDialog(self, para_aceitar=False).exec()
