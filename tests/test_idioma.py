@@ -135,5 +135,36 @@ checar(
     idioma_servico.traduzir("campo_lacre") == "Lacre",
 )
 
+# ---------------------------------------------------------------------------
+print("\n[7] Paridade entre catálogos: mesmas chaves, mesmos campos {}")
+# ---------------------------------------------------------------------------
+# Um idioma a mais não pode esquecer uma chave (cairia para o pt) nem, pior,
+# perder um campo {} de um molde — aí o dado capturado sumiria na tradução.
+import json  # noqa: E402
+from string import Formatter  # noqa: E402
+
+RAIZ = Path(__file__).resolve().parent.parent
+
+
+def _campos(molde: str):
+    return {nome for _, nome, _, _ in Formatter().parse(molde) if nome}
+
+
+pt = json.loads((RAIZ / "idiomas" / "pt.json").read_text(encoding="utf-8"))
+for idioma in idiomas_disponiveis():
+    if idioma == "pt":
+        continue
+    outro = json.loads((RAIZ / "idiomas" / f"{idioma}.json").read_text(encoding="utf-8"))
+    checar(f"[{idioma}] mesmas chaves que o pt", set(outro) == set(pt))
+    divergencias = [
+        chave for chave in pt
+        if chave in outro and _campos(pt[chave]) != _campos(outro[chave])
+    ]
+    checar(f"[{idioma}] mesmos campos {{}} em cada molde", not divergencias)
+    if divergencias:
+        for chave in divergencias:
+            print(f"      {chave}: pt{sorted(_campos(pt[chave]))} "
+                  f"vs {idioma}{sorted(_campos(outro[chave]))}")
+
 print("\n" + ("TODOS OS TESTES PASSARAM" if not falhas else f"{len(falhas)} FALHA(S): {falhas}"))
 sys.exit(1 if falhas else 0)

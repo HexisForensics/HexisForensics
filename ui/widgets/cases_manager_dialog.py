@@ -5,6 +5,10 @@ e gerar os documentos da aquisição.
 
 A retificação da PEÇA não tem botão próprio aqui: entra-se por "Retificar
 Dados do Caso", que lista todos os dispositivos do caso.
+
+Todo texto de tela vem do catálogo (`services.idioma.traduzir`): o molde é
+traduzido; o valor capturado (erro, caminho, nome, resumo) é injetado por
+`campos` e nunca passa pela tradução.
 """
 
 from __future__ import annotations
@@ -46,6 +50,7 @@ from services.case_service import (
     ler_cadeia_custodia,
 )
 from services import ficha_service, laudo_service, relatorio_extracao_service, sessao_service
+from services.idioma import traduzir
 from services.decifragem_service import (
     decifrar_backup_ios,
     decifrar_whatsapp,
@@ -67,7 +72,7 @@ class CasesManagerDialog(QDialog):
         self.pasta_extracoes = pasta_extracoes
         self.case_service = CaseService(pasta_extracoes)
 
-        self.setWindowTitle("Gerenciador de Casos e Cadeia de Custódia")
+        self.setWindowTitle(traduzir("gc_titulo_janela"))
         self.setModal(True)
         caber_na_tela(self, 1100, 700)
         self.setMinimumSize(900, 560)
@@ -86,16 +91,14 @@ class CasesManagerDialog(QDialog):
         widget_projetos = QWidget()
         layout_proj = QVBoxLayout(widget_projetos)
         layout_proj.setContentsMargins(0, 0, 0, 0)
-        
-        layout_proj.addWidget(QLabel("<b>Casos:</b>"))
+
+        layout_proj.addWidget(QLabel(traduzir("gc_casos")))
         self.lista_projetos = QListWidget()
         self.lista_projetos.currentRowChanged.connect(self._ao_selecionar_projeto)
         layout_proj.addWidget(self.lista_projetos)
-        self.botao_excluir_caso = QPushButton("🗑 Excluir caso…")
+        self.botao_excluir_caso = QPushButton(traduzir("gc_btn_excluir_caso"))
         self.botao_excluir_caso.setEnabled(False)
-        self.botao_excluir_caso.setToolTip(
-            "Envia o caso inteiro à Lixeira do Windows (restaurável), depois de confirmar "
-            "digitando o nome dele. A exclusão fica no registro de acessos.")
+        self.botao_excluir_caso.setToolTip(traduzir("gc_tt_excluir_caso"))
         self.botao_excluir_caso.clicked.connect(self._excluir_caso)
         layout_proj.addWidget(self.botao_excluir_caso)
 
@@ -110,15 +113,12 @@ class CasesManagerDialog(QDialog):
         # exigir que o examinador escolha uma aquisicao antes. Era esse o
         # custo do desenho anterior: o painel ficava vazio ate o segundo
         # clique, e descobrir do que tratava um caso custava dois cliques.
-        layout_det.addWidget(QLabel("<b>Ficha do Caso</b>"))
+        layout_det.addWidget(QLabel(traduzir("gc_ficha_do_caso")))
         self.texto_ficha = QTextEdit()
         self.texto_ficha.setReadOnly(True)
         layout_det.addWidget(self.texto_ficha, stretch=1)
 
-        layout_det.addWidget(QLabel(
-            "<b>Dispositivos do caso</b> — os botões de documento abaixo valem para o "
-            "dispositivo <b>selecionado nesta lista</b>:"
-        ))
+        layout_det.addWidget(QLabel(traduzir("gc_dispositivos_do_caso")))
         self.lista_dispositivos = QListWidget()
         self.lista_dispositivos.currentRowChanged.connect(self._ao_selecionar_dispositivo)
         self.lista_dispositivos.setMaximumHeight(120)
@@ -129,7 +129,7 @@ class CasesManagerDialog(QDialog):
         self.abas = QTabWidget()
         self.texto_detalhes = QTextEdit()
         self.texto_detalhes.setReadOnly(True)
-        self.abas.addTab(self.texto_detalhes, "Cadeia de custódia")
+        self.abas.addTab(self.texto_detalhes, traduzir("gc_aba_cadeia"))
 
         aba_documentos = QWidget()
         layout_docs = QVBoxLayout(aba_documentos)
@@ -142,92 +142,67 @@ class CasesManagerDialog(QDialog):
         self.rotulo_documentos = QLabel()
         self.rotulo_documentos.setObjectName("TextoSecundario")
         linha_docs.addWidget(self.rotulo_documentos, 1)
-        botao_abrir_doc = QPushButton("📄 Abrir")
+        botao_abrir_doc = QPushButton(traduzir("gc_btn_abrir"))
         botao_abrir_doc.clicked.connect(self._abrir_documento)
-        botao_copiar_doc = QPushButton("💾 Salvar cópia em…")
+        botao_copiar_doc = QPushButton(traduzir("gc_btn_salvar_copia"))
         botao_copiar_doc.clicked.connect(self._copiar_documento)
-        botao_exportar_doc = QPushButton("📤 Exportar para entrega…")
-        botao_exportar_doc.setToolTip(
-            "Copia os documentos selecionados (Ctrl/Shift para vários) para um pendrive ou "
-            "pasta, confere cada cópia pelo hash, emite recibo e registra no caso.")
+        botao_exportar_doc = QPushButton(traduzir("gc_btn_exportar"))
+        botao_exportar_doc.setToolTip(traduzir("gc_tt_exportar"))
         botao_exportar_doc.clicked.connect(self._exportar_documentos)
         linha_docs.addWidget(botao_abrir_doc)
         linha_docs.addWidget(botao_copiar_doc)
         linha_docs.addWidget(botao_exportar_doc)
         layout_docs.addLayout(linha_docs)
-        self.abas.addTab(aba_documentos, "Documentos")
+        self.abas.addTab(aba_documentos, traduzir("gc_aba_documentos"))
         # O que foi adquirido, examinado aqui mesmo e só para leitura: abrir a
         # pasta lacrada no Explorer pode criar Thumbs.db/desktop.ini dentro dela.
         self.material = MaterialWidget()
-        self.abas.addTab(self.material, "Material")
+        self.abas.addTab(self.material, traduzir("gc_aba_material"))
         layout_det.addWidget(self.abas, stretch=4)
 
         # --- BOTÕES DE AÇÃO ---
 
-        self.botao_editar_caso = QPushButton("📁 Retificar Dados do Caso")
+        self.botao_editar_caso = QPushButton(traduzir("gc_btn_editar_caso"))
         self.botao_editar_caso.setEnabled(False)
         self.botao_editar_caso.clicked.connect(self._editar_metadados_caso)
 
-        self.botao_autorizacao = QPushButton("⚖ Anexar Autorização")
+        self.botao_autorizacao = QPushButton(traduzir("gc_btn_autorizacao"))
         self.botao_autorizacao.setEnabled(False)
-        self.botao_autorizacao.setToolTip(
-            "Anexa ao caso a decisão judicial, o termo de consentimento ou a requisição — inclusive "
-            "quando o documento só foi digitalizado depois da coleta."
-        )
+        self.botao_autorizacao.setToolTip(traduzir("gc_tt_autorizacao"))
         self.botao_autorizacao.clicked.connect(self._anexar_autorizacao)
 
         # "Relatório" sugeria um documento; o que sai sao varios arquivos --
         # um CSV por artefato, o PDF consolidado, a procedencia e os
         # descartes contados. O rotulo passa a dizer o que o botao faz.
-        self.botao_relatorio = QPushButton("📊 Relatório de Conteúdo (CSV + PDF)")
+        self.botao_relatorio = QPushButton(traduzir("gc_btn_relatorio"))
         self._habilitar_documentos(False)
-        self.botao_relatorio.setToolTip(
-            "Converte SMS, chamadas e agenda em um CSV por artefato (abre no Excel) "
-            "e um PDF consolidado, fora da aquisição selada."
-        )
+        self.botao_relatorio.setToolTip(traduzir("gc_tt_relatorio"))
         self.botao_relatorio.clicked.connect(self._gerar_relatorio_conteudo)
 
 
-        self.botao_relatorio_extracao = QPushButton("📑 Relatório de Extração (PDF)")
+        self.botao_relatorio_extracao = QPushButton(traduzir("gc_btn_relatorio_extracao"))
         self.botao_relatorio_extracao.setEnabled(False)
-        self.botao_relatorio_extracao.setToolTip(
-            "Emite o relatório técnico da aquisição: ambiente, método, desfecho por "
-            "módulo, arquivos por categoria, inventário e selo."
-        )
+        self.botao_relatorio_extracao.setToolTip(traduzir("gc_tt_relatorio_extracao"))
         self.botao_relatorio_extracao.clicked.connect(self._gerar_relatorio_de_extracao)
 
-        self.botao_ficha = QPushButton("🪪 Ficha do Aparelho (PDF)")
+        self.botao_ficha = QPushButton(traduzir("gc_btn_ficha"))
         self.botao_ficha.setEnabled(False)
-        self.botao_ficha.setToolTip(
-            "Capa de leitura rápida: abre com o que a coleta obteve — bloqueio ao "
-            "ser recebido, identificação do aparelho e da linha, segurança e desfecho. "
-            "Cada campo cita a fonte selada; o que não veio consta como NÃO APURADO."
-        )
+        self.botao_ficha.setToolTip(traduzir("gc_tt_ficha"))
         self.botao_ficha.clicked.connect(self._gerar_ficha_do_aparelho)
 
-        self.botao_laudo_pericial = QPushButton("⚖ Laudo Pericial (PDF)")
+        self.botao_laudo_pericial = QPushButton(traduzir("gc_btn_laudo"))
         self.botao_laudo_pericial.setEnabled(False)
-        self.botao_laudo_pericial.setToolTip(
-            "Emite o laudo do dispositivo: material examinado, metodologia, limitações, "
-            "resultados, integridade e conclusão, com as declarações do examinador."
-        )
+        self.botao_laudo_pericial.setToolTip(traduzir("gc_tt_laudo"))
         self.botao_laudo_pericial.clicked.connect(self._gerar_laudo_pericial)
 
-        self.botao_conversas = QPushButton("💬 PDF de conversas selecionadas")
+        self.botao_conversas = QPushButton(traduzir("gc_btn_conversas"))
         self.botao_conversas.setEnabled(False)
-        self.botao_conversas.setToolTip(
-            "Escolha as conversas relevantes (WhatsApp, SMS, MMS) e gere o PDF delas, "
-            "completas. A íntegra de todas fica na planilha e no caderno HTML."
-        )
+        self.botao_conversas.setToolTip(traduzir("gc_tt_conversas"))
         self.botao_conversas.clicked.connect(self._pdf_de_conversas)
 
-        self.botao_decifrar = QPushButton("🔑 Decifrar backup")
+        self.botao_decifrar = QPushButton(traduzir("gc_btn_decifrar"))
         self.botao_decifrar.setEnabled(False)
-        self.botao_decifrar.setToolTip(
-            "Android: decifra o backup do WhatsApp (.crypt15) com a chave de 64 dígitos. "
-            "iPhone: decifra o backup cifrado com a senha de backup. O material em claro "
-            "fica fora da aquisição selada."
-        )
+        self.botao_decifrar.setToolTip(traduzir("gc_tt_decifrar"))
         self.botao_decifrar.clicked.connect(self._decifrar_whatsapp)
 
         # Grade de três colunas, na ordem do trabalho: o caso; o conteúdo
@@ -284,8 +259,8 @@ class CasesManagerDialog(QDialog):
     def _informar_documento(self, titulo: str, documento) -> None:
         if documento.erro:
             QMessageBox.critical(
-                self, "Documento não gerado",
-                f"Não foi possível gerar o documento:\n{documento.erro}",
+                self, traduzir("gc_doc_nao_gerado_titulo"),
+                traduzir("gc_doc_nao_gerado_corpo", erro=documento.erro),
             )
             return
         self._carregar_documentos()
@@ -294,14 +269,14 @@ class CasesManagerDialog(QDialog):
     def _pdf_de_conversas(self) -> None:
         pasta_aquisicao = self._aquisicao_selecionada()
         if pasta_aquisicao is None:
-            QMessageBox.warning(self, "Aviso", "Selecione uma aquisição na lista.")
+            QMessageBox.warning(self, traduzir("gc_aviso"), traduzir("gc_selecione_aquisicao"))
             return
         ConversasDialog(pasta_aquisicao, parent=self).exec()
 
     def _decifrar_whatsapp(self) -> None:
         pasta_aquisicao = self._aquisicao_selecionada()
         if pasta_aquisicao is None:
-            QMessageBox.warning(self, "Aviso", "Selecione uma aquisição na lista.")
+            QMessageBox.warning(self, traduzir("gc_aviso"), traduzir("gc_selecione_aquisicao"))
             return
         if e_aquisicao_ios(pasta_aquisicao):
             # No iPhone o que se decifra é o backup inteiro, com a senha de
@@ -311,17 +286,14 @@ class CasesManagerDialog(QDialog):
                 # O módulo de backup cifrado gerou a senha e a guardou sob o
                 # selo: o examinador só confirma, sem copiar do log.
                 senha, confirmado = QInputDialog.getText(
-                    self, "Senha do backup do iPhone",
-                    "Senha temporária gerada pela suíte nesta aquisição (guardada em "
-                    "backup_ios_cifrado/senha_do_backup.txt e conferida com o lacre). Confirme para "
-                    "decifrar:",
+                    self, traduzir("gc_senha_iphone_titulo"),
+                    traduzir("gc_senha_iphone_gerada"),
                     QLineEdit.Normal, gerada,
                 )
             else:
                 senha, confirmado = QInputDialog.getText(
-                    self, "Senha do backup do iPhone",
-                    "Senha de backup definida no iPhone (não é o código de desbloqueio). "
-                    "Ela constará do registro da decifragem, para que possa ser repetida:",
+                    self, traduzir("gc_senha_iphone_titulo"),
+                    traduzir("gc_senha_iphone_definida"),
                     QLineEdit.Password,
                 )
             if not confirmado or not senha:
@@ -341,15 +313,12 @@ class CasesManagerDialog(QDialog):
             self.unsetCursor()
 
         if resultado.erro:
-            QMessageBox.warning(self, "Nada foi decifrado", resultado.erro)
+            QMessageBox.warning(self, traduzir("gc_nada_decifrado"), resultado.erro)
             return
         QMessageBox.information(
             self,
-            "Backup decifrado",
-            f"{resultado.resumo}\n\nGravado em:\n{resultado.pasta}\n\n"
-            "A aquisição selada não foi alterada.\n\nEm seguida será gerado o Relatório de "
-            "Conteúdo, que é onde as mensagens aparecem. Um Laudo emitido antes desta "
-            "decifragem não as traz: emita-o de novo.",
+            traduzir("gc_backup_decifrado_titulo"),
+            traduzir("gc_backup_decifrado_corpo", resumo=resultado.resumo, pasta=resultado.pasta),
         )
         # Decifrar não mostra mensagem nenhuma por si: quem as mostra é o
         # relatório de conteúdo. Sem gerá-lo aqui, o examinador decifra e
@@ -359,40 +328,38 @@ class CasesManagerDialog(QDialog):
     def _gerar_relatorio_de_extracao(self) -> None:
         pasta_aquisicao = self._aquisicao_selecionada()
         if pasta_aquisicao is None:
-            QMessageBox.warning(self, "Aviso", "Selecione uma aquisição na lista.")
+            QMessageBox.warning(self, traduzir("gc_aviso"), traduzir("gc_selecione_aquisicao"))
             return
         self.setCursor(Qt.WaitCursor)
         try:
             documento = relatorio_extracao_service.gerar(pasta_aquisicao)
         finally:
             self.unsetCursor()
-        self._informar_documento("Relatório de Extração gerado", documento)
+        self._informar_documento(traduzir("gc_relatorio_extracao_gerado"), documento)
 
     def _gerar_ficha_do_aparelho(self) -> None:
         pasta_aquisicao = self._aquisicao_selecionada()
         if pasta_aquisicao is None:
-            QMessageBox.warning(self, "Aviso", "Selecione uma aquisição na lista.")
+            QMessageBox.warning(self, traduzir("gc_aviso"), traduzir("gc_selecione_aquisicao"))
             return
         self.setCursor(Qt.WaitCursor)
         try:
             documento = ficha_service.gerar(pasta_aquisicao)
         finally:
             self.unsetCursor()
-        self._informar_documento("Ficha do Aparelho gerada", documento)
+        self._informar_documento(traduzir("gc_ficha_gerada"), documento)
 
     def _gerar_laudo_pericial(self) -> None:
         pasta_aquisicao = self._aquisicao_selecionada()
         if pasta_aquisicao is None:
-            QMessageBox.warning(self, "Aviso", "Selecione uma aquisição na lista.")
+            QMessageBox.warning(self, traduzir("gc_aviso"), traduzir("gc_selecione_aquisicao"))
             return
 
         # Quem subscreve é o examinador da sessão, confirmado a cada laudo:
         # pode não ser quem fez a extração, e o laudo mostra os dois.
         resposta = QMessageBox.question(
-            self, "Examinador que subscreve",
-            f"Este laudo será subscrito por {sessao_service.nome()}.\n\n"
-            "Se não é você, feche esta janela e use 'Trocar examinador', no rodapé da "
-            "barra lateral.",
+            self, traduzir("gc_examinador_subscreve_titulo"),
+            traduzir("gc_examinador_subscreve_corpo", nome=sessao_service.nome()),
             QMessageBox.Ok | QMessageBox.Cancel, QMessageBox.Ok,
         )
         if resposta != QMessageBox.Ok:
@@ -430,11 +397,10 @@ class CasesManagerDialog(QDialog):
                 )
             except OSError as erro:
                 QMessageBox.warning(
-                    self, "Atenção",
-                    "O laudo foi gerado, mas as respostas aos protocolos NÃO puderam "
-                    f"ser juntadas ao caso ({erro}). Elas existem apenas dentro do laudo.",
+                    self, traduzir("gc_atencao"),
+                    traduzir("gc_laudo_protocolos_falha", erro=erro),
                 )
-        self._informar_documento("Laudo Pericial gerado", documento)
+        self._informar_documento(traduzir("gc_laudo_gerado"), documento)
 
     def _carregar_projetos(self) -> None:
         self.lista_projetos.clear()
@@ -454,7 +420,7 @@ class CasesManagerDialog(QDialog):
             self.lista_projetos.addItem(item)
 
         if not self._resumos:
-            self.texto_ficha.setText("Nenhum caso encontrado na pasta de extrações.")
+            self.texto_ficha.setText(traduzir("gc_nenhum_caso"))
 
     @staticmethod
     def _rotulo_do_caso(resumo) -> str:
@@ -467,16 +433,23 @@ class CasesManagerDialog(QDialog):
         """
         partes = list(resumo.reconhecimento)
         quantas = len(resumo.aquisicoes)
-        partes.append(f"{quantas} aquisições" if quantas != 1 else "1 aquisição")
+        partes.append(
+            traduzir("gc_rotulo_aquisicoes", quantas=quantas) if quantas != 1
+            else traduzir("gc_rotulo_uma_aquisicao")
+        )
         if resumo.lacres:
-            partes.append("lacre " + ", ".join(resumo.lacres))
+            partes.append(traduzir("gc_rotulo_lacre", lacres=", ".join(resumo.lacres)))
         if resumo.examinadores:
-            rotulo = "examinador" if len(resumo.examinadores) == 1 else "examinadores"
-            partes.append(f"{rotulo}: " + ", ".join(resumo.examinadores))
+            rotulo = (traduzir("gc_examinador_sing") if len(resumo.examinadores) == 1
+                      else traduzir("gc_examinador_plur"))
+            partes.append(traduzir(
+                "gc_rotulo_examinador_linha", rotulo=rotulo,
+                nomes=", ".join(resumo.examinadores),
+            ))
         if resumo.ultima_atividade:
             partes.append(resumo.ultima_atividade.strftime("%d/%m/%Y"))
         if resumo.metadados_divergentes:
-            partes.append("⚠ metadados divergentes")
+            partes.append(traduzir("gc_metadados_divergentes"))
         return f"{resumo.identificador}\n{'  ·  '.join(partes)}"
 
     def _ao_selecionar_projeto(self, row: int) -> None:
@@ -498,17 +471,19 @@ class CasesManagerDialog(QDialog):
         try:
             resumo = self.case_service.resumo_do_caso(pasta_proj)
         except Exception as erro:
-            self.texto_ficha.setText(f"Erro ao ler informações do caso: {erro}")
+            self.texto_ficha.setText(traduzir("gc_erro_ler_caso", erro=erro))
             return
 
         self.texto_ficha.setHtml(self._montar_ficha(resumo))
 
         for aquisicao in resumo.aquisicoes:
-            selo = "🔒 selada" if aquisicao.selada else "aberta"
-            item = QListWidgetItem(
-                f"{aquisicao.rotulo}  ·  examinador: {aquisicao.examinador or 'não registrado'}"
-                f"  ·  {selo}"
-            )
+            selo = traduzir("gc_selada") if aquisicao.selada else traduzir("gc_aberta")
+            item = QListWidgetItem(traduzir(
+                "gc_rotulo_aquisicao",
+                rotulo=aquisicao.rotulo,
+                examinador=aquisicao.examinador or traduzir("gc_nao_registrado"),
+                selo=selo,
+            ))
             # Contrato de dados preservado: os manipuladores de edicao,
             # caderno e conteudo leem exatamente estes tres papeis.
             item.setData(Qt.UserRole, aquisicao.pasta)
@@ -522,9 +497,7 @@ class CasesManagerDialog(QDialog):
             self.lista_dispositivos.addItem(item)
 
         if not resumo.aquisicoes:
-            self.texto_detalhes.setText(
-                "Este caso ainda não tem nenhuma aquisição gravada."
-            )
+            self.texto_detalhes.setText(traduzir("gc_sem_aquisicao"))
         else:
             # A primeira aquisição já vem selecionada. Sem isso os botões de
             # documento ficavam desligados até um clique na lista de
@@ -541,7 +514,7 @@ class CasesManagerDialog(QDialog):
         de "a tela não mostra esse dado".
         """
         def linha(rotulo: str, valor: str) -> str:
-            valor = escapar(valor) if valor else "<i>não informado</i>"
+            valor = escapar(valor) if valor else traduzir("gc_ficha_nao_informado")
             return f"<tr><td><b>{escapar(rotulo)}</b></td><td>{valor}</td></tr>"
 
         partes = [f"<h3>{escapar(resumo.identificador)}</h3>"]
@@ -551,18 +524,10 @@ class CasesManagerDialog(QDialog):
             # aquisicao. Quando elas discordam, escolher uma versao em
             # silencio seria a ferramenta afirmando o que nao verificou.
             campos = ", ".join(resumo.campos_divergentes)
-            partes.append(
-                "<p style='color:#c62828;'><b>⚠ Dados do caso divergentes entre as "
-                f"aquisições:</b> {escapar(campos)}.<br>"
-                "A ficha mostra a versão da aquisição mais recente. Use "
-                "'Retificar Dados do Caso' para criar o registro único do caso.</p>"
-            )
+            partes.append(traduzir("gc_ficha_divergentes", campos=escapar(campos)))
 
         if not resumo.tem_registro:
-            partes.append(
-                "<p><i>Caso anterior ao registro único: os dados abaixo foram lidos "
-                "de dentro das aquisições.</i></p>"
-            )
+            partes.append(traduzir("gc_ficha_caso_anterior"))
 
         partes.append("<table cellpadding='3'>")
         for campo, valor in resumo.dados_do_caso.items():
@@ -570,34 +535,31 @@ class CasesManagerDialog(QDialog):
         partes.append("</table>")
 
         if resumo.lacres:
-            partes.append(f"<p><b>Lacres:</b> {escapar(', '.join(resumo.lacres))}</p>")
+            partes.append(traduzir("gc_ficha_lacres", valor=escapar(', '.join(resumo.lacres))))
         if resumo.examinadores:
-            partes.append(
-                f"<p><b>Examinador(es):</b> {escapar(', '.join(resumo.examinadores))}</p>"
-            )
+            partes.append(traduzir(
+                "gc_ficha_examinadores", valor=escapar(', '.join(resumo.examinadores))
+            ))
 
-        partes.append(f"<p><b>Aquisições:</b> {len(resumo.aquisicoes)}</p>")
+        partes.append(traduzir("gc_ficha_aquisicoes", valor=len(resumo.aquisicoes)))
         self._dados_do_caso_na_ficha = dict(resumo.dados_do_caso)
 
         if resumo.documentos:
-            partes.append("<p><b>Autorização anexada:</b></p><ul>")
+            partes.append(traduzir("gc_ficha_autorizacao_anexada"))
             for documento in resumo.documentos:
-                partes.append(
-                    f"<li>{escapar(documento.get('rotulo') or documento.get('tipo', ''))}"
-                    f" — {escapar(documento.get('nome', ''))}</li>"
-                )
+                partes.append(traduzir(
+                    "gc_ficha_doc_item",
+                    rotulo=escapar(documento.get('rotulo') or documento.get('tipo', '')),
+                    nome=escapar(documento.get('nome', '')),
+                ))
             partes.append("</ul>")
         else:
-            partes.append(
-                "<p><b>Autorização:</b> <i>nenhum documento anexado a este caso.</i></p>"
-            )
+            partes.append(traduzir("gc_ficha_sem_autorizacao"))
 
         if resumo.complementos:
-            partes.append(
-                f"<p><b>Complementos juntados:</b> {resumo.complementos}</p>"
-            )
+            partes.append(traduzir("gc_ficha_complementos", valor=resumo.complementos))
 
-        partes.append(f"<p style='color:gray;'>Pasta: {escapar(str(resumo.pasta))}</p>")
+        partes.append(traduzir("gc_ficha_pasta", valor=escapar(str(resumo.pasta))))
         return "".join(partes)
 
     def _ao_selecionar_dispositivo(self, row: int) -> None:
@@ -605,18 +567,20 @@ class CasesManagerDialog(QDialog):
             self._habilitar_documentos(False)
             self._carregar_documentos()
             return
-            
+
         item = self.lista_dispositivos.item(row)
         conteudo_custodia = item.data(Qt.UserRole + 1)
         caminho_pasta: Path = item.data(Qt.UserRole)
 
         self._carregar_documentos()
         if conteudo_custodia:
-            texto_completo = f"{conteudo_custodia}\n\nCaminho dos arquivos:\n{caminho_pasta}"
+            texto_completo = traduzir(
+                "gc_caminho_arquivos", conteudo=conteudo_custodia, caminho=caminho_pasta
+            )
             self.texto_detalhes.setText(texto_completo)
             self._habilitar_documentos(True)
         else:
-            self.texto_detalhes.setText(f"Diretório: {caminho_pasta}")
+            self.texto_detalhes.setText(traduzir("gc_diretorio", caminho=caminho_pasta))
             self._habilitar_documentos(False)
 
     def _excluir_caso(self) -> None:
@@ -625,23 +589,19 @@ class CasesManagerDialog(QDialog):
             return
         pasta_caso: Path = self.lista_projetos.item(linha).data(Qt.UserRole)
         confirmacao, confirmado = QInputDialog.getText(
-            self, "Excluir caso",
-            f"O caso {pasta_caso.name} inteiro — aquisições, documentos, relatórios e "
-            "complementos — será enviado à Lixeira do Windows. Dá para restaurá-lo de lá; "
-            "apagar de vez é esvaziar a Lixeira.\n\n"
-            f"Para confirmar, digite o nome do caso ({pasta_caso.name}):",
+            self, traduzir("gc_excluir_titulo"),
+            traduzir("gc_excluir_corpo", nome=pasta_caso.name),
         )
         if not confirmado:
             return
         try:
             excluir_caso(pasta_caso, confirmacao, casos=self.case_service)
         except ErroDeExclusao as erro:
-            QMessageBox.warning(self, "Caso não excluído", str(erro))
+            QMessageBox.warning(self, traduzir("gc_caso_nao_excluido"), str(erro))
             return
         QMessageBox.information(
-            self, "Caso excluído",
-            f"O caso {pasta_caso.name} foi enviado à Lixeira do Windows e a exclusão foi "
-            "registrada.")
+            self, traduzir("gc_caso_excluido_titulo"),
+            traduzir("gc_caso_excluido_corpo", nome=pasta_caso.name))
         self._carregar_projetos()
 
     # ------------------------------------------------------------------
@@ -661,18 +621,19 @@ class CasesManagerDialog(QDialog):
             item.setData(Qt.UserRole, str(documento.caminho))
             self.lista_documentos.addItem(item)
         self.rotulo_documentos.setText(
-            f"{len(documentos)} documento(s) desta aquisição — clique duas vezes para abrir."
-            if documentos else
-            "Nenhum documento gerado ainda para esta aquisição. Use os botões abaixo."
+            traduzir("gc_docs_contagem", n=len(documentos)) if documentos
+            else traduzir("gc_docs_nenhum")
         )
-        self.abas.setTabText(1, f"Documentos ({len(documentos)})")
+        self.abas.setTabText(1, traduzir("gc_aba_documentos_contagem", n=len(documentos)))
         if documentos:
             self.lista_documentos.setCurrentRow(0)
 
     def _documento_escolhido(self):
         item = self.lista_documentos.currentItem()
         if item is None:
-            QMessageBox.information(self, "Documentos", "Escolha um documento na lista.")
+            QMessageBox.information(
+                self, traduzir("gc_documentos_titulo"), traduzir("gc_escolha_documento")
+            )
             return None
         return Path(item.data(Qt.UserRole))
 
@@ -685,7 +646,9 @@ class CasesManagerDialog(QDialog):
         pasta_aquisicao = self._aquisicao_selecionada()
         escolhidos = [Path(item.data(Qt.UserRole)) for item in self.lista_documentos.selectedItems()]
         if pasta_aquisicao is None or not escolhidos:
-            QMessageBox.information(self, "Exportar", "Selecione um ou mais documentos na lista.")
+            QMessageBox.information(
+                self, traduzir("gc_exportar_titulo"), traduzir("gc_selecione_documentos")
+            )
             return
         EntregaDialog(pasta_aquisicao, documentos=escolhidos, parent=self).exec()
 
@@ -694,19 +657,19 @@ class CasesManagerDialog(QDialog):
         if caminho is None:
             return
         destino, _ = QFileDialog.getSaveFileName(
-            self, "Salvar cópia do documento", str(Path.home() / caminho.name),
-            "Documento PDF (*.pdf)",
+            self, traduzir("gc_salvar_copia_titulo"), str(Path.home() / caminho.name),
+            traduzir("gc_filtro_pdf"),
         )
         if not destino:
             return
         try:
             resumo = salvar_copia(caminho, Path(destino))
         except OSError as erro:
-            QMessageBox.critical(self, "Cópia não salva", str(erro))
+            QMessageBox.critical(self, traduzir("gc_copia_nao_salva"), str(erro))
             return
         QMessageBox.information(
-            self, "Cópia salva",
-            f"Cópia salva em:\n{destino}\n\nConferida pelo SHA-256, idêntica ao original:\n{resumo}",
+            self, traduzir("gc_copia_salva_titulo"),
+            traduzir("gc_copia_salva_corpo", destino=destino, resumo=resumo),
         )
 
     def _obter_dados_atuais(self) -> dict:
@@ -739,7 +702,7 @@ class CasesManagerDialog(QDialog):
         """
         linha = self.lista_projetos.currentRow()
         if linha < 0:
-            QMessageBox.warning(self, "Aviso", "Selecione um caso na lista.")
+            QMessageBox.warning(self, traduzir("gc_aviso"), traduzir("gc_selecione_caso"))
             return
         pasta_caso: Path = self.lista_projetos.item(linha).data(Qt.UserRole)
 
@@ -761,15 +724,13 @@ class CasesManagerDialog(QDialog):
         try:
             alterado = self.case_service.retificar_caso(pasta_caso, dialogo_caso.dados_metadados())
         except OSError as erro:
-            QMessageBox.critical(self, "Erro", f"Não foi possível gravar: {erro}")
+            QMessageBox.critical(self, traduzir("gc_erro"), traduzir("gc_nao_gravar", erro=erro))
             return
         if alterado:
             QMessageBox.information(
                 self,
-                "Dados do caso retificados",
-                "O registro do caso foi atualizado e a alteração ficou registrada "
-                "como complemento, com os valores anteriores.\n\n"
-                "As aquisições já seladas não foram tocadas.",
+                traduzir("gc_caso_retificado_titulo"),
+                traduzir("gc_caso_retificado_corpo"),
             )
         self._carregar_projetos()
         self.lista_projetos.setCurrentRow(linha)
@@ -794,21 +755,18 @@ class CasesManagerDialog(QDialog):
         if not self.case_service.aquisicao_selada(pasta_aquisicao):
             try:
                 arquivo_custodia.write_text(conteudo, encoding="utf-8")
-                QMessageBox.information(self, "Sucesso", "Dados atualizados com sucesso.")
+                QMessageBox.information(
+                    self, traduzir("gc_sucesso"), traduzir("gc_dados_atualizados")
+                )
                 return True
             except OSError as erro:
-                QMessageBox.critical(self, "Erro", f"Não foi possível salvar: {erro}")
+                QMessageBox.critical(self, traduzir("gc_erro"), traduzir("gc_nao_salvar", erro=erro))
                 return False
 
         resposta = QMessageBox.question(
             self,
-            "Esta aquisição já está selada",
-            "Esta coleta já tem manifesto de integridade.\n\n"
-            "Reescrevê-la faria o caso divergir do próprio selo e apagaria o registro do "
-            "que existia no momento do exame.\n\n"
-            "A alteração pode ser juntada como COMPLEMENTO ao caso: o material coletado "
-            "permanece intocado, e a retificação fica registrada com data própria.\n\n"
-            "Deseja juntar como complemento?",
+            traduzir("gc_selada_titulo"),
+            traduzir("gc_selada_corpo"),
         )
         if resposta != QMessageBox.Yes:
             return False
@@ -826,7 +784,7 @@ class CasesManagerDialog(QDialog):
         """
         linha = self.lista_projetos.currentRow()
         if linha < 0:
-            QMessageBox.warning(self, "Aviso", "Selecione um caso na lista.")
+            QMessageBox.warning(self, traduzir("gc_aviso"), traduzir("gc_selecione_caso"))
             return
 
         pasta_caso: Path = self.lista_projetos.item(linha).data(Qt.UserRole)
@@ -853,8 +811,8 @@ class CasesManagerDialog(QDialog):
             except (ValueError, OSError) as erro:
                 QMessageBox.critical(
                     self,
-                    "Erro",
-                    f"Não foi possível anexar {Path(documento['arquivo']).name}:\n{erro}",
+                    traduzir("gc_erro"),
+                    traduzir("gc_nao_anexar", nome=Path(documento['arquivo']).name, erro=erro),
                 )
                 continue
             anexados.append(caminho.name)
@@ -864,13 +822,8 @@ class CasesManagerDialog(QDialog):
 
         QMessageBox.information(
             self,
-            "Autorização anexada",
-            "Anexado ao caso:\n  " + "\n  ".join(anexados) + "\n\n"
-            "O caso foi reselado e a juntada ficou registrada como complemento, "
-            "com o hash de cada documento.\n\n"
-            "As aquisições anteriores NÃO foram alteradas e não passam a contar "
-            "com este documento: cada uma registra o que estava à vista no momento "
-            "em que foi feita.",
+            traduzir("gc_autorizacao_anexada_titulo"),
+            traduzir("gc_autorizacao_anexada_corpo", lista="\n  ".join(anexados)),
         )
         self._ao_selecionar_projeto(linha)
 
@@ -878,22 +831,24 @@ class CasesManagerDialog(QDialog):
         try:
             caminho = self.case_service.juntar_complemento(pasta_caso, titulo, texto)
         except OSError as erro:
-            QMessageBox.critical(self, "Erro", f"Não foi possível juntar o complemento: {erro}")
+            QMessageBox.critical(
+                self, traduzir("gc_erro"), traduzir("gc_complemento_erro", erro=erro)
+            )
             return False
 
         QMessageBox.information(
             self,
-            "Complemento juntado",
-            f"Complemento gravado em:\n{caminho.name}\n\n"
-            "As aquisições já seladas não foram alteradas, e o caso foi reselado — "
-            "o manifesto anterior está preservado.",
+            traduzir("gc_complemento_juntado_titulo"),
+            traduzir("gc_complemento_juntado_corpo", nome=caminho.name),
         )
         return True
 
     def _editar_dispositivo_selecionado(self) -> None:
         linha_atual = self.lista_dispositivos.currentRow()
         if linha_atual < 0:
-            QMessageBox.warning(self, "Aviso", "Selecione um dispositivo na lista para retificar.")
+            QMessageBox.warning(
+                self, traduzir("gc_aviso"), traduzir("gc_selecione_dispositivo_retificar")
+            )
             return
 
         item = self.lista_dispositivos.item(linha_atual)
@@ -904,7 +859,7 @@ class CasesManagerDialog(QDialog):
         dados_atuais = ler_cadeia_custodia(arq_custodia)
 
         dialogo_disp = DeviceInfoDialog(parent=self, modo_edicao=True)
-        dialogo_disp.setWindowTitle("Retificar Dados do Dispositivo")
+        dialogo_disp.setWindowTitle(traduzir("gc_retificar_dispositivo_titulo"))
 
         dialogo_disp.campo_marca_modelo.setText(dados_atuais.get("Equipamento", ""))
         dialogo_disp.campo_cor.setText(dados_atuais.get("Cor", ""))
@@ -933,13 +888,13 @@ class CasesManagerDialog(QDialog):
         """
         linha = self.lista_dispositivos.currentRow()
         if linha < 0:
-            QMessageBox.warning(self, "Aviso", "Selecione um dispositivo na lista.")
+            QMessageBox.warning(self, traduzir("gc_aviso"), traduzir("gc_selecione_dispositivo"))
             return
 
         arq_custodia = self.lista_dispositivos.item(linha).data(Qt.UserRole + 2)
         if arq_custodia is None:
             QMessageBox.warning(
-                self, "Aviso", "Selecione uma aquisição específica para gerar o relatório."
+                self, traduzir("gc_aviso"), traduzir("gc_selecione_aquisicao_especifica")
             )
             return
 
@@ -949,15 +904,14 @@ class CasesManagerDialog(QDialog):
         # é interpretação, e o aparelho pode estar em fuso diferente do da
         # estação. O que for escolhido fica declarado no relatório.
         local = datetime.now().astimezone().tzinfo
-        rotulo_local = f"Fuso desta estação ({datetime.now().astimezone().strftime('%Z%z')})"
-        opcoes = [rotulo_local, "UTC — sem conversão"]
+        rotulo_local = traduzir(
+            "gc_fuso_estacao", zona=datetime.now().astimezone().strftime('%Z%z')
+        )
+        opcoes = [rotulo_local, traduzir("gc_fuso_utc")]
         escolha, confirmado = QInputDialog.getItem(
             self,
-            "Fuso horário das datas",
-            "As datas do aparelho estão em formato numérico e precisam ser "
-            "convertidas. O fuso escolhido será declarado no relatório.\n\n"
-            "O relógio do próprio aparelho, aferido na coleta, está no "
-            "registro_procedimento.txt da aquisição — confira-o se houver dúvida.",
+            traduzir("gc_fuso_titulo"),
+            traduzir("gc_fuso_corpo"),
             opcoes,
             0,
             False,
@@ -969,35 +923,26 @@ class CasesManagerDialog(QDialog):
         resultado = RelatorioService.gerar(pasta_aquisicao, fuso=fuso)
 
         if resultado.erro:
-            QMessageBox.warning(self, "Nada a relatar", resultado.erro)
+            QMessageBox.warning(self, traduzir("gc_nada_relatar"), resultado.erro)
             return
 
         partes = [
-            f"Relatório gravado em:\n{resultado.pasta}",
+            traduzir("gc_relatorio_gravado", pasta=resultado.pasta),
             "\n".join(resultado.resumo_por_artefato),
         ]
         if not resultado.total_registros:
             # Sem esta linha, o examinador sai procurando planilha que não
             # existe — foi o que aconteceu na primeira execução real.
-            partes.append(
-                "NENHUMA PLANILHA CSV FOI GERADA, porque não houve registro a "
-                "apresentar. Os motivos estão acima e em PROCEDENCIA.txt."
-            )
+            partes.append(traduzir("gc_sem_planilha"))
         if resultado.total_descartes:
-            partes.append(
-                f"ATENÇÃO: {resultado.total_descartes} trecho(s) do material bruto NÃO "
-                "puderam ser interpretados e não constam do relatório. Ele está "
-                "incompleto em relação à evidência — ver NAO_INTERPRETADO.txt."
-            )
+            partes.append(traduzir("gc_descartes", n=resultado.total_descartes))
         if resultado.origens_divergentes:
-            partes.append(
-                "ATENÇÃO: o material de origem não confere mais com o selo da coleta: "
-                + ", ".join(resultado.origens_divergentes)
-            )
+            partes.append(traduzir(
+                "gc_origens_divergentes", origens=", ".join(resultado.origens_divergentes)
+            ))
         partes += [
             "",
-            "A aquisição não foi alterada: o relatório é documento derivado e "
-            "fica fora do que foi selado.",
+            traduzir("gc_relatorio_nao_altera"),
         ]
 
         mensagem = "\n\n".join(partes)
@@ -1007,9 +952,9 @@ class CasesManagerDialog(QDialog):
             or not resultado.total_registros
         )
         if com_ressalva:
-            QMessageBox.warning(self, "Relatório gerado com ressalvas", mensagem)
+            QMessageBox.warning(self, traduzir("gc_relatorio_ressalvas_titulo"), mensagem)
         else:
-            QMessageBox.information(self, "Relatório de conteúdo gerado", mensagem)
+            QMessageBox.information(self, traduzir("gc_relatorio_conteudo_gerado"), mensagem)
 
         # Abre o PDF: o relatório existe para ser lido, e dizer só em que
         # pasta ele ficou obrigava a ir buscá-lo.
