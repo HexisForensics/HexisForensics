@@ -530,5 +530,24 @@
   "eg_mensagem": "{n} file(s) delivered, each verified by SHA-256.\n\nDelivery folder:\n{pasta}\n\nThe delivery was recorded in the case.",
   "eg_falhas_prefixo": "\n\nATTENTION — not delivered:\n{lista}",
   "eg_ressalvas_titulo": "Delivery with caveats",
-  "eg_concluida_titulo": "Delivery completed"
+  "eg_concluida_titulo": "Delivery completed",
+
+  "tm_titulo": "Terms of use",
+  "tm_aviso_com_nome": "<b>{nome}</b>, before continuing, read the terms of use. ",
+  "tm_aviso_sem_nome": "Before continuing, read the terms of use. ",
+  "tm_aviso_sufixo": "Acceptance is personal and is kept in this station's access log.",
+  "tm_btn_recusar": "I do not accept",
+  "tm_btn_aceitar": "I accept",
+  "tm_btn_fechar": "Close",
+
+  "vp_titulo": "{nome} — Hexis Forensics",
+  "vp_anterior": "◀ Previous",
+  "vp_proxima": "Next ▶",
+  "vp_ajustar": "Fit to width",
+  "vp_imprimir": "🖨 Print",
+  "vp_abrir_externo": "Open in Windows reader",
+  "vp_nao_abriu": "Could not open the document:\n{caminho}",
+  "vp_imprimir_titulo": "Print",
+  "vp_impressao_indisponivel": "Printing unavailable on this station.",
+  "vp_impressora_recusou": "The printer did not accept the job."
 }

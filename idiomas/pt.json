@@ -530,5 +530,24 @@
   "eg_mensagem": "{n} arquivo(s) entregue(s), cada um conferido pelo SHA-256.\n\nPasta da entrega:\n{pasta}\n\nA entrega foi registrada no caso.",
   "eg_falhas_prefixo": "\n\nATENÇÃO — não entregues:\n{lista}",
   "eg_ressalvas_titulo": "Entrega com ressalvas",
-  "eg_concluida_titulo": "Entrega concluída"
+  "eg_concluida_titulo": "Entrega concluída",
+
+  "tm_titulo": "Termos de uso",
+  "tm_aviso_com_nome": "<b>{nome}</b>, antes de continuar, leia os termos de uso. ",
+  "tm_aviso_sem_nome": "Antes de continuar, leia os termos de uso. ",
+  "tm_aviso_sufixo": "O aceite é pessoal e fica no registro de acessos desta estação.",
+  "tm_btn_recusar": "Não aceito",
+  "tm_btn_aceitar": "Eu aceito",
+  "tm_btn_fechar": "Fechar",
+
+  "vp_titulo": "{nome} — Hexis Forensics",
+  "vp_anterior": "◀ Anterior",
+  "vp_proxima": "Próxima ▶",
+  "vp_ajustar": "Ajustar à largura",
+  "vp_imprimir": "🖨 Imprimir",
+  "vp_abrir_externo": "Abrir no leitor do Windows",
+  "vp_nao_abriu": "Não foi possível abrir o documento:\n{caminho}",
+  "vp_imprimir_titulo": "Imprimir",
+  "vp_impressao_indisponivel": "Impressão indisponível nesta estação.",
+  "vp_impressora_recusou": "A impressora não aceitou o trabalho."
 }

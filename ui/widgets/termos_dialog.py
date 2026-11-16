@@ -16,13 +16,14 @@ from PySide6.QtWidgets import (
 )
 
 from services import termos_service
+from services.idioma import traduzir
 from .ajuste_de_tela import caber_na_tela
 
 
 class TermosDialog(QDialog):
     def __init__(self, parent=None, para_aceitar: bool = True, nome: str = ""):
         super().__init__(parent)
-        self.setWindowTitle("Termos de uso")
+        self.setWindowTitle(traduzir("tm_titulo"))
         self.setModal(True)
         caber_na_tela(self, 640, 460)
 
@@ -31,9 +32,9 @@ class TermosDialog(QDialog):
         layout.setSpacing(10)
         if para_aceitar:
             aviso = QLabel(
-                (f"<b>{nome}</b>, antes de continuar, leia os termos de uso. " if nome else
-                 "Antes de continuar, leia os termos de uso. ")
-                + "O aceite é pessoal e fica no registro de acessos desta estação."
+                (traduzir("tm_aviso_com_nome", nome=nome) if nome
+                 else traduzir("tm_aviso_sem_nome"))
+                + traduzir("tm_aviso_sufixo")
             )
             aviso.setWordWrap(True)
             layout.addWidget(aviso)
@@ -44,15 +45,15 @@ class TermosDialog(QDialog):
         linha = QHBoxLayout()
         linha.addStretch()
         if para_aceitar:
-            recusar = QPushButton("Não aceito")
+            recusar = QPushButton(traduzir("tm_btn_recusar"))
             recusar.clicked.connect(self.reject)
-            aceitar = QPushButton("Eu aceito")
+            aceitar = QPushButton(traduzir("tm_btn_aceitar"))
             aceitar.setDefault(True)
             aceitar.clicked.connect(self.accept)
             linha.addWidget(recusar)
             linha.addWidget(aceitar)
         else:
-            fechar = QPushButton("Fechar")
+            fechar = QPushButton(traduzir("tm_btn_fechar"))
             fechar.setDefault(True)
             fechar.clicked.connect(self.accept)
             linha.addWidget(fechar)

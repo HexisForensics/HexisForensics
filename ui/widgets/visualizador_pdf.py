@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QUrl
 
 from services.documentos_service import salvar_copia
+from services.idioma import traduzir
 from .ajuste_de_tela import caber_na_tela, centralizar_na_tela
 
 PASSO_DE_ZOOM = 1.2
@@ -44,7 +45,7 @@ class VisualizadorPdf(QWidget):
     def __init__(self, caminho: Path, parent=None):
         super().__init__(parent, Qt.Window)
         self.caminho = Path(caminho)
-        self.setWindowTitle(f"{self.caminho.name} — Hexis Forensics")
+        self.setWindowTitle(traduzir("vp_titulo", nome=self.caminho.name))
         caber_na_tela(self, 980, 860)
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -59,26 +60,26 @@ class VisualizadorPdf(QWidget):
 
         barra = QToolBar()
         barra.setMovable(False)
-        self._acao(barra, "◀ Anterior", self._anterior, QKeySequence.MoveToPreviousPage)
+        self._acao(barra, traduzir("vp_anterior"), self._anterior, QKeySequence.MoveToPreviousPage)
         self.rotulo_pagina = QLabel()
         self.rotulo_pagina.setContentsMargins(10, 0, 10, 0)
         barra.addWidget(self.rotulo_pagina)
-        self._acao(barra, "Próxima ▶", self._proxima, QKeySequence.MoveToNextPage)
+        self._acao(barra, traduzir("vp_proxima"), self._proxima, QKeySequence.MoveToNextPage)
         barra.addSeparator()
         self._acao(barra, "－", self._diminuir, QKeySequence.ZoomOut)
         self._acao(barra, "＋", self._aumentar, QKeySequence.ZoomIn)
-        self._acao(barra, "Ajustar à largura", self._ajustar)
+        self._acao(barra, traduzir("vp_ajustar"), self._ajustar)
         barra.addSeparator()
-        self._acao(barra, "🖨 Imprimir", self._imprimir, QKeySequence.Print)
-        self._acao(barra, "💾 Salvar cópia em…", self._salvar_copia, QKeySequence.Save)
-        self._acao(barra, "Abrir no leitor do Windows", self._abrir_externo)
+        self._acao(barra, traduzir("vp_imprimir"), self._imprimir, QKeySequence.Print)
+        self._acao(barra, traduzir("gc_btn_salvar_copia"), self._salvar_copia, QKeySequence.Save)
+        self._acao(barra, traduzir("vp_abrir_externo"), self._abrir_externo)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(barra)
         if self.documento.status() != QPdfDocument.Status.Ready:
-            aviso = QLabel(f"Não foi possível abrir o documento:\n{self.caminho}")
+            aviso = QLabel(traduzir("vp_nao_abriu", caminho=self.caminho))
             aviso.setAlignment(Qt.AlignCenter)
             layout.addWidget(aviso, 1)
         else:
@@ -110,7 +111,7 @@ class VisualizadorPdf(QWidget):
         self._ir(self._pagina_atual() + 1)
 
     def _atualizar_pagina(self, pagina: int) -> None:
-        self.rotulo_pagina.setText(f"Página {pagina + 1} de {self._total()}")
+        self.rotulo_pagina.setText(traduzir("pdf_pagina_de", n=pagina + 1, total=self._total()))
 
     def _zoom(self, fator: float) -> None:
         self.vista.setZoomMode(QPdfView.ZoomMode.Custom)
@@ -130,7 +131,8 @@ class VisualizadorPdf(QWidget):
         try:
             from PySide6.QtPrintSupport import QPrintDialog, QPrinter
         except ImportError:
-            QMessageBox.warning(self, "Imprimir", "Impressão indisponível nesta estação.")
+            QMessageBox.warning(self, traduzir("vp_imprimir_titulo"),
+                                traduzir("vp_impressao_indisponivel"))
             return
         impressora = QPrinter(QPrinter.HighResolution)
         dialogo = QPrintDialog(impressora, self)
@@ -141,7 +143,8 @@ class VisualizadorPdf(QWidget):
         ultima = min(self._total(), impressora.toPage() or self._total())
         pintor = QPainter()
         if not pintor.begin(impressora):
-            QMessageBox.warning(self, "Imprimir", "A impressora não aceitou o trabalho.")
+            QMessageBox.warning(self, traduzir("vp_imprimir_titulo"),
+                                traduzir("vp_impressora_recusou"))
             return
         try:
             for numero in range(primeira - 1, ultima):
@@ -155,19 +158,19 @@ class VisualizadorPdf(QWidget):
 
     def _salvar_copia(self) -> None:
         destino, _ = QFileDialog.getSaveFileName(
-            self, "Salvar cópia do documento", str(Path.home() / self.caminho.name),
-            "Documento PDF (*.pdf)",
+            self, traduzir("gc_salvar_copia_titulo"), str(Path.home() / self.caminho.name),
+            traduzir("gc_filtro_pdf"),
         )
         if not destino:
             return
         try:
             resumo = salvar_copia(self.caminho, Path(destino))
         except OSError as erro:
-            QMessageBox.critical(self, "Cópia não salva", str(erro))
+            QMessageBox.critical(self, traduzir("gc_copia_nao_salva"), str(erro))
             return
         QMessageBox.information(
-            self, "Cópia salva",
-            f"Cópia salva em:\n{destino}\n\nConferida pelo SHA-256, idêntica ao original:\n{resumo}",
+            self, traduzir("gc_copia_salva_titulo"),
+            traduzir("gc_copia_salva_corpo", destino=destino, resumo=resumo),
         )
 
     def _abrir_externo(self) -> None:
