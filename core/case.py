@@ -358,6 +358,25 @@ def idioma_do_caso(pasta: Path) -> str:
     return idioma or IDIOMA_PADRAO
 
 
+def idioma_para_selar(pasta: Path) -> str:
+    """
+    O idioma em que o material selado deste caso DEVE ser escrito.
+
+    É o carimbo, quando já existe; senão o idioma ativo — que é o que
+    `gravar_caso` vai carimbar na criação. Assim o selado escrito antes de o
+    `caso.json` existir (o registro do procedimento abre junto) nasce no
+    mesmo idioma que o caso vai registrar, e a leitura de volta bate.
+    """
+    try:
+        dados = json.loads(
+            (pasta_do_caso(pasta) / NOME_ARQUIVO_CASO).read_text(encoding="utf-8"))
+        if dados.get("idioma"):
+            return dados["idioma"]
+    except (OSError, ValueError):
+        pass
+    return idioma_ativo()
+
+
 def montar_cadeia_custodia(
     identificador_caso: str,
     dados_caso: Dict[str, str],

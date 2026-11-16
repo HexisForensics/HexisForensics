@@ -178,7 +178,7 @@ def bloco_ambiente(dossie: Dossie, largura: float) -> list:
     else:
         elementos.append(Paragraph(traduzir("bl_ambiente_sem"), e["corpo"]))
 
-    relogio = dossie.evento("AFERIÇÃO DE RELÓGIO")  # chave de busca no registro selado
+    relogio = dossie.evento("relogio")  # tipo canônico; resolve no idioma do caso
     elementos.append(Paragraph(traduzir("bl_ambiente_relogio_titulo"), e["subsecao"]))
     if relogio:
         elementos.append(Paragraph(escapar(relogio.texto), e["esquerda"]))
@@ -254,13 +254,13 @@ def bloco_alteracoes_ocorridas(dossie: Dossie, largura: float) -> list:
     """O que o registro anotou como alteração e como decisão, no momento em que ocorreu."""
     e = estilos()
     elementos = []
-    # (chave de busca no registro SELADO, chave do rótulo, chave do vazio).
-    for titulo, rotulo_key, vazio_key in (
-        ("ALTERAÇÃO NO DISPOSITIVO EXAMINADO", "bl_alt_rotulo", "bl_alt_vazio"),
-        ("DECISÃO METODOLÓGICA", "bl_dec_rotulo", "bl_dec_vazio"),
+    # (tipo canônico do evento SELADO, chave do rótulo, chave do vazio).
+    for tipo, rotulo_key, vazio_key in (
+        ("alteracao", "bl_alt_rotulo", "bl_alt_vazio"),
+        ("decisao", "bl_dec_rotulo", "bl_dec_vazio"),
     ):
         elementos.append(Paragraph(traduzir(rotulo_key), e["subsecao"]))
-        eventos = dossie.eventos_com(titulo)
+        eventos = dossie.eventos_com(tipo)
         if not eventos:
             elementos.append(Paragraph(traduzir(vazio_key), e["corpo"]))
             continue

@@ -24,7 +24,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .case import juntar_complemento, pasta_do_caso
+from .case import idioma_do_caso, juntar_complemento, pasta_do_caso
+from .procedimento import titulo_evento
 
 SIM = "Sim"
 NAO = "Não"
@@ -125,6 +126,15 @@ def verificar_automaticos(pasta_aquisicao: Path) -> list:
         except OSError:
             texto = ""
 
+    # Os títulos do diário estão no idioma CARIMBADO no caso: é por ele que se
+    # procura cada entrada, para um registro em inglês não ser lido como
+    # ausência (o pior defeito: "Registro não localizado" sobre algo que está lá).
+    idioma = idioma_do_caso(pasta)
+    titulo_ambiente = titulo_evento("ambiente", idioma)
+    titulo_decisao = titulo_evento("decisao", idioma)
+    titulo_alteracao = titulo_evento("alteracao", idioma)
+    titulo_relogio = titulo_evento("relogio", idioma)
+
     itens = []
 
     # 5.3.2 Auditabilidade — avaliação independente exige documentação de tudo.
@@ -151,12 +161,12 @@ def verificar_automaticos(pasta_aquisicao: Path) -> list:
         "5.3.3 / 5.3.4",
         "As condições do exame — estação, ferramenta e versões — foram registradas, "
         "permitindo repetição e reprodução?",
-        SIM if TITULO_AMBIENTE in texto else NAO_LOCALIZADO,
-        f"{diario.name}, entrada de ambiente" if TITULO_AMBIENTE in texto else "—",
+        SIM if titulo_ambiente in texto else NAO_LOCALIZADO,
+        f"{diario.name}, entrada de ambiente" if titulo_ambiente in texto else "—",
     ))
 
     # 5.3.5 Justificabilidade — as decisões metodológicas precisam constar.
-    decisoes = texto.count(TITULO_DECISAO)
+    decisoes = texto.count(titulo_decisao)
     itens.append((
         "5.3.5",
         "As decisões metodológicas do exame foram registradas com sua justificativa?",
@@ -166,7 +176,7 @@ def verificar_automaticos(pasta_aquisicao: Path) -> list:
 
     # 5.4.1 e 6.1 — alteração inevitável não é proibida; é obrigatório
     # registrá-la e justificá-la. A norma NÃO exige ausência de alteração.
-    alteracoes = texto.count(TITULO_ALTERACAO)
+    alteracoes = texto.count(titulo_alteracao)
     if not texto:
         resposta_alteracao, origem_alteracao = NAO_LOCALIZADO, "—"
     elif alteracoes:
@@ -187,8 +197,8 @@ def verificar_automaticos(pasta_aquisicao: Path) -> list:
         "6.6",
         "O relógio do dispositivo foi confrontado com o da estação e o desvio "
         "registrado?",
-        SIM if TITULO_RELOGIO in texto else NAO_LOCALIZADO,
-        f"{diario.name}, aferição de relógio" if TITULO_RELOGIO in texto else "—",
+        SIM if titulo_relogio in texto else NAO_LOCALIZADO,
+        f"{diario.name}, aferição de relógio" if titulo_relogio in texto else "—",
     ))
 
     # 6.6 Documentação — identificadores únicos do dispositivo.

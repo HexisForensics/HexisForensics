@@ -27,11 +27,31 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from .idioma import IDIOMA_PADRAO, traduzir
 from .versao import descrever_ambiente
 
 NOME_ARQUIVO = "registro_procedimento.txt"
 
 LARGURA = 78
+
+# Tipo de entrada do diário -> chave de tradução do título. O título é
+# ESCRITO no idioma do caso e PROCURADO por esse mesmo idioma (ver
+# `titulo_evento`, usado por `core.protocolos` e `services.dossie_service`).
+_EVENTOS = {
+    "fundamento": "sl_evt_fundamento",
+    "operador": "sl_evt_operador",
+    "ambiente": "sl_evt_ambiente",
+    "relogio": "sl_evt_relogio",
+    "decisao": "sl_evt_decisao",
+    "alteracao": "sl_evt_alteracao",
+    "observacao": "sl_evt_observacao",
+    "encerramento": "sl_evt_encerramento",
+}
+
+
+def titulo_evento(tipo: str, idioma: str = IDIOMA_PADRAO) -> str:
+    """O título da entrada do diário no idioma dado. Chave de busca no selado."""
+    return traduzir(_EVENTOS[tipo], idioma)
 
 
 def _agora_iso() -> str:
@@ -52,12 +72,20 @@ class RegistroProcedimento:
     def __init__(self, pasta_caso: Path):
         self.pasta_caso = Path(pasta_caso)
         self.caminho = self.pasta_caso / NOME_ARQUIVO
+        # Idioma CARIMBADO no caso (ou o ativo, que será carimbado): o diário
+        # é escrito nele, e lido de volta por ele. Resolvido aqui, uma vez, na
+        # abertura — não pode mudar no meio de uma aquisição.
+        from core.case import idioma_para_selar
+        self.idioma = idioma_para_selar(self.pasta_caso)
+
+    def _t(self, chave: str, **campos) -> str:
+        return traduzir(chave, self.idioma, **campos)
 
     # ------------------------------------------------------------------
     # Escrita
     # ------------------------------------------------------------------
-    def _anexar(self, titulo: str, linhas: list) -> bool:
-        bloco = [f"[{_agora_iso()}] {titulo}"]
+    def _anexar(self, tipo: str, linhas: list) -> bool:
+        bloco = [f"[{_agora_iso()}] {titulo_evento(tipo, self.idioma)}"]
         bloco += [f"    {linha}" for linha in linhas]
         bloco.append("")
         try:
@@ -72,12 +100,12 @@ class RegistroProcedimento:
         """Cabeçalho do registro, gravado na abertura do caso."""
         cabecalho = [
             "=" * LARGURA,
-            "            REGISTRO DO PROCEDIMENTO DE AQUISIÇÃO FORENSE",
+            self._t("sl_reg_titulo"),
             "=" * LARGURA,
-            f"Caso:        {identificador_caso}",
-            f"Plataforma:  {plataforma}",
-            f"Dispositivo: {id_dispositivo}",
-            f"Abertura:    {_agora_iso()}",
+            self._t("sl_reg_l_caso", valor=identificador_caso),
+            self._t("sl_reg_l_plataforma", valor=plataforma),
+            self._t("sl_reg_l_dispositivo", valor=id_dispositivo),
+            self._t("sl_reg_l_abertura", valor=_agora_iso()),
             "=" * LARGURA,
             "",
         ]
@@ -97,10 +125,10 @@ class RegistroProcedimento:
         abre declarando o fundamento — é a primeira coisa que se questiona
         sobre uma extração, e a última que deveria faltar no registro.
         """
-        linhas = [f"Fundamento: {resumo}"]
+        linhas = [self._t("sl_reg_fundamento", valor=resumo)]
         if detalhe:
             linhas.append(detalhe)
-        return self._anexar("FUNDAMENTO LEGAL DO ACESSO", linhas)
+        return self._anexar("fundamento", linhas)
 
     def registrar_operador(self, linhas_do_operador: list, conta_da_estacao: str) -> bool:
         """
@@ -109,12 +137,10 @@ class RegistroProcedimento:
         misturam — uma é declaração, a outra é leitura.
         """
         return self._anexar(
-            "OPERADOR DA AQUISIÇÃO",
+            "operador",
             list(linhas_do_operador)
-            + [
-                "Conta do sistema na estação (apurada pela ferramenta): "
-                + (conta_da_estacao or "não apurada")
-            ],
+            + [self._t("sl_reg_conta",
+                       valor=conta_da_estacao or self._t("sl_reg_nao_apurada"))],
         )
 
     def registrar_ambiente(self, versao_adb: Optional[str] = None) -> bool:
@@ -123,7 +149,7 @@ class RegistroProcedimento:
         if versao_adb:
             ambiente["adb"] = versao_adb
         return self._anexar(
-            "AMBIENTE DA ESTAÇÃO FORENSE",
+            "ambiente",
             [f"{chave}: {valor}" for chave, valor in ambiente.items()],
         )
 
@@ -134,7 +160,7 @@ class RegistroProcedimento:
         Sem o desvio medido no momento da aquisição, todo carimbo de tempo
         dos artefatos extraídos fica sem âncora.
         """
-        return self._anexar("AFERIÇÃO DE RELÓGIO", [resumo_relogio])
+        return self._anexar("relogio", [resumo_relogio])
 
     def registrar_decisao(self, decisao: str, justificativa: str) -> bool:
         """
@@ -145,7 +171,8 @@ class RegistroProcedimento:
         não outro. Ex.: "extração física não realizada: aparelho sem root;
         adotada extração lógica via ADB".
         """
-        return self._anexar("DECISÃO METODOLÓGICA", [f"Decisão: {decisao}", f"Motivo: {justificativa}"])
+        return self._anexar("decisao", [self._t("sl_reg_decisao", valor=decisao),
+                                        self._t("sl_reg_motivo", valor=justificativa)])
 
     def registrar_alteracao(self, alteracao: str, justificativa: str) -> bool:
         """
@@ -153,14 +180,15 @@ class RegistroProcedimento:
         inevitável. Ver a nota no topo deste módulo.
         """
         return self._anexar(
-            "ALTERAÇÃO NO DISPOSITIVO EXAMINADO",
-            [f"Alteração: {alteracao}", f"Justificativa: {justificativa}"],
+            "alteracao",
+            [self._t("sl_reg_alteracao", valor=alteracao),
+             self._t("sl_reg_justificativa", valor=justificativa)],
         )
 
     def registrar_observacao(self, texto: str) -> bool:
         """Anotação livre do procedimento."""
-        return self._anexar("OBSERVAÇÃO", [texto])
+        return self._anexar("observacao", [texto])
 
     def encerrar(self, resumo: str) -> bool:
         """Fecha o registro com o desfecho consolidado da aquisição."""
-        return self._anexar("ENCERRAMENTO DA AQUISIÇÃO", [resumo])
+        return self._anexar("encerramento", [resumo])

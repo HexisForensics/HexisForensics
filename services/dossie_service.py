@@ -43,6 +43,7 @@ from core.hashing import (
 from core.metodo import PASTA_METODO, MetodoDeclarado, ler_metodo
 from core.operador import ler_da_aquisicao as ler_operador
 from core.procedimento import NOME_ARQUIVO as NOME_REGISTRO
+from core.procedimento import titulo_evento
 from core.relogio import ler_desvio_registrado
 from services.case_service import VALORES_VAZIOS, ler_cadeia_custodia
 
@@ -77,6 +78,9 @@ class Dossie:
     caso: str
     plataforma: str = ""
     momento: Optional[datetime] = None
+    # Idioma CARIMBADO no caso: é por ele que o selado (cadeia e registro do
+    # procedimento) é lido — rótulos e títulos de evento no idioma certo.
+    idioma: str = "pt"
 
     # Cadeia de custódia: o que foi DECLARADO no cadastro.
     dados_do_caso: List[Tuple[str, str]] = field(default_factory=list)
@@ -131,35 +135,44 @@ class Dossie:
     def equipamento(self) -> str:
         return self.peca_por_chave.get("marca_modelo", "")
 
+    def _rotulo_cabecalho(self, chave: str) -> str:
+        """O rótulo do cabeçalho do registro (ex.: "Dispositivo") no idioma do caso."""
+        return traduzir(chave, self.idioma).split(":", 1)[0].strip()
+
     @property
     def identificador_do_dispositivo(self) -> str:
-        return dict(self.cabecalho_do_registro).get("Dispositivo", "")
+        rotulo = self._rotulo_cabecalho("sl_reg_l_dispositivo")
+        return dict(self.cabecalho_do_registro).get(rotulo, "")
 
     @property
     def abertura(self) -> str:
-        return dict(self.cabecalho_do_registro).get("Abertura", "")
+        rotulo = self._rotulo_cabecalho("sl_reg_l_abertura")
+        return dict(self.cabecalho_do_registro).get(rotulo, "")
 
     @property
     def encerramento(self) -> str:
+        alvo = titulo_evento("encerramento", self.idioma)
         for evento in reversed(self.eventos):
-            if evento.titulo.startswith("ENCERRAMENTO"):
+            if evento.titulo == alvo:
                 return evento.carimbo
         return ""
 
-    def evento(self, titulo: str) -> Optional[Evento]:
-        """O primeiro evento com este título, ou `None`."""
+    def evento(self, tipo: str) -> Optional[Evento]:
+        """O primeiro evento deste TIPO canônico ("ambiente", "relogio", ...)."""
+        alvo = titulo_evento(tipo, self.idioma)
         for evento in self.eventos:
-            if evento.titulo == titulo:
+            if evento.titulo == alvo:
                 return evento
         return None
 
-    def eventos_com(self, titulo: str) -> List[Evento]:
-        return [evento for evento in self.eventos if evento.titulo == titulo]
+    def eventos_com(self, tipo: str) -> List[Evento]:
+        alvo = titulo_evento(tipo, self.idioma)
+        return [evento for evento in self.eventos if evento.titulo == alvo]
 
     @property
     def ambiente(self) -> List[Tuple[str, str]]:
         """O ambiente gravado NO DIA — nunca o da estação que imprime hoje."""
-        evento = self.evento("AMBIENTE DA ESTAÇÃO FORENSE")
+        evento = self.evento("ambiente")
         pares = []
         for linha in evento.linhas if evento else []:
             if ":" in linha:
@@ -233,7 +246,7 @@ def _ler_cadeia(dossie: Dossie) -> None:
     # Os rótulos do arquivo estão no idioma CARIMBADO no caso. É por ele que
     # se sabe qual rótulo corresponde a cada chave — e assim o lacre e o
     # equipamento são lidos certos, mesmo num caso selado em inglês.
-    idioma = idioma_do_caso(dossie.pasta)
+    idioma = dossie.idioma
     pares_disp = rotulos_do_dispositivo(idioma)
 
     def limpo(valor: str) -> str:
@@ -288,7 +301,8 @@ def montar_dossie(pasta_aquisicao: Path) -> Dossie:
     pasta = Path(pasta_aquisicao)
     plataforma, momento = descrever_aquisicao(pasta.name)
     dossie = Dossie(
-        pasta=pasta, caso=pasta_do_caso(pasta).name, plataforma=plataforma, momento=momento
+        pasta=pasta, caso=pasta_do_caso(pasta).name, plataforma=plataforma, momento=momento,
+        idioma=idioma_do_caso(pasta),
     )
 
     _ler_registro(dossie)
