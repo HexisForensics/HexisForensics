@@ -996,5 +996,19 @@
   "rs_idx_h_mensagens": "Messages",
   "rs_idx_h_periodo": "Period",
   "rs_csv_h_arquivo_origem": "Source file",
-  "rs_csv_h_linha_origem": "Source line"
+  "rs_csv_h_linha_origem": "Source line",
+  "cs_erro_nenhuma": "No conversation was selected.",
+  "cs_erro_nao_encontradas": "The selected conversations were not found.",
+  "cs_titulo": "SELECTED CONVERSATIONS",
+  "cs_titulo_doc": "Selected Conversations",
+  "cs_l_selecionadas": "Selected conversations",
+  "cs_selecionadas_de": "{n} of {total}",
+  "cs_l_mensagens": "Messages in this document",
+  "cs_intro": "The conversations below were CHOSEN by the examiner from those present in the acquisition, and are reproduced in full, in the order in which they occurred. The choice does not assert that the others are irrelevant. The full text of all conversations is in the spreadsheet and the HTML dossier of the Content Report, and the original material remains in the sealed acquisition. Each message carries the source file and line, to be checked against it.",
+  "cs_via_base": "{via} · {q} message(s)",
+  "cs_via_origem": " · source: {caminho}",
+  "cs_anexo": " [attachment: {valor}]",
+  "cs_h_remetente": "Sender",
+  "cs_h_origem": "Source",
+  "cs_linha": "line {n}"
 }

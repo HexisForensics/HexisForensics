@@ -996,5 +996,19 @@
   "rs_idx_h_mensagens": "Mensagens",
   "rs_idx_h_periodo": "Período",
   "rs_csv_h_arquivo_origem": "Arquivo de origem",
-  "rs_csv_h_linha_origem": "Linha de origem"
+  "rs_csv_h_linha_origem": "Linha de origem",
+  "cs_erro_nenhuma": "Nenhuma conversa foi selecionada.",
+  "cs_erro_nao_encontradas": "As conversas selecionadas não foram encontradas.",
+  "cs_titulo": "CONVERSAS SELECIONADAS",
+  "cs_titulo_doc": "Conversas Selecionadas",
+  "cs_l_selecionadas": "Conversas selecionadas",
+  "cs_selecionadas_de": "{n} de {total}",
+  "cs_l_mensagens": "Mensagens neste documento",
+  "cs_intro": "As conversas abaixo foram ESCOLHIDAS pelo examinador entre as existentes na aquisição, e são reproduzidas completas, na ordem em que aconteceram. A escolha não afirma que as demais sejam irrelevantes. A íntegra de todas as conversas está na planilha e no caderno HTML do Relatório de Conteúdo, e o material original permanece na aquisição selada. Cada mensagem traz o arquivo e a linha de origem, para ser conferida contra ele.",
+  "cs_via_base": "{via} · {q} mensagem(ns)",
+  "cs_via_origem": " · origem: {caminho}",
+  "cs_anexo": " [anexo: {valor}]",
+  "cs_h_remetente": "Remetente",
+  "cs_h_origem": "Origem",
+  "cs_linha": "linha {n}"
 }

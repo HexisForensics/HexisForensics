@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Tuple
 
 from reportlab.platypus import PageBreak, Paragraph, Spacer
 
+from core.idioma import traduzir
 from services import identidade_pdf as identidade
 from services.dossie_service import montar_dossie
 from services.relatorio_extracao_service import (
@@ -119,13 +120,13 @@ def gerar_pdf_conversas(
     """
     pasta_aquisicao = Path(pasta_aquisicao)
     if not selecionadas:
-        return DocumentoGerado(erro="Nenhuma conversa foi selecionada.")
+        return DocumentoGerado(erro=traduzir("cs_erro_nenhuma"))
     try:
         conversas, artefatos = listar_conversas(pasta_aquisicao, fuso)
         por_chave = {(c.artefato, c.chave): c for c in conversas}
         escolhidas = [por_chave[s] for s in selecionadas if s in por_chave]
         if not escolhidas:
-            return DocumentoGerado(erro="As conversas selecionadas não foram encontradas.")
+            return DocumentoGerado(erro=traduzir("cs_erro_nao_encontradas"))
         origem = {a.chave: a for a in artefatos}
         dossie = montar_dossie(pasta_aquisicao)
         nome_do_fuso = next(
@@ -135,28 +136,23 @@ def gerar_pdf_conversas(
         e = identidade.estilos()
         largura = identidade.largura_util(paisagem=True)
         historia = [
-            Paragraph("CONVERSAS SELECIONADAS", e["titulo"]),
+            Paragraph(traduzir("cs_titulo"), e["titulo"]),
             Paragraph(
-                f"Caso {identidade.escapar(dossie.caso)} — aquisição "
-                f"{identidade.escapar(pasta_aquisicao.name)}",
+                traduzir("fha_subtitulo",
+                         caso=identidade.escapar(dossie.caso),
+                         aquisicao=identidade.escapar(pasta_aquisicao.name)),
                 e["subtitulo"],
             ),
             identidade.tabela_de_pares([
-                ("Conversas selecionadas", f"{len(escolhidas)} de {len(conversas)}"),
-                ("Mensagens neste documento", str(sum(c.quantidade for c in escolhidas))),
-                ("Fuso das datas", identidade.escapar(nome_do_fuso)),
-                ("Gerado em", datetime.now().astimezone().strftime("%d/%m/%Y %H:%M:%S %z")),
+                (traduzir("cs_l_selecionadas"),
+                 traduzir("cs_selecionadas_de", n=len(escolhidas), total=len(conversas))),
+                (traduzir("cs_l_mensagens"), str(sum(c.quantidade for c in escolhidas))),
+                (traduzir("rs_pdf_l_fuso"), identidade.escapar(nome_do_fuso)),
+                (traduzir("rs_pdf_l_gerado"),
+                 datetime.now().astimezone().strftime("%d/%m/%Y %H:%M:%S %z")),
             ], largura, proporcao=0.25),
             Spacer(1, 6),
-            Paragraph(
-                "As conversas abaixo foram ESCOLHIDAS pelo examinador entre as existentes na "
-                "aquisição, e são reproduzidas completas, na ordem em que aconteceram. A "
-                "escolha não afirma que as demais sejam irrelevantes. A íntegra de todas as "
-                "conversas está na planilha e no caderno HTML do Relatório de Conteúdo, e o "
-                "material original permanece na aquisição selada. Cada mensagem traz o "
-                "arquivo e a linha de origem, para ser conferida contra ele.",
-                e["nota"],
-            ),
+            Paragraph(traduzir("cs_intro"), e["nota"]),
         ]
 
         for indice, conversa in enumerate(escolhidas):
@@ -167,9 +163,11 @@ def gerar_pdf_conversas(
             historia += [
                 Paragraph(identidade.escapar(titulo), e["secao"]),
                 Paragraph(
-                    f"{identidade.escapar(conversa.via)} · {conversa.quantidade} mensagem(ns)"
+                    traduzir("cs_via_base", via=identidade.escapar(conversa.via),
+                             q=conversa.quantidade)
                     + (f" · {conversa.periodo}" if conversa.periodo else "")
-                    + (f" · origem: {identidade.escapar(artefato.caminho_relativo)}"
+                    + (traduzir("cs_via_origem",
+                                caminho=identidade.escapar(artefato.caminho_relativo))
                        if artefato else ""),
                     e["esquerda"],
                 ),
@@ -187,19 +185,21 @@ def gerar_pdf_conversas(
                 if campos.get("assunto"):
                     conteudo = f"[{campos['assunto']}] {conteudo}"
                 if campos.get("anexo"):
-                    conteudo += f" [anexo: {campos['anexo']}]"
+                    conteudo += traduzir("cs_anexo", valor=campos['anexo'])
                 linhas.append([
                     identidade.escapar(registro.momento_legivel),
                     identidade.escapar(campos.get("direcao")),
                     identidade.escapar(quem if quem and not quem.startswith("(") else ""),
                     identidade.escapar(conteudo),
                     Paragraph(
-                        identidade.escapar(f"linha {registro.linha_de_origem}"),
+                        identidade.escapar(traduzir("cs_linha", n=registro.linha_de_origem)),
                         e["mono_pequeno"],
                     ),
                 ])
             historia.append(identidade.tabela(
-                ["Data e hora", "Sentido", "Remetente", "Conteúdo", "Origem"],
+                [traduzir("rs_col_momento"), traduzir("rs_col_direcao"),
+                 traduzir("cs_h_remetente"), traduzir("rs_col_conteudo"),
+                 traduzir("cs_h_origem")],
                 linhas,
                 [largura * 0.13, largura * 0.09, largura * 0.14, largura * 0.56,
                  largura * 0.08],
@@ -210,7 +210,7 @@ def gerar_pdf_conversas(
             f"Conversas_selecionadas_{pasta_aquisicao.name}",
         )
         identidade.montar_documento(
-            caminho, "Conversas Selecionadas", historia, rastreio=dossie.rastreio,
+            caminho, traduzir("cs_titulo_doc"), historia, rastreio=dossie.rastreio,
             selo=dossie.sha256_do_manifesto, paisagem=True, teste=dossie.de_teste,
         )
         return DocumentoGerado(caminho=caminho)
