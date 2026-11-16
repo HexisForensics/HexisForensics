@@ -21,6 +21,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QGuiApplication, QPixmap, QTextDocument
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QFormLayout,
     QFrame,
@@ -39,13 +40,39 @@ from PySide6.QtWidgets import (
 from services import sessao_service
 from services.branding_service import BrandConfig
 from services.extraction_service import identificacao_da_ferramenta
-from services.idioma import traduzir
+from services.idioma import (
+    definir_e_salvar,
+    idioma_ativo,
+    idiomas_disponiveis,
+    nome_do_idioma,
+    traduzir,
+)
 
 from .termos_dialog import TermosDialog
 from .vitrine_entrada import VitrineAnimada
 from .ajuste_de_tela import caber_na_tela
 
 ENTRAR, NOVO, RECUPERAR, CODIGO, ADMIN = range(5)
+
+# Código de retorno próprio: o examinador trocou o idioma e a tela precisa
+# ser reaberta já no idioma novo (ver `abrir_entrada`). Diferente de
+# Accepted (1) e Rejected (0).
+REABRIR = 2
+
+
+def abrir_entrada(marca, **kwargs) -> int:
+    """
+    Abre a tela de entrada, reabrindo-a se o examinador trocar o idioma.
+
+    Trocar o idioma reconstrói a tela inteira. Em vez de reconstruir ao vivo
+    (frágil, com dezenas de widgets e referências), a tela fecha com REABRIR
+    e esta função a recria já no idioma novo. Devolve Accepted/Rejected ao
+    chamador, como um `exec()` comum.
+    """
+    while True:
+        resultado = TelaEntrada(marca, **kwargs).exec()
+        if resultado != REABRIR:
+            return resultado
 
 ESTILO = """
 #PainelMarca {
@@ -160,6 +187,25 @@ class TelaEntrada(QDialog):
         direita.setObjectName("PainelEntrada")
         coluna = QVBoxLayout(direita)
         coluna.setContentsMargins(46, 40, 46, 30)
+
+        # Seletor de idioma, no topo: escolhido aqui, antes do login, todo o
+        # resto do app já abre no idioma escolhido. Trocar reabre esta tela
+        # (ver `abrir_entrada`), evitando reconstrução ao vivo.
+        disponiveis = idiomas_disponiveis()
+        if len(disponiveis) > 1:
+            linha_idioma = QHBoxLayout()
+            linha_idioma.addStretch()
+            linha_idioma.addWidget(QLabel("🌐"))
+            self.combo_idioma = QComboBox()
+            for cod in disponiveis:
+                self.combo_idioma.addItem(nome_do_idioma(cod), cod)
+            self.combo_idioma.setCurrentIndex(disponiveis.index(idioma_ativo()))
+            self.combo_idioma.setToolTip(traduzir("sel_idioma_tooltip"))
+            # Conectar só DEPOIS de posicionar: a montagem não dispara a troca.
+            self.combo_idioma.currentIndexChanged.connect(self._trocar_idioma)
+            linha_idioma.addWidget(self.combo_idioma)
+            coluna.addLayout(linha_idioma)
+
         self.paginas = QStackedWidget()
         self.paginas.addWidget(self._pagina_entrar())
         self.paginas.addWidget(self._pagina_novo())
@@ -644,6 +690,12 @@ class TelaEntrada(QDialog):
                 sessao_service.encerrar()
                 return
         super().accept()
+
+    def _trocar_idioma(self, indice: int) -> None:
+        cod = self.combo_idioma.itemData(indice)
+        if cod and cod != idioma_ativo():
+            definir_e_salvar(cod)
+            self.done(REABRIR)
 
     def _esqueci(self) -> None:
         if self._escolhido():

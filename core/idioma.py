@@ -35,9 +35,11 @@ tempo de execução.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from core.instalacao import raiz_da_instalacao
+from core.operador import pasta_do_perfil
 
 IDIOMA_PADRAO = "pt"
 
@@ -139,3 +141,47 @@ def traduzir(chave: str, idioma: Optional[str] = None, **campos) -> str:
 def recarregar() -> None:
     """Esquece os catálogos em memória (para teste, ou após editar um .json)."""
     _catalogos.clear()
+
+
+# ---------------------------------------------------------------------------
+# Preferência de idioma — escolhida na tela de entrada, lembrada entre sessões.
+#
+# Mora com os perfis, em %APPDATA%/HexisForensics (gravável, e que atualizar
+# ou reinstalar a suíte não apaga — ver core.operador.pasta_do_perfil). É
+# conveniência: se não puder ser lida ou gravada, o idioma apenas volta ao
+# padrão, sem derrubar nada.
+# ---------------------------------------------------------------------------
+NOME_ARQUIVO_PREF = "idioma.txt"
+
+
+def _caminho_pref(pasta: Optional[Path] = None) -> Path:
+    base = Path(pasta) if pasta else pasta_do_perfil()
+    return base / NOME_ARQUIVO_PREF
+
+
+def idioma_salvo(pasta: Optional[Path] = None) -> Optional[str]:
+    """Idioma gravado como preferência, se existir E tiver catálogo; senão None."""
+    try:
+        cod = _caminho_pref(pasta).read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return cod if cod in idiomas_disponiveis() else None
+
+
+def aplicar_idioma_salvo(pasta: Optional[Path] = None) -> str:
+    """Põe o idioma ativo no que foi salvo (se válido). Chamado no arranque."""
+    cod = idioma_salvo(pasta)
+    if cod:
+        definir_idioma(cod)
+    return idioma_ativo()
+
+
+def definir_e_salvar(idioma: str, pasta: Optional[Path] = None) -> None:
+    """Troca o idioma ativo e grava a preferência. Falha de escrita não estoura."""
+    definir_idioma(idioma)
+    try:
+        caminho = _caminho_pref(pasta)
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        caminho.write_text(idioma, encoding="utf-8")
+    except OSError:
+        pass

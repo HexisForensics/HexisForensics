@@ -664,5 +664,7 @@
   "cf_rotulo_fotos": "Photographs: {fotos}<br>The SHA-256 of this acquisition's manifest is computed and printed in the document automatically.",
   "cf_btn_cancelar": "Cancel",
   "cf_btn_gerar_laudo": "📄 Generate Forensic Examination Report (PDF)",
-  "cf_btn_gerar_caderno": "💾 Save and Generate Notebook"
+  "cf_btn_gerar_caderno": "💾 Save and Generate Notebook",
+
+  "sel_idioma_tooltip": "Language"
 }

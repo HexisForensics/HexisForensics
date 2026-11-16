@@ -44,7 +44,7 @@ from .widgets.device_info_dialog import DeviceInfoDialog
 from .widgets.fundamento_dialog import AutorizacaoDialog
 from .widgets.examinadores_dialog import ExaminadoresDialog
 from .widgets.exame_sem_extracao_dialog import ExameSemExtracaoDialog
-from .widgets.tela_entrada import TelaEntrada
+from .widgets.tela_entrada import TelaEntrada, abrir_entrada
 from .widgets.termos_dialog import TermosDialog
 from .widgets.device_panel import DevicePanel
 from .widgets.disk_panel import DiskPanel
@@ -529,7 +529,7 @@ class MainWindow(QMainWindow):
             if dialogo.excluiu_o_proprio:
                 # Sem sessão não se usa a suíte: volta a entrada, e fechá-la sai.
                 self.hide()
-                if TelaEntrada(self.marca).exec() != QDialog.Accepted:
+                if abrir_entrada(self.marca) != QDialog.Accepted:
                     self._sair_sem_perguntar = True
                     self.close()
                     return
@@ -676,16 +676,15 @@ class MainWindow(QMainWindow):
             )
             return
         self.hide()
-        entrada = TelaEntrada(self.marca, texto_sair=traduzir("mw_voltar_sessao"),
-                              abrir_cadastro=abrir_cadastro)
-        if entrada.exec() == QDialog.Accepted:
+        if abrir_entrada(self.marca, texto_sair=traduzir("mw_voltar_sessao"),
+                         abrir_cadastro=abrir_cadastro) == QDialog.Accepted:
             self._atualizar_sessao()
             self.console_log.adicionar_linha(
                 f"[*] Sessão aberta por {sessao_service.nome()}.", com_timestamp=True)
         elif not sessao_service.ativa():
             # Quem entrou e recusou os termos encerrou a sessão: não há mais a
             # sessão anterior para onde voltar. Sem sessão não se usa a suíte.
-            if TelaEntrada(self.marca).exec() != QDialog.Accepted:
+            if abrir_entrada(self.marca) != QDialog.Accepted:
                 self._sair_sem_perguntar = True
                 self.close()
                 return
@@ -713,9 +712,8 @@ class MainWindow(QMainWindow):
         self.hide()
         try:
             while True:
-                entrada = TelaEntrada(self.marca, bloqueio=True,
-                                      preselecionar=sessao_service.nome())
-                if entrada.exec() == QDialog.Accepted:
+                if abrir_entrada(self.marca, bloqueio=True,
+                                 preselecionar=sessao_service.nome()) == QDialog.Accepted:
                     self._atualizar_sessao()
                     self.show()
                     return

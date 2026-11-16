@@ -14,8 +14,11 @@ from __future__ import annotations
 from core.idioma import (  # noqa: F401  (reexport proposital)
     IDIOMA_PADRAO,
     IDIOMAS_PREVISTOS,
+    aplicar_idioma_salvo,
+    definir_e_salvar,
     definir_idioma,
     idioma_ativo,
+    idioma_salvo,
     idiomas_disponiveis,
     nome_do_idioma,
     traduzir,

@@ -664,5 +664,7 @@
   "cf_rotulo_fotos": "Fotografias: {fotos}<br>O SHA-256 do manifesto desta aquisição é calculado e impresso no documento automaticamente.",
   "cf_btn_cancelar": "Cancelar",
   "cf_btn_gerar_laudo": "📄 Gerar Laudo Pericial (PDF)",
-  "cf_btn_gerar_caderno": "💾 Salvar e Gerar Caderno"
+  "cf_btn_gerar_caderno": "💾 Salvar e Gerar Caderno",
+
+  "sel_idioma_tooltip": "Idioma"
 }

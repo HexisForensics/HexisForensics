@@ -20,11 +20,12 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
+from core.idioma import aplicar_idioma_salvo
 from services import registro_de_erros
 from services.branding_service import carregar_branding
 from ui.main_window import MainWindow
 from ui.style import aplicar_tema
-from ui.widgets.tela_entrada import TelaEntrada
+from ui.widgets.tela_entrada import TelaEntrada, abrir_entrada
 
 
 def autoteste(caminho_saida: str) -> int:
@@ -111,8 +112,12 @@ def main() -> int:
     app.setOrganizationName(marca.nome_exibicao)
     aplicar_tema(app, marca)
 
+    # Idioma lembrado da última sessão (escolhido na tela de entrada). Antes
+    # de qualquer janela, para tudo nascer no idioma certo.
+    aplicar_idioma_salvo()
+
     # Ninguém usa a suíte sem entrar: a sessão é quem assina cada aquisição.
-    if TelaEntrada(marca).exec() != TelaEntrada.Accepted:
+    if abrir_entrada(marca) != TelaEntrada.Accepted:
         return 0
 
     janela = MainWindow(marca)
