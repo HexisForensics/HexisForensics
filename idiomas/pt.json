@@ -365,5 +365,18 @@
   "fd_ja_na_lista_titulo": "Já na lista",
   "fd_ja_na_lista_corpo": "Este arquivo já foi escolhido para anexar.",
   "fd_sem_doc_titulo": "Prosseguir sem documento anexado?",
-  "fd_sem_doc_corpo": "Nenhum documento de autorização foi anexado a este caso.\n\nA extração pode prosseguir — a autorização existe independentemente de o documento estar aqui —, mas o caso vai registrar por extenso que nada foi anexado, e o documento poderá ser juntado depois pelo gerenciador de casos.\n\nProsseguir assim mesmo?"
+  "fd_sem_doc_corpo": "Nenhum documento de autorização foi anexado a este caso.\n\nA extração pode prosseguir — a autorização existe independentemente de o documento estar aqui —, mas o caso vai registrar por extenso que nada foi anexado, e o documento poderá ser juntado depois pelo gerenciador de casos.\n\nProsseguir assim mesmo?",
+
+  "md_titulo": "Método e Limitações da Coleta",
+  "md_nenhum": "(nenhum)",
+  "md_cabecalho": "<b>{n} módulo(s) selecionado(s):</b> {nomes}",
+  "md_competencia": "<br><b>Competência exigida:</b> {perfis}",
+  "md_titulo_limitacoes": "<b>O que esta coleta NÃO vai alcançar</b>",
+  "md_sem_limitacoes": "Nenhum dos módulos selecionados declarou limitações.",
+  "md_nota_limitacoes": "<i>São limites do método, não deste aparelho. Servem para que a ausência de um dado no material coletado não seja lida como ausência do dado no aparelho.</i>",
+  "md_titulo_alteracoes": "<b>O que pode ser alterado no aparelho</b>",
+  "md_justificativa": "      Justificativa: {valor}",
+  "md_nota_alteracoes": "<i>É o que a execução pode provocar. A alteração que de fato ocorrer é anotada no registro do procedimento, no momento em que ocorrer.</i>",
+  "md_btn_ciente": "Ciente — Prosseguir",
+  "md_btn_cancelar": "Cancelar"
 }

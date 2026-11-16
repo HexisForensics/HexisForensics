@@ -365,5 +365,18 @@
   "fd_ja_na_lista_titulo": "Already in the list",
   "fd_ja_na_lista_corpo": "This file has already been chosen to attach.",
   "fd_sem_doc_titulo": "Continue without an attached document?",
-  "fd_sem_doc_corpo": "No authorization document was attached to this case.\n\nThe extraction can continue — the authorization exists regardless of whether the document is here —, but the case will record in full that nothing was attached, and the document can be filed later via the case manager.\n\nContinue anyway?"
+  "fd_sem_doc_corpo": "No authorization document was attached to this case.\n\nThe extraction can continue — the authorization exists regardless of whether the document is here —, but the case will record in full that nothing was attached, and the document can be filed later via the case manager.\n\nContinue anyway?",
+
+  "md_titulo": "Collection Method and Limitations",
+  "md_nenhum": "(none)",
+  "md_cabecalho": "<b>{n} module(s) selected:</b> {nomes}",
+  "md_competencia": "<br><b>Competence required:</b> {perfis}",
+  "md_titulo_limitacoes": "<b>What this collection will NOT reach</b>",
+  "md_sem_limitacoes": "None of the selected modules declared limitations.",
+  "md_nota_limitacoes": "<i>These are limits of the method, not of this device. They ensure that the absence of a datum in the collected material is not read as the absence of the datum from the device.</i>",
+  "md_titulo_alteracoes": "<b>What may be changed on the device</b>",
+  "md_justificativa": "      Rationale: {valor}",
+  "md_nota_alteracoes": "<i>This is what the run may cause. The change that actually occurs is recorded in the procedure record, at the moment it occurs.</i>",
+  "md_btn_ciente": "Acknowledged — Continue",
+  "md_btn_cancelar": "Cancel"
 }

@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from .ajuste_de_tela import caber_na_tela
+from services.idioma import traduzir
 
 
 class MetodoDialog(QDialog):
@@ -44,7 +45,7 @@ class MetodoDialog(QDialog):
 
     def __init__(self, modulos: list, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Método e Limitações da Coleta")
+        self.setWindowTitle(traduzir("md_titulo"))
         self.setModal(True)
         caber_na_tela(self, 680, 560)
 
@@ -70,17 +71,15 @@ class MetodoDialog(QDialog):
 
     # ------------------------------------------------------------------
     def _montar_cabecalho(self) -> QLabel:
-        nomes = ", ".join(modulo["nome"] for modulo in self._modulos) or "(nenhum)"
+        nomes = ", ".join(modulo["nome"] for modulo in self._modulos) or traduzir("md_nenhum")
         perfis = []
         for modulo in self._modulos:
             if modulo.get("perfil") and modulo["perfil"] not in perfis:
                 perfis.append(modulo["perfil"])
 
-        texto = (
-            f"<b>{len(self._modulos)} módulo(s) selecionado(s):</b> {nomes}"
-        )
+        texto = traduzir("md_cabecalho", n=len(self._modulos), nomes=nomes)
         if perfis:
-            texto += f"<br><b>Competência exigida:</b> {'; '.join(perfis)}"
+            texto += traduzir("md_competencia", perfis='; '.join(perfis))
 
         rotulo = QLabel(texto)
         rotulo.setWordWrap(True)
@@ -91,7 +90,7 @@ class MetodoDialog(QDialog):
         layout = QVBoxLayout(caixa)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        titulo = QLabel("<b>O que esta coleta NÃO vai alcançar</b>")
+        titulo = QLabel(traduzir("md_titulo_limitacoes"))
         layout.addWidget(titulo)
 
         linhas = []
@@ -107,15 +106,11 @@ class MetodoDialog(QDialog):
         texto.setReadOnly(True)
         texto.setPlainText(
             "\n".join(linhas).strip()
-            or "Nenhum dos módulos selecionados declarou limitações."
+            or traduzir("md_sem_limitacoes")
         )
         layout.addWidget(texto, 1)
 
-        nota = QLabel(
-            "<i>São limites do método, não deste aparelho. Servem para que a "
-            "ausência de um dado no material coletado não seja lida como "
-            "ausência do dado no aparelho.</i>"
-        )
+        nota = QLabel(traduzir("md_nota_limitacoes"))
         nota.setWordWrap(True)
         layout.addWidget(nota)
         return caixa
@@ -139,11 +134,12 @@ class MetodoDialog(QDialog):
         caixa = QWidget()
         layout = QVBoxLayout(caixa)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(QLabel("<b>O que pode ser alterado no aparelho</b>"))
+        layout.addWidget(QLabel(traduzir("md_titulo_alteracoes")))
 
         linhas = []
         for nome, alteracao, justificativa in pares:
-            linhas += [nome, f"    • {alteracao}", f"      Justificativa: {justificativa}", ""]
+            linhas += [nome, f"    • {alteracao}",
+                       traduzir("md_justificativa", valor=justificativa), ""]
 
         texto = QTextEdit()
         texto.setReadOnly(True)
@@ -151,21 +147,17 @@ class MetodoDialog(QDialog):
         texto.setMaximumHeight(160)
         layout.addWidget(texto)
 
-        nota = QLabel(
-            "<i>É o que a execução pode provocar. A alteração que de fato "
-            "ocorrer é anotada no registro do procedimento, no momento em que "
-            "ocorrer.</i>"
-        )
+        nota = QLabel(traduzir("md_nota_alteracoes"))
         nota.setWordWrap(True)
         layout.addWidget(nota)
         return caixa
 
     def _montar_botoes(self) -> QHBoxLayout:
         botoes = QHBoxLayout()
-        botao_ok = QPushButton("Ciente — Prosseguir")
+        botao_ok = QPushButton(traduzir("md_btn_ciente"))
         botao_ok.setDefault(True)
         botao_ok.clicked.connect(self.accept)
-        botao_cancelar = QPushButton("Cancelar")
+        botao_cancelar = QPushButton(traduzir("md_btn_cancelar"))
         botao_cancelar.clicked.connect(self.reject)
         botoes.addStretch()
         botoes.addWidget(botao_ok)
