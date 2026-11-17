@@ -320,32 +320,40 @@ class ResultadoConferencia:
 
     @property
     def resumo(self) -> str:
+        """
+        Texto de uma linha no idioma ATIVO — é o que a tela mostra ao vivo a
+        quem está conferindo. O relatório gravado em disco usa o idioma
+        CARIMBADO no caso (ver `resumo_no_idioma` e `_gravar_relatorio_conferencia`):
+        um pode diferir do outro quando quem confere está com a tela noutro
+        idioma, e cada um fica certo no seu lugar.
+        """
+        from core.idioma import idioma_ativo
+        return self.resumo_no_idioma(idioma_ativo())
+
+    def resumo_no_idioma(self, idioma: str) -> str:
+        """O mesmo resumo, no idioma pedido explicitamente."""
+        from core.idioma import traduzir
         if self.erro:
-            return f"Conferência não realizada: {self.erro}"
+            return traduzir("ci_resumo_erro", idioma, erro=self.erro)
         if self.integro:
-            return (
-                f"ÍNTEGRO: {len(self.intactos)} arquivo(s) conferidos, todos idênticos ao "
-                "manifesto."
-            )
+            return traduzir("ci_resumo_integro", idioma, intactos=len(self.intactos))
         partes = [
-            f"{len(self.alterados)} alterado(s)",
-            f"{len(self.ausentes)} ausente(s)",
-            f"{len(self.acrescentados)} acrescentado(s)",
-            f"{len(self.ilegiveis)} ilegível(is)",
+            traduzir("ci_parte_alterados", idioma, n=len(self.alterados)),
+            traduzir("ci_parte_ausentes", idioma, n=len(self.ausentes)),
+            traduzir("ci_parte_acrescentados", idioma, n=len(self.acrescentados)),
+            traduzir("ci_parte_ilegiveis", idioma, n=len(self.ilegiveis)),
         ]
         if self.alterados_desde_o_original:
-            partes.append(
-                f"{len(self.alterados_desde_o_original)} divergente(s) do SELO ORIGINAL"
-            )
+            partes.append(traduzir("ci_parte_selo_original", idioma,
+                                   n=len(self.alterados_desde_o_original)))
         if self.autorizacao_divergente:
-            partes.append(
-                f"{len(self.autorizacao_divergente)} documento(s) de AUTORIZAÇÃO alterado(s)"
-            )
+            partes.append(traduzir("ci_parte_autoriz_alterados", idioma,
+                                   n=len(self.autorizacao_divergente)))
         if self.autorizacao_ausente:
-            partes.append(
-                f"{len(self.autorizacao_ausente)} documento(s) de AUTORIZAÇÃO ausente(s)"
-            )
-        return f"DIVERGÊNCIAS: {', '.join(partes)}, sobre {len(self.intactos)} íntegro(s)."
+            partes.append(traduzir("ci_parte_autoriz_ausentes", idioma,
+                                   n=len(self.autorizacao_ausente)))
+        return traduzir("ci_resumo_divergencias", idioma,
+                        partes=", ".join(partes), intactos=len(self.intactos))
 
 
 def conferir_manifesto(
@@ -516,39 +524,42 @@ def _gravar_relatorio_conferencia(resultado: ResultadoConferencia) -> Optional[P
         caminho = resultado.pasta / f"{PREFIXO_CONFERENCIA}_{carimbo}_{sufixo}.txt"
         sufixo += 1
 
+    # O relatório sai no idioma CARIMBADO no caso — o mesmo do manifesto que
+    # ele confere e do resto do material selado da aquisição. Caso sem carimbo
+    # (legado, ou pasta fora de um caso) é português, e o texto não muda um
+    # byte. O corpo com os nomes dos arquivos é dado e nunca é traduzido.
+    from core.case import idioma_do_caso
+    from core.idioma import traduzir
+    idi = idioma_do_caso(resultado.pasta)
+    def t(ch, **campos):
+        return traduzir(ch, idi, **campos)
+    nenhum = t("ci_rel_nenhum")
+
     linhas = [
         "=" * 70,
-        "CONFERÊNCIA DE INTEGRIDADE (SHA-256)".center(70),
+        t("ci_rel_titulo").center(70),
         "=" * 70,
-        f"Pasta conferida: {resultado.pasta.name}",
-        f"Selo vigente:    {resultado.manifesto.name if resultado.manifesto else '(nenhum)'}",
-        f"Selos da pasta:  {', '.join(resultado.manifestos) or '(nenhum)'}",
-        f"Data/Hora:       {datetime.now().astimezone().isoformat(timespec='seconds')}",
+        t("ci_rel_pasta", valor=resultado.pasta.name),
+        t("ci_rel_selo_vigente",
+          valor=resultado.manifesto.name if resultado.manifesto else nenhum),
+        t("ci_rel_selos", valor=", ".join(resultado.manifestos) or nenhum),
+        t("ci_rel_data", valor=datetime.now().astimezone().isoformat(timespec='seconds')),
         "",
-        f"RESULTADO: {resultado.resumo}",
+        t("ci_rel_resultado", valor=resultado.resumo_no_idioma(idi)),
         "=" * 70,
     ]
 
     for titulo, itens, nota in (
-        ("ARQUIVOS ALTERADOS DESDE A COLETA", resultado.alterados,
-         "O conteúdo destes arquivos MUDOU após o manifesto ter sido gerado."),
-        ("ARQUIVOS AUSENTES", resultado.ausentes,
-         "Constavam do manifesto e não foram encontrados na pasta."),
-        ("ARQUIVOS ACRESCENTADOS APÓS O MANIFESTO", resultado.acrescentados,
-         "Estão na pasta e não constavam do manifesto."),
-        ("ARQUIVOS ILEGÍVEIS", resultado.ilegiveis,
-         "Não foi possível ler o conteúdo para conferir."),
-        ("ARQUIVOS QUE DIVERGEM DO SELO ORIGINAL", resultado.alterados_desde_o_original,
-         "Conferem com o manifesto mais recente, porém NÃO com o primeiro selo "
-         "da pasta. Isso ocorre quando um arquivo é alterado e o manifesto é "
-         "regerado em seguida."),
-        ("DOCUMENTOS DE AUTORIZAÇÃO ALTERADOS", resultado.autorizacao_divergente,
-         "A decisão judicial ou o termo que amparou esta aquisição está na pasta "
-         "do caso com conteúdo DIFERENTE do que foi selado aqui no dia da coleta. "
-         "O documento examinado não é mais o mesmo."),
-        ("DOCUMENTOS DE AUTORIZAÇÃO AUSENTES OU ILEGÍVEIS", resultado.autorizacao_ausente,
-         "Constavam do registro desta aquisição e não foi possível encontrá-los "
-         "ou lê-los na pasta do caso."),
+        (t("ci_sec_alterados_t"), resultado.alterados, t("ci_sec_alterados_n")),
+        (t("ci_sec_ausentes_t"), resultado.ausentes, t("ci_sec_ausentes_n")),
+        (t("ci_sec_acrescentados_t"), resultado.acrescentados, t("ci_sec_acrescentados_n")),
+        (t("ci_sec_ilegiveis_t"), resultado.ilegiveis, t("ci_sec_ilegiveis_n")),
+        (t("ci_sec_selo_original_t"), resultado.alterados_desde_o_original,
+         t("ci_sec_selo_original_n")),
+        (t("ci_sec_autoriz_alterados_t"), resultado.autorizacao_divergente,
+         t("ci_sec_autoriz_alterados_n")),
+        (t("ci_sec_autoriz_ausentes_t"), resultado.autorizacao_ausente,
+         t("ci_sec_autoriz_ausentes_n")),
     ):
         if itens:
             linhas += ["", titulo, "-" * len(titulo), nota, ""]
@@ -557,7 +568,7 @@ def _gravar_relatorio_conferencia(resultado: ResultadoConferencia) -> Optional[P
     linhas += [
         "",
         "=" * 70,
-        f"Arquivos íntegros: {len(resultado.intactos)}",
+        t("ci_rel_integros", valor=len(resultado.intactos)),
         "=" * 70,
     ]
 
