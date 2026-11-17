@@ -40,24 +40,18 @@ class ComputadorDevice:
         já que o examinador pode ter escolhido a unidade minutos antes e o
         pendrive pode ter sido removido nesse meio tempo.
         """
+        from core.idioma import traduzir
         if not disk_client.rodando_no_windows():
-            return StatusUnidade(
-                False,
-                None,
-                "Este módulo funciona apenas no Windows — nenhuma unidade pode ser verificada neste sistema.",
-            )
+            return StatusUnidade(False, None, traduzir("dev_comp_so_windows"))
 
         for unidade in self.listar_unidades(apenas_removiveis=apenas_removiveis):
             if unidade.caminho.upper() == caminho_unidade.upper():
                 return StatusUnidade(
-                    True, unidade, f"Unidade '{unidade.caminho}' disponível."
+                    True, unidade, traduzir("dev_comp_disponivel", caminho=unidade.caminho)
                 )
 
         return StatusUnidade(
-            False,
-            None,
-            f"A unidade '{caminho_unidade}' não foi encontrada. Ela pode ter sido "
-            "removida/desconectada — atualize a lista e selecione novamente.",
+            False, None, traduzir("dev_comp_nao_encontrada", caminho=caminho_unidade),
         )
 
     def obter_id_unidade(self, caminho_unidade: str) -> str:

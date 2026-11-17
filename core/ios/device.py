@@ -37,9 +37,10 @@ class IOSDevice:
         nome = valores.get("DeviceName", "iPhone")
         modelo = valores.get("ProductType", "")
         versao = valores.get("ProductVersion", "")
+        from core.idioma import traduzir
         return StatusConexaoIOS(
             True, True, udid,
-            f"Conectado e autorizado: {nome} ({modelo}, iOS {versao}) — UDID {udid}",
+            traduzir("dev_ios_conectado", nome=nome, modelo=modelo, versao=versao, udid=udid),
         )
 
     def obter_id_dispositivo(self) -> str:

@@ -218,12 +218,8 @@ class ADBClient:
 
     def verificar_binario(self) -> Tuple[bool, str]:
         if not self.caminho_binario.exists():
-            return False, (
-                f"O binário do ADB não foi encontrado em '{self.caminho_binario}'. "
-                "Copie adb.exe (e AdbWinApi.dll / AdbWinUsbApi.dll no Windows) para a "
-                "pasta 'binario/', ou instale o Android Platform Tools e garanta que "
-                "'adb' esteja disponível no PATH do sistema."
-            )
+            from core.idioma import traduzir
+            return False, traduzir("adb_sem_binario", caminho=self.caminho_binario)
         return True, ""
 
     def executar_detalhado(
