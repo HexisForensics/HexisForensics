@@ -436,7 +436,7 @@ class AndroidExtractor(BaseExtractor):
             cancelado=lambda: self.cancelado,
             ao_progredir=ao_progredir,
         )
-        self.log(f" -> {resultado.resumo()}")
+        self.log(f" -> {resultado.resumo(self._idi_selo)}")
 
         # A mensagem do ADB é evidência da tentativa: fica no log mesmo
         # quando a cópia teve sucesso (pode haver recusa parcial).

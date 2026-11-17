@@ -157,20 +157,20 @@ class ResultadoPull:
         """
         return self.situacao in (SituacaoPull.CANCELADO, SituacaoPull.EXPIRADO)
 
-    def resumo(self) -> str:
-        """Linha unica para log e para o relatorio do caso."""
+    def resumo(self, idioma: str = None) -> str:
+        """Linha unica para log e para o relatorio do caso, no idioma dado."""
+        from core.idioma import traduzir
         descricao = {
-            SituacaoPull.OK: f"{self.arquivos_copiados} arquivo(s), {self.bytes_copiados} byte(s)",
-            SituacaoPull.VAZIO: "caminho existe, porem sem arquivos",
-            SituacaoPull.INEXISTENTE: "caminho nao existe no aparelho",
-            SituacaoPull.ACESSO_NEGADO: "ACESSO NEGADO pelo Android",
-            SituacaoPull.CANCELADO: (
-                f"CANCELADA pelo examinador apos {self.arquivos_copiados} arquivo(s)"
-            ),
-            SituacaoPull.EXPIRADO: (
-                f"INTERROMPIDA: o ADB parou de responder apos {self.arquivos_copiados} arquivo(s)"
-            ),
-            SituacaoPull.ERRO: f"ERRO do ADB (codigo {self.codigo_saida})",
+            SituacaoPull.OK: traduzir("lg_pull_ok", idioma,
+                                      arquivos=self.arquivos_copiados, bytes=self.bytes_copiados),
+            SituacaoPull.VAZIO: traduzir("lg_pull_vazio", idioma),
+            SituacaoPull.INEXISTENTE: traduzir("lg_pull_inexistente", idioma),
+            SituacaoPull.ACESSO_NEGADO: traduzir("lg_pull_negado", idioma),
+            SituacaoPull.CANCELADO: traduzir("lg_pull_cancelado", idioma,
+                                             arquivos=self.arquivos_copiados),
+            SituacaoPull.EXPIRADO: traduzir("lg_pull_expirado", idioma,
+                                            arquivos=self.arquivos_copiados),
+            SituacaoPull.ERRO: traduzir("lg_pull_erro", idioma, codigo=self.codigo_saida),
         }[self.situacao]
         return f"{self.caminho_remoto} -> {descricao}"
 
