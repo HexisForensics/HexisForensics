@@ -45,28 +45,24 @@ class FilesystemDumpExtractor(AndroidExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta_filesystem = pasta_caso / "filesystem"
         pasta_filesystem.mkdir(parents=True, exist_ok=True)
 
-        self.log(
-            "[*] Shell do ADB em modo root: "
-            + ("sim" if self.shell_e_root() else "não")
-        )
+        self.log(self._t("lg_fs_modo_root",
+                         valor=self._t("lg_fs_sim") if self.shell_e_root() else self._t("lg_fs_nao")))
         if not self.shell_e_root():
-            self.log(
-                "[*] O shell NÃO está em modo root — /data/data provavelmente será recusado "
-                "pelo Android. A tentativa será registrada como evidência."
-            )
+            self.log(self._t("lg_fs_sem_root"))
 
         aquisicoes = []
         total = len(ALVOS_FILESYSTEM)
-        self.log("\n[*] Iniciando extração do Filesystem (pode demorar bastante)...")
+        self.log(self._t("lg_fs_iniciando"))
 
         for indice, (nome_pasta, caminho_android) in enumerate(ALVOS_FILESYSTEM.items(), 1):
             if self.cancelado:
-                return ResultadoExtracao(False, "Extração cancelada pelo usuário.")
+                return ResultadoExtracao(False, self._t("lg_cancelada_modulo"))
 
-            self.log(f"[*] Extraindo diretório: {caminho_android} -> aguarde...")
+            self.log(self._t("lg_fs_extraindo", caminho=caminho_android))
             faixa = (int((indice - 1) / total * 100), int(indice / total * 100))
             aquisicoes.append(
                 self.adquirir_caminho(
@@ -88,10 +84,10 @@ class FilesystemDumpExtractor(AndroidExtractor):
             aviso_perfis = self.restricao_de_multiplos_usuarios(perfis)
             detalhes["perfis_de_usuario"] = perfis
             detalhes["copia_incompleta"] = True
-            self.log(f"[RESSALVA] {aviso_perfis}")
+            self.log(self._t("lg_ressalva", valor=aviso_perfis))
             self.registrar_decisao(
                 pasta_caso,
-                f"Aquisição restrita ao perfil principal, dentre {perfis} perfis existentes.",
+                self._t("lg_fs_dec_perfis", perfis=perfis),
                 aviso_perfis,
             )
 
@@ -101,7 +97,7 @@ class FilesystemDumpExtractor(AndroidExtractor):
             detalhes["copia_incompleta"] = True
             self.registrar_decisao(
                 pasta_caso,
-                "Dados privados de aplicativos não adquiridos por via lógica.",
+                self._t("lg_fs_dec_restricao"),
                 restricoes[0],
             )
         if consolidado["caminhos_negados"]:
@@ -109,10 +105,8 @@ class FilesystemDumpExtractor(AndroidExtractor):
         if consolidado.get("caminhos_interrompidos"):
             detalhes["copia_incompleta"] = True
             interrompidos = ", ".join(consolidado["caminhos_interrompidos"])
-            self.log(
-                f"[RESSALVA] Cópia interrompida antes do fim em: {interrompidos}. "
-                "O material adquirido é parcial."
-            )
+            self.log(self._t("lg_ressalva",
+                             valor=self._t("lg_lb_interrompida", caminhos=interrompidos)))
         if detalhes.get("arquivos_faltantes"):
             # Arquivo que existia na origem e não chegou ao destino é
             # ressalva obrigatória: sem isso o exame concluiria completude
@@ -122,55 +116,40 @@ class FilesystemDumpExtractor(AndroidExtractor):
         # Nada copiado é FALHA, não sucesso silencioso.
         if consolidado["arquivos_copiados"] == 0:
             motivo = (
-                "acesso negado pelo Android (exige root)"
+                self._t("lg_fs_motivo_negado")
                 if consolidado["caminhos_negados"]
-                else "os caminhos não existem ou estão vazios"
+                else self._t("lg_fs_motivo_vazio")
             )
-            self.log(f"[FALHA] Nenhum arquivo foi copiado do sistema de arquivos — {motivo}.")
+            self.log(self._t("lg_falha", valor=self._t("lg_fs_falha_log", motivo=motivo)))
             return ResultadoExtracao(
                 sucesso=False,
-                mensagem=f"Nenhum arquivo copiado do sistema de arquivos: {motivo}.",
+                mensagem=self._t("lg_fs_falha_msg", motivo=motivo),
                 caminho_saida=pasta_filesystem,
                 detalhes=detalhes,
             )
 
-        mensagem = (
-            f"Filesystem extraído: {consolidado['arquivos_copiados']} arquivo(s), "
-            f"{consolidado['bytes_copiados']} byte(s)."
-        )
+        mensagem = self._t("lg_fs_msg_ok", arquivos=consolidado['arquivos_copiados'],
+                           bytes=consolidado['bytes_copiados'])
         # A mensagem é o que o examinador lê primeiro. Contra o emulador, em
         # 09/10/2026, `/data/data` inteiro falhou e ela dizia apenas
         # "Filesystem extraído: 7 arquivo(s)" — a ressalva existia em
         # `detalhes`, e a frase que resume o módulo não a carregava.
         if consolidado["caminhos_com_erro"]:
-            mensagem += (
-                " Ressalva: a cópia de "
-                + ", ".join(consolidado["caminhos_com_erro"])
-                + " terminou com ERRO do ADB (ver log)."
-            )
+            mensagem += self._t("lg_fs_ress_erro",
+                                lista=", ".join(consolidado["caminhos_com_erro"]))
         if detalhes.get("arquivos_faltantes"):
-            mensagem += (
-                f" Ressalva: {detalhes['arquivos_faltantes']} arquivo(s) existiam no "
-                "aparelho e NÃO foram adquiridos — a cópia é parcial."
-            )
+            mensagem += self._t("lg_fs_ress_faltantes", n=detalhes['arquivos_faltantes'])
         if consolidado["caminhos_negados"]:
             negados = ", ".join(consolidado["caminhos_negados"])
-            mensagem += f" Ressalva: acesso negado a {negados} (exige root)."
-            self.log(
-                f"[RESSALVA] O Android negou acesso a: {negados}. Os bancos privados dos "
-                "aplicativos NÃO foram adquiridos — a ausência de dados desses caminhos não "
-                "autoriza concluir que o aparelho não os continha."
-            )
+            mensagem += self._t("lg_fs_ress_negado", negados=negados)
+            self.log(self._t("lg_ressalva", valor=self._t("lg_fs_negado_log", negados=negados)))
             self.registrar_decisao(
                 pasta_caso,
-                f"Aquisição de {negados} não realizada; prosseguiu-se com os caminhos acessíveis.",
-                "O Android recusou o acesso ao shell ADB sem privilégio elevado (root). "
-                "A recusa foi preservada como evidência da tentativa. Aquisição desses "
-                "caminhos exigiria root, cuja obtenção altera o dispositivo e demanda "
-                "decisão expressa do examinador.",
+                self._t("lg_fs_dec_negado", negados=negados),
+                self._t("lg_fs_dec_negado_motivo"),
             )
 
-        self.log(f"[CONCLUÍDO] {mensagem}")
+        self.log(self._t("lg_concluido", valor=mensagem))
         return ResultadoExtracao(
             sucesso=True,
             mensagem=mensagem,

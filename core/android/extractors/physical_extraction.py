@@ -126,40 +126,32 @@ class ExtracaoFisicaExtractor(AndroidExtractor):
     # Execução
     # ------------------------------------------------------------------
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta_fisica = pasta_caso / "physical"
         pasta_fisica.mkdir(parents=True, exist_ok=True)
         caminho_imagem = pasta_fisica / NOME_IMAGEM
 
-        self.log("[*] Localizando a partição 'userdata' no dispositivo...")
+        self.log(self._t("lg_px_localizando"))
         caminho_particao = self._resolver_particao()
         if not caminho_particao:
-            self.log("[FALHA] Nenhum caminho conhecido para a partição 'userdata' foi encontrado.")
+            self.log(self._t("lg_falha", valor=self._t("lg_px_sem_particao_log")))
             return ResultadoExtracao(
                 False,
-                "Partição 'userdata' não localizada no dispositivo. O layout de partições "
-                "pode ser específico do fabricante — verifique manualmente via "
-                "'adb shell ls /dev/block/by-name/'.",
+                self._t("lg_px_sem_particao_msg"),
             )
-        self.log(f"[*] Partição localizada: {caminho_particao}")
+        self.log(self._t("lg_px_localizada", caminho=caminho_particao))
 
         tamanho_esperado = self._obter_tamanho_particao(caminho_particao)
         if tamanho_esperado:
-            self.log(f"[*] Tamanho declarado da partição: {self._formatar(tamanho_esperado)}")
+            self.log(self._t("lg_px_tamanho", valor=self._formatar(tamanho_esperado)))
         else:
-            self.log(
-                "[RESSALVA] Não foi possível obter o tamanho da partição. A aquisição prossegue, "
-                "mas sem conferência de completude do tamanho final."
-            )
+            self.log(self._t("lg_ressalva", valor=self._t("lg_px_sem_tamanho")))
 
         if not self.adb.suporta_exec_out():
-            self.log(
-                "[FALHA] A versão do ADB instalada não oferece 'exec-out'. Transmitir imagem "
-                "binária por 'adb shell' corrompe os dados — a extração foi interrompida."
-            )
+            self.log(self._t("lg_falha", valor=self._t("lg_px_sem_execout_log")))
             return ResultadoExtracao(
                 False,
-                "ADB sem suporte a 'exec-out'. Atualize o Android Platform Tools antes de "
-                "realizar extração física: o canal de texto corrompe silenciosamente a imagem.",
+                self._t("lg_px_sem_execout_msg"),
             )
 
         # Sonda antes de transmitir gigabytes: um bloco de 512 bytes diz se
@@ -167,26 +159,26 @@ class ExtracaoFisicaExtractor(AndroidExtractor):
         # Aqui o stderr é bem-vindo no fluxo — é diagnóstico, não evidência.
         acessivel, diagnostico = self._sondar_particao(caminho_particao)
         if not acessivel:
-            self.log(f"[FALHA] A partição não pôde ser lida. Retorno do dispositivo: {diagnostico}")
+            self.log(self._t("lg_falha",
+                             valor=self._t("lg_px_nao_lida_log", diagnostico=diagnostico)))
             if "Permission denied" in diagnostico or "not permitted" in diagnostico:
-                self.log("[BLOQUEIO FORENSE] O Android negou o acesso direto à partição (sem root).")
+                self.log(self._t("lg_px_bloqueio"))
                 return ResultadoExtracao(
                     False,
-                    "Extração física negada: dispositivo sem root não permite leitura direta "
-                    "da partição 'userdata'.",
+                    self._t("lg_px_negada_msg"),
                     caminho_saida=pasta_fisica,
                     detalhes={"stderr": diagnostico},
                 )
             return ResultadoExtracao(
                 False,
-                f"A partição '{caminho_particao}' não pôde ser lida. Retorno do dispositivo: "
-                f"{diagnostico or 'sem mensagem'}.",
+                self._t("lg_px_nao_lida_msg", caminho=caminho_particao,
+                        diagnostico=diagnostico or self._t("lg_px_sem_mensagem")),
                 caminho_saida=pasta_fisica,
                 detalhes={"stderr": diagnostico},
             )
 
-        self.log("\n[*] Iniciando clonagem bit-a-bit por canal binário (exec-out)...")
-        self.log("[*] SHA-256 sendo calculado durante a transmissão. AGUARDE — pode levar horas.")
+        self.log(self._t("lg_px_iniciando"))
+        self.log(self._t("lg_px_sha_calculando"))
 
         # `2>/dev/null` NO APARELHO é o que mantém a imagem limpa. O
         # `exec-out` funde o stderr do comando remoto no fluxo binário, e o
@@ -221,7 +213,7 @@ class ExtracaoFisicaExtractor(AndroidExtractor):
                 )
         except OSError as exc:
             return ResultadoExtracao(
-                False, f"Falha de escrita ao gravar a imagem em disco: {exc}"
+                False, self._t("lg_px_falha_escrita", exc=exc)
             )
 
         bytes_gravados = escritor.bytes_gravados
@@ -229,14 +221,10 @@ class ExtracaoFisicaExtractor(AndroidExtractor):
 
         # --- Cancelamento pelo operador -------------------------------
         if resultado_stream.cancelado:
-            self.log(
-                f"[CANCELADO] Interrompido pelo operador após {self._formatar(bytes_gravados)}. "
-                "A imagem está incompleta e não deve ser usada como evidência."
-            )
+            self.log(self._t("lg_px_cancelado_log", valor=self._formatar(bytes_gravados)))
             return ResultadoExtracao(
                 False,
-                f"Extração cancelada pelo operador. Imagem parcial de "
-                f"{self._formatar(bytes_gravados)} preservada, marcada como incompleta.",
+                self._t("lg_px_cancelado_msg", valor=self._formatar(bytes_gravados)),
                 caminho_saida=caminho_imagem,
                 detalhes={"incompleta": True, "bytes": bytes_gravados},
             )
@@ -247,43 +235,40 @@ class ExtracaoFisicaExtractor(AndroidExtractor):
 
         # --- Nenhum byte gravado --------------------------------------
         if bytes_gravados == 0:
-            self.log(
-                f"[FALHA] Nenhum byte foi transmitido. Saída do dispositivo: {stderr or 'vazia'}"
-            )
+            self.log(self._t("lg_falha", valor=self._t(
+                "lg_px_zero_log", valor=stderr or self._t("lg_px_vazia"))))
             return ResultadoExtracao(
                 False,
-                "Nenhum dado foi transmitido pelo dispositivo — a imagem gerada está vazia. "
-                f"Retorno do comando: {stderr or 'sem mensagem de erro'}.",
+                self._t("lg_px_zero_msg", valor=stderr or self._t("lg_px_sem_erro")),
                 caminho_saida=caminho_imagem,
                 detalhes={"bytes": 0, "stderr": stderr},
             )
 
         # --- Erro reportado pelo processo -----------------------------
         if resultado_stream.codigo_saida != 0:
-            self.log(
-                f"[FALHA] O comando terminou com código {resultado_stream.codigo_saida} "
-                f"após {self._formatar(bytes_gravados)}."
-            )
+            self.log(self._t("lg_falha", valor=self._t(
+                "lg_px_codigo_log", codigo=resultado_stream.codigo_saida,
+                valor=self._formatar(bytes_gravados))))
             return ResultadoExtracao(
                 False,
-                f"A clonagem falhou (código {resultado_stream.codigo_saida}) após "
-                f"{self._formatar(bytes_gravados)}. Imagem incompleta — não usar como evidência. "
-                f"Detalhe: {stderr or 'sem mensagem'}.",
+                self._t("lg_px_codigo_msg", codigo=resultado_stream.codigo_saida,
+                        valor=self._formatar(bytes_gravados),
+                        stderr=stderr or self._t("lg_px_sem_mensagem")),
                 caminho_saida=caminho_imagem,
                 detalhes={"incompleta": True, "bytes": bytes_gravados, "stderr": stderr},
             )
 
         # --- Hash gravado antes de qualquer conclusão -----------------
         caminho_hash = gravar_hash_avulso(caminho_imagem, hash_imagem)
-        self.log(f"[*] SHA-256 da imagem: {hash_imagem}")
-        self.log(f"[*] Hash gravado em: {caminho_hash.name}")
+        self.log(self._t("lg_px_sha_imagem", hash=hash_imagem))
+        self.log(self._t("lg_px_hash_gravado", nome=caminho_hash.name))
 
         # --- Conferência de completude --------------------------------
         completa, ressalva = self._conferir_tamanho(bytes_gravados, tamanho_esperado)
         self.progresso(100)
 
         if not completa:
-            self.log(f"[RESSALVA] {ressalva}")
+            self.log(self._t("lg_ressalva", valor=ressalva))
             return ResultadoExtracao(
                 False,
                 ressalva,
@@ -296,14 +281,12 @@ class ExtracaoFisicaExtractor(AndroidExtractor):
                 },
             )
 
-        mensagem = (
-            f"Imagem física gerada ({self._formatar(bytes_gravados)}). SHA-256: {hash_imagem}"
-        )
+        mensagem = self._t("lg_px_msg_ok", valor=self._formatar(bytes_gravados), hash=hash_imagem)
         if ressalva:
-            mensagem += f" | Ressalva: {ressalva}"
-            self.log(f"[RESSALVA] {ressalva}")
+            mensagem += self._t("lg_px_ress_sep", ressalva=ressalva)
+            self.log(self._t("lg_ressalva", valor=ressalva))
 
-        self.log("[CONCLUÍDO] Extração física finalizada e integridade registrada.")
+        self.log(self._t("lg_concluido", valor=self._t("lg_px_concluido")))
         return ResultadoExtracao(
             True,
             mensagem,
@@ -346,8 +329,7 @@ class ExtracaoFisicaExtractor(AndroidExtractor):
             return False, (texto + " " + (resultado.stderr or "")).strip()
         return True, ""
 
-    @staticmethod
-    def _conferir_tamanho(gravados: int, esperado: Optional[int]) -> Tuple[bool, str]:
+    def _conferir_tamanho(self, gravados: int, esperado: Optional[int]) -> Tuple[bool, str]:
         """
         Compara o que foi gravado com o tamanho declarado da partição.
 
@@ -357,10 +339,7 @@ class ExtracaoFisicaExtractor(AndroidExtractor):
         foi e o que não foi verificado.
         """
         if not esperado:
-            return True, (
-                "Tamanho da partição não pôde ser obtido do dispositivo; a completude da "
-                "imagem não foi verificada."
-            )
+            return True, self._t("lg_px_tam_nao_obtido")
 
         if gravados == esperado:
             return True, ""
@@ -368,33 +347,18 @@ class ExtracaoFisicaExtractor(AndroidExtractor):
         # Excesso é sempre fatal, e a assimetria com a falta é deliberada:
         # imagem MENOR pode vir de um tamanho declarado impreciso pelo
         # dispositivo, mas imagem MAIOR só pode vir de bytes que não são da
-        # partição. Foi o que aconteceu na primeira execução real deste
-        # módulo: a mensagem de diagnóstico do `dd` entrou no fluxo binário
-        # e ficou colada no fim da imagem — 97 bytes de texto dentro de uma
-        # cópia bit-a-bit. A versão anterior tratava `gravados >= esperado`
-        # como sucesso e não viu nada.
+        # partição.
         if gravados > esperado:
             excedente = gravados - esperado
-            return False, (
-                f"Imagem MAIOR que a partição declarada: "
-                f"{ExtracaoFisicaExtractor._formatar(gravados)} contra "
-                f"{ExtracaoFisicaExtractor._formatar(esperado)} — {excedente} byte(s) a mais. "
-                "Bytes que não pertencem à partição entraram no fluxo. A imagem NÃO é cópia "
-                "fiel e não deve ser usada como evidência."
-            )
+            return False, self._t("lg_px_tam_maior", gravados=self._formatar(gravados),
+                                   esperado=self._formatar(esperado), excedente=excedente)
 
         proporcao = gravados / esperado
         if proporcao >= MARGEM_TOLERANCIA:
-            return True, (
-                f"Imagem com {proporcao:.2%} do tamanho declarado da partição — diferença "
-                "dentro da margem, mas convém conferir antes do uso pericial."
-            )
+            return True, self._t("lg_px_tam_margem", proporcao=f"{proporcao:.2%}")
 
-        return False, (
-            f"Imagem incompleta: {proporcao:.2%} do tamanho declarado da partição "
-            f"({ExtracaoFisicaExtractor._formatar(gravados)} de "
-            f"{ExtracaoFisicaExtractor._formatar(esperado)}). Não usar como evidência."
-        )
+        return False, self._t("lg_px_tam_incompleta", proporcao=f"{proporcao:.2%}",
+                              gravados=self._formatar(gravados), esperado=self._formatar(esperado))
 
     @staticmethod
     def _formatar(bytes_totais: int) -> str:

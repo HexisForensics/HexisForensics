@@ -54,17 +54,17 @@ class ApksExtractor(AndroidExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta = pasta_caso / "apks"
         pasta.mkdir(parents=True, exist_ok=True)
 
         pacotes = self._listar_pacotes_do_usuario()
 
         if pacotes is None:
-            self.log("[FALHA] A consulta de aplicativos instalados não pôde ser realizada.")
+            self.log(self._t("lg_falha", valor=self._t("lg_apk_falha_consulta_log")))
             return ResultadoExtracao(
                 False,
-                "Não foi possível consultar os aplicativos instalados: o comando falhou no "
-                "aparelho. Nada se pode afirmar sobre quais aplicativos existiam.",
+                self._t("lg_apk_falha_consulta_msg"),
                 caminho_saida=pasta,
             )
 
@@ -72,17 +72,16 @@ class ApksExtractor(AndroidExtractor):
         # "o aparelho não respondeu" seria afirmar o que não ocorreu — e a
         # conclusão que se tira de cada caso é oposta.
         if not pacotes:
-            self.log("[*] O aparelho respondeu: nenhum aplicativo instalado pelo usuário.")
+            self.log(self._t("lg_apk_nenhum_log"))
             self._gravar_inventario(pasta, {}, {}, [])
             return ResultadoExtracao(
                 True,
-                "O aparelho respondeu à consulta e não há aplicativo instalado pelo usuário. "
-                "Nenhum APK a copiar — o que é diferente de não ter sido possível consultar.",
+                self._t("lg_apk_nenhum_msg"),
                 caminho_saida=pasta,
                 detalhes={"aplicativos_de_usuario": 0, "apks_copiados": 0, "pacotes_sem_apk": []},
             )
 
-        self.log(f"[*] {len(pacotes)} aplicativo(s) instalado(s) pelo usuário. Copiando APKs...")
+        self.log(self._t("lg_apk_copiando", n=len(pacotes)))
 
         copiados: Dict[str, str] = {}
         falhos = []
@@ -90,7 +89,7 @@ class ApksExtractor(AndroidExtractor):
 
         for indice, (pacote, caminho_remoto) in enumerate(sorted(pacotes.items()), 1):
             if self.cancelado:
-                self.log("[*] Cópia de APKs cancelada pelo examinador.")
+                self.log(self._t("lg_apk_cancelada"))
                 break
 
             destino = pasta / pacote
@@ -115,23 +114,24 @@ class ApksExtractor(AndroidExtractor):
         }
 
         if not copiados:
-            self.log("[FALHA] Nenhum APK pôde ser copiado.")
+            self.log(self._t("lg_falha", valor=self._t("lg_apk_falha_log")))
             return ResultadoExtracao(
                 False,
-                f"Nenhum dos {len(pacotes)} aplicativos teve o APK copiado.",
+                self._t("lg_apk_falha_msg", n=len(pacotes)),
                 caminho_saida=pasta,
                 detalhes=detalhes,
             )
 
-        mensagem = f"{len(copiados)} APK(s) copiados de {len(pacotes)} aplicativo(s) de usuário."
+        mensagem = self._t("lg_apk_msg_ok", copiados=len(copiados), n=len(pacotes))
         if falhos:
             # Aplicativo listado cujo APK não veio é lacuna que o exame
             # precisa enxergar antes de concluir sobre o conjunto instalado.
             detalhes["copia_incompleta"] = True
-            mensagem += f" Ressalva: {len(falhos)} sem APK copiado."
-            self.log(f"[RESSALVA] Sem APK copiado: {', '.join(falhos[:10])}")
+            mensagem += self._t("lg_apk_ress", n=len(falhos))
+            self.log(self._t("lg_ressalva",
+                             valor=self._t("lg_apk_sem_apk", lista=', '.join(falhos[:10]))))
 
-        self.log(f"[CONCLUÍDO] {mensagem}")
+        self.log(self._t("lg_concluido", valor=mensagem))
         return ResultadoExtracao(True, mensagem, caminho_saida=pasta, detalhes=detalhes)
 
     # ------------------------------------------------------------------
@@ -150,7 +150,7 @@ class ApksExtractor(AndroidExtractor):
             ["shell", "pm", "list", "packages", "-3", "-f"], timeout=120
         )
         if not resultado.sucesso:
-            self.log(f"    [ERRO] Falha ao listar pacotes: {resultado.motivo_falha}")
+            self.log(self._t("lg_apk_erro_listar", motivo=resultado.motivo_falha))
             return None
 
         pacotes: Dict[str, str] = {}
@@ -160,33 +160,26 @@ class ApksExtractor(AndroidExtractor):
                 pacotes[correspondencia.group("pacote")] = correspondencia.group("caminho")
         return pacotes
 
-    @staticmethod
-    def _gravar_inventario(pasta: Path, pacotes, copiados, falhos) -> None:
+    def _gravar_inventario(self, pasta: Path, pacotes, copiados, falhos) -> None:
         linhas = [
             "=" * 74,
-            "INVENTÁRIO DE APLICATIVOS INSTALADOS PELO USUÁRIO".center(74),
+            self._t("lg_apk_inv_titulo").center(74),
             "=" * 74,
             "",
-            f"Aplicativos de usuário localizados: {len(pacotes)}",
-            f"APKs efetivamente copiados:         {len(copiados)}",
-            f"Pacotes sem APK copiado:            {len(falhos)}",
+            self._t("lg_apk_inv_localizados", n=len(pacotes)),
+            self._t("lg_apk_inv_copiados", n=len(copiados)),
+            self._t("lg_apk_inv_sem_apk", n=len(falhos)),
             "",
             "-" * 74,
-            "SHA-256 DE CADA APK COPIADO",
+            self._t("lg_apk_inv_sha_titulo"),
             "-" * 74,
         ]
         linhas += [f"{valor} *{nome}" for nome, valor in sorted(copiados.items())]
 
         if falhos:
-            linhas += ["", "-" * 74, "PACOTES INSTALADOS CUJO APK NÃO PÔDE SER COPIADO", "-" * 74]
-            linhas += [f"  - {pacote}  ({pacotes.get(pacote, 'caminho desconhecido')})" for pacote in falhos]
+            linhas += ["", "-" * 74, self._t("lg_apk_inv_falhos_titulo"), "-" * 74]
+            desconhecido = self._t("lg_apk_inv_caminho_desconhecido")
+            linhas += [f"  - {pacote}  ({pacotes.get(pacote, desconhecido)})" for pacote in falhos]
 
-        linhas += [
-            "",
-            "=" * 74,
-            "NOTA: aplicativos de sistema não são copiados por este módulo — vêm da",
-            "imagem de fábrica e somam centenas de pacotes. Se a análise exigir algum",
-            "deles, o caminho consta em artefatos_sistema/pacotes_detalhado.txt.",
-            "=" * 74,
-        ]
+        linhas += ["", "=" * 74] + self._t("lg_apk_inv_nota").split("\n") + ["=" * 74]
         (pasta / "INVENTARIO_APKS.txt").write_text("\n".join(linhas), encoding="utf-8")
