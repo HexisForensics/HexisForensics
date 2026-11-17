@@ -14,6 +14,8 @@ RAIZ_PROJETO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ_PROJETO))
 
 import core.android.extractors  # noqa: F401,E402
+import core.ios.extractors  # noqa: F401,E402
+import core.computador.extractors  # noqa: F401,E402
 from core.metodo import descrever, gravar_metodo, ler_metodo  # noqa: E402
 from services.extraction_service import listar_extratores  # noqa: E402
 
@@ -40,22 +42,63 @@ lim_en = EST.limitacoes_no_idioma("en")
 checar("há duas limitações em EN", len(lim_en) == 2)
 checar("limitação EN é inglês", "screenshot shows what was visible" in lim_en[1])
 
-print("\n[2] Módulo ainda não migrado cai para o português (fallback)")
-nao_migrado = EXTRATORES["android_device_info"]
-checar("nome em EN = literal PT", nao_migrado.nome_no_idioma("en") == nao_migrado.nome_exibicao)
-checar("limitações em EN = literais PT",
-       nao_migrado.limitacoes_no_idioma("en") == list(nao_migrado.limitacoes_conhecidas))
+print("\n[2] Módulo sem chave no catálogo cai para o português (fallback)")
+# Um id inexistente no catálogo prova o fallback sem depender do estado da
+# migração: quando a chave falta, sai o literal declarado no código.
+from core.base_extractor import BaseExtractor  # noqa: E402
 
-print("\n[3] O catálogo PT do módulo migrado bate byte a byte com o literal")
+
+class _ModuloFicticio(BaseExtractor):
+    id = "modulo_inexistente_no_catalogo"
+    nome_exibicao = "Nome só no código"
+    descricao = "Descrição só no código"
+    limitacoes_conhecidas = ("Limitação declarada apenas no código-fonte.",)
+
+    def disponivel(self):
+        return (False, "")
+
+    def executar(self, pasta_caso):
+        return None
+
+
+checar("nome em EN = literal PT", _ModuloFicticio.nome_no_idioma("en") == "Nome só no código")
+checar("limitações em EN = literais PT",
+       _ModuloFicticio.limitacoes_no_idioma("en") == ["Limitação declarada apenas no código-fonte."])
+
+print("\n[3] O catálogo PT de TODO módulo bate byte a byte com o literal")
+# O selo PT é escrito pelo catálogo (descrever resolve 'pt'): se a chave PT
+# divergir do literal, um caso PT deixaria de ser idêntico ao de antes.
 pt = json.loads((RAIZ_PROJETO / "idiomas" / "pt.json").read_text(encoding="utf-8"))
-checar("mod_..._nome == nome_exibicao",
-       pt["mod_android_estado_inicial_nome"] == EST.nome_exibicao)
-checar("mod_..._desc == descricao",
-       pt["mod_android_estado_inicial_desc"] == EST.descricao)
-checar("mod_..._lim_0 == limitação 0",
-       pt["mod_android_estado_inicial_lim_0"] == EST.limitacoes_conhecidas[0])
-checar("mod_..._lim_1 == limitação 1",
-       pt["mod_android_estado_inicial_lim_1"] == EST.limitacoes_conhecidas[1])
+en = json.loads((RAIZ_PROJETO / "idiomas" / "en.json").read_text(encoding="utf-8"))
+
+TODOS = []
+for plat in ("Android", "iOS", "Computador"):
+    for e in listar_extratores(plat):
+        if e.id not in [x.id for x in TODOS]:
+            TODOS.append(e)
+
+divergentes = []
+nao_migrados = []
+for e in TODOS:
+    campos = {f"mod_{e.id}_nome": e.nome_exibicao, f"mod_{e.id}_desc": e.descricao}
+    for i, lim in enumerate(e.limitacoes_conhecidas):
+        campos[f"mod_{e.id}_lim_{i}"] = lim
+    for i, (o, j) in enumerate(e.alteracoes_no_dispositivo):
+        campos[f"mod_{e.id}_alt_{i}_o"] = o
+        campos[f"mod_{e.id}_alt_{i}_j"] = j
+    if f"mod_{e.id}_nome" not in pt:
+        nao_migrados.append(e.id)
+        continue
+    for chave, literal in campos.items():
+        if pt.get(chave) != literal:
+            divergentes.append(chave)
+
+checar(f"todo mod_* PT é idêntico ao literal ({divergentes[:3]})", not divergentes)
+checar(f"todos os módulos migrados (faltam: {nao_migrados})", not nao_migrados)
+
+print("\n[3b] Cada módulo tem nome traduzido em EN presente no catálogo")
+sem_en = [e.id for e in TODOS if f"mod_{e.id}_nome" not in en]
+checar(f"todo módulo tem nome EN ({sem_en})", not sem_en)
 
 print("\n[4] O método selado nasce no idioma carimbado")
 with tempfile.TemporaryDirectory() as tmp:
