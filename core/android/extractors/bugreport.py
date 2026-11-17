@@ -64,11 +64,12 @@ class BugreportExtractor(AndroidExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta = pasta_caso / "bugreport"
         pasta.mkdir(parents=True, exist_ok=True)
 
         api = self.nivel_api()
-        self.log(f"[*] Gerando bugreport (API {api or '?'}). Isso leva alguns minutos...")
+        self.log(self._t("lg_br_gerando", api=api or '?'))
         self.progresso(5)
 
         if api is not None and api < NIVEL_API_BUGREPORT_ZIP:
@@ -79,8 +80,8 @@ class BugreportExtractor(AndroidExtractor):
         self.progresso(90)
 
         if caminho is None or not caminho.exists() or caminho.stat().st_size == 0:
-            motivo = resultado.motivo_falha or "o aparelho não produziu conteúdo"
-            self.log(f"[FALHA] Bugreport não obtido: {motivo}")
+            motivo = resultado.motivo_falha or self._t("lg_br_sem_conteudo")
+            self.log(self._t("lg_falha", valor=self._t("lg_br_falha_log", motivo=motivo)))
             # Arquivo vazio não é evidência: é tentativa frustrada, e a
             # tentativa já está no log.
             if caminho is not None and caminho.exists():
@@ -90,7 +91,7 @@ class BugreportExtractor(AndroidExtractor):
                     pass
             return ResultadoExtracao(
                 False,
-                f"Bugreport não obtido: {motivo}.",
+                self._t("lg_br_falha_msg", motivo=motivo),
                 caminho_saida=pasta,
                 detalhes={"formato": formato, "api": api},
             )
@@ -113,20 +114,19 @@ class BugreportExtractor(AndroidExtractor):
         if resultado.expirou:
             # Conteúdo pode estar truncado: o relatório precisa dizer isso.
             detalhes["copia_incompleta"] = True
-            self.log("[RESSALVA] O aparelho parou de responder durante a geração do bugreport.")
+            self.log(self._t("lg_ressalva", valor=self._t("lg_br_parcial_log")))
             return ResultadoExtracao(
                 True,
-                f"Bugreport parcial obtido ({caminho.name}, {tamanho} bytes). "
-                "Ressalva: o aparelho parou de responder durante a geração, e o conteúdo "
-                "pode estar truncado.",
+                self._t("lg_br_parcial_msg", nome=caminho.name, bytes=tamanho),
                 caminho_saida=caminho,
                 detalhes=detalhes,
             )
 
-        self.log(f"[CONCLUÍDO] Bugreport gravado: {caminho.name} ({tamanho} bytes)")
+        self.log(self._t("lg_concluido",
+                         valor=self._t("lg_br_ok_log", nome=caminho.name, bytes=tamanho)))
         return ResultadoExtracao(
             True,
-            f"Bugreport obtido: {caminho.name}, {tamanho} bytes, formato {formato}.",
+            self._t("lg_br_ok_msg", nome=caminho.name, bytes=tamanho, formato=formato),
             caminho_saida=caminho,
             detalhes=detalhes,
         )

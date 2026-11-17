@@ -64,33 +64,34 @@ class BackupLogicoExtractor(AndroidExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta_metadados = pasta_caso / "system_info"
         pasta_midia = pasta_caso / "media"
         pasta_metadados.mkdir(parents=True, exist_ok=True)
         pasta_midia.mkdir(parents=True, exist_ok=True)
 
-        self.log("[*] Coletando metadados e propriedades do sistema...")
+        self.log(self._t("lg_lb_metadados"))
         propriedades = self.adb.executar(["shell", "getprop"])
         (pasta_metadados / "getprop.txt").write_text(propriedades, encoding="utf-8")
 
-        self.log("[*] Coletando informações de pacotes e apps instalados...")
+        self.log(self._t("lg_lb_pacotes"))
         apps = self.adb.executar(["shell", "pm", "list", "packages", "-f"])
         (pasta_metadados / "apps_instalados.txt").write_text(apps, encoding="utf-8")
 
         metadados_ok = bool(propriedades.strip()) and bool(apps.strip())
         if not metadados_ok:
-            self.log("[RESSALVA] Metadados do sistema vieram vazios — verifique a conexão ADB.")
+            self.log(self._t("lg_ressalva", valor=self._t("lg_lb_metadados_vazios")))
         self.progresso(15)
 
         aquisicoes = []
         total = len(PASTAS_MIDIA)
-        self.log("\n[*] Iniciando a cópia de mídias e arquivos (isso pode demorar)...")
+        self.log(self._t("lg_lb_iniciando"))
 
         for indice, (nome, caminho_android) in enumerate(PASTAS_MIDIA.items(), 1):
             if self.cancelado:
-                return ResultadoExtracao(False, "Extração cancelada pelo usuário.")
+                return ResultadoExtracao(False, self._t("lg_cancelada_modulo"))
 
-            self.log(f"[*] Extraindo {nome} ({caminho_android})...")
+            self.log(self._t("lg_lb_extraindo", nome=nome, caminho=caminho_android))
             # Faixa que este caminho ocupa na barra: o progresso passa a
             # refletir a transferencia, e nao a contagem de pastas.
             faixa = (15 + int((indice - 1) / total * 85), 15 + int(indice / total * 85))
@@ -114,10 +115,8 @@ class BackupLogicoExtractor(AndroidExtractor):
         if consolidado.get("caminhos_interrompidos"):
             detalhes["copia_incompleta"] = True
             interrompidos = ", ".join(consolidado["caminhos_interrompidos"])
-            self.log(
-                f"[RESSALVA] Cópia interrompida antes do fim em: {interrompidos}. "
-                "O material adquirido é parcial."
-            )
+            self.log(self._t("lg_ressalva",
+                             valor=self._t("lg_lb_interrompida", caminhos=interrompidos)))
         if detalhes.get("arquivos_faltantes"):
             # Arquivo que existia na origem e não chegou ao destino é
             # ressalva obrigatória: sem isso o exame concluiria completude
@@ -126,48 +125,42 @@ class BackupLogicoExtractor(AndroidExtractor):
 
         # Nenhuma mídia E nenhum metadado = nada foi adquirido.
         if consolidado["arquivos_copiados"] == 0 and not metadados_ok:
-            self.log("[FALHA] Nem metadados nem mídias foram adquiridos.")
+            self.log(self._t("lg_falha", valor=self._t("lg_lb_falha_log")))
             return ResultadoExtracao(
                 sucesso=False,
-                mensagem="Nenhum dado foi adquirido: metadados vazios e nenhuma mídia copiada.",
+                mensagem=self._t("lg_lb_falha_msg"),
                 caminho_saida=pasta_caso,
                 detalhes=detalhes,
             )
 
-        mensagem = (
-            f"Backup lógico concluído: {consolidado['arquivos_copiados']} arquivo(s) de mídia, "
-            f"{consolidado['bytes_copiados']} byte(s)."
-        )
+        mensagem = self._t("lg_lb_msg_ok",
+                           arquivos=consolidado['arquivos_copiados'],
+                           bytes=consolidado['bytes_copiados'])
 
         # Metadados vieram, mas nenhuma mídia: é sucesso parcial, e precisa
         # ficar explícito — não se pode concluir que o aparelho não tinha mídia.
         if consolidado["arquivos_copiados"] == 0:
             detalhes["copia_incompleta"] = True
             if consolidado["caminhos_inexistentes"]:
-                motivo = (
-                    "as seguintes pastas não existem no aparelho: "
-                    + ", ".join(consolidado["caminhos_inexistentes"])
-                )
+                motivo = self._t("lg_lb_motivo_inexistentes",
+                                 caminhos=", ".join(consolidado["caminhos_inexistentes"]))
             else:
-                motivo = "as pastas existem no aparelho, porém estão vazias"
-            mensagem = (
-                "Metadados do sistema coletados, porém NENHUM arquivo de mídia foi copiado — "
-                f"{motivo}."
-            )
-            self.log(f"[RESSALVA] {mensagem}")
+                motivo = self._t("lg_lb_motivo_vazias")
+            mensagem = self._t("lg_lb_msg_sem_midia", motivo=motivo)
+            self.log(self._t("lg_ressalva", valor=mensagem))
 
         if consolidado["caminhos_negados"]:
             negados = ", ".join(consolidado["caminhos_negados"])
-            mensagem += f" Ressalva: acesso negado a {negados}."
-            self.log(f"[RESSALVA] O Android negou acesso a: {negados}.")
+            mensagem += self._t("lg_lb_ress_negado_msg", negados=negados)
+            self.log(self._t("lg_ressalva", valor=self._t("lg_lb_negado_log", negados=negados)))
 
         if consolidado["caminhos_com_erro"]:
             detalhes["copia_incompleta"] = True
             com_erro = ", ".join(consolidado["caminhos_com_erro"])
-            mensagem += f" Ressalva: erro do ADB em {com_erro}."
-            self.log(f"[RESSALVA] Erro do ADB ao copiar: {com_erro}.")
+            mensagem += self._t("lg_lb_ress_erro_msg", com_erro=com_erro)
+            self.log(self._t("lg_ressalva", valor=self._t("lg_lb_erro_log", com_erro=com_erro)))
 
-        self.log(f"[CONCLUÍDO] {mensagem}")
+        self.log(self._t("lg_concluido", valor=mensagem))
         return ResultadoExtracao(
             sucesso=True,
             mensagem=mensagem,

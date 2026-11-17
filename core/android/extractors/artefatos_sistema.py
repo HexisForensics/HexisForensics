@@ -29,46 +29,19 @@ from core.registry import registrar_extrator
 
 from .base import AndroidExtractor
 
-# nome do arquivo -> (argumentos ADB, descrição para o índice)
+# nome do arquivo -> (argumentos ADB, chave de idioma da descrição no índice)
 COLETAS = {
-    "uso_de_aplicativos.txt": (
-        ["shell", "dumpsys", "usagestats"],
-        "Linha do tempo de uso de cada aplicativo",
-    ),
-    "redes_wifi.txt": (
-        ["shell", "dumpsys", "wifi"],
-        "Redes Wi-Fi conhecidas e histórico de associação",
-    ),
-    "conectividade.txt": (
-        ["shell", "dumpsys", "connectivity"],
-        "Estado e histórico de conectividade de rede",
-    ),
-    "notificacoes.txt": (
-        ["shell", "dumpsys", "notification"],
-        "Notificações ativas e recentes",
-    ),
-    "historico_bateria.txt": (
-        ["shell", "dumpsys", "batterystats"],
-        "Histórico de energia, com marcações de tela ligada",
-    ),
+    "uso_de_aplicativos.txt": (["shell", "dumpsys", "usagestats"], "lg_as_desc_uso"),
+    "redes_wifi.txt": (["shell", "dumpsys", "wifi"], "lg_as_desc_wifi"),
+    "conectividade.txt": (["shell", "dumpsys", "connectivity"], "lg_as_desc_conectividade"),
+    "notificacoes.txt": (["shell", "dumpsys", "notification"], "lg_as_desc_notificacoes"),
+    "historico_bateria.txt": (["shell", "dumpsys", "batterystats"], "lg_as_desc_bateria"),
     "aplicativos_em_execucao.txt": (
-        ["shell", "dumpsys", "activity", "activities"],
-        "Atividades e tarefas em execução no momento da coleta",
-    ),
-    # Diz QUAIS contas estao configuradas no aparelho, e de que tipo:
-    # `com.google` para Gmail, `com.microsoft.office.outlook` para Outlook,
-    # Exchange, e os mensageiros que se registram como conta. Nao traz
-    # mensagem alguma -- traz a pergunta que o examinador sempre faz
-    # primeiro, que e de quem e este aparelho e a que servicos ele responde.
-    "contas_configuradas.txt": (
-        ["shell", "dumpsys", "account"],
-        "Contas configuradas no aparelho e seus tipos (e-mail, mensageiros, nuvem)",
-    ),
-    "processos.txt": (["shell", "ps", "-A"], "Processos em execução"),
-    "pacotes_detalhado.txt": (
-        ["shell", "dumpsys", "package"],
-        "Pacotes instalados, permissões concedidas e datas de instalação",
-    ),
+        ["shell", "dumpsys", "activity", "activities"], "lg_as_desc_execucao"),
+    # Diz QUAIS contas estao configuradas no aparelho, e de que tipo.
+    "contas_configuradas.txt": (["shell", "dumpsys", "account"], "lg_as_desc_contas"),
+    "processos.txt": (["shell", "ps", "-A"], "lg_as_desc_processos"),
+    "pacotes_detalhado.txt": (["shell", "dumpsys", "package"], "lg_as_desc_pacotes"),
 }
 
 # Abaixo deste tamanho a saída é tratada como recusa ou vazio, não como dado.
@@ -102,31 +75,32 @@ class ArtefatosSistemaExtractor(AndroidExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta = pasta_caso / "artefatos_sistema"
         pasta.mkdir(parents=True, exist_ok=True)
 
         obtidos, vazios, recusados = [], [], []
         total = len(COLETAS)
 
-        for indice, (nome_arquivo, (argumentos, descricao)) in enumerate(COLETAS.items(), 1):
+        for indice, (nome_arquivo, (argumentos, chave_desc)) in enumerate(COLETAS.items(), 1):
             if self.cancelado:
-                return ResultadoExtracao(False, "Extração cancelada pelo usuário.", pasta)
+                return ResultadoExtracao(False, self._t("lg_cancelada_modulo"), pasta)
 
-            self.log(f"[*] Coletando: {descricao}...")
+            self.log(self._t("lg_as_coletando", descricao=self._t(chave_desc)))
             resultado = self.adb.executar_detalhado(argumentos, timeout=180)
 
             if not resultado.sucesso:
-                conteudo = f"(coleta falhou) {resultado.motivo_falha}"
+                conteudo = self._t("lg_as_falhou_conteudo", motivo=resultado.motivo_falha)
                 recusados.append(nome_arquivo)
-                self.log(f"    [RESSALVA] Falhou: {resultado.motivo_falha}")
+                self.log(self._t("lg_as_falhou", motivo=resultado.motivo_falha))
             elif len(resultado.stdout.strip()) < TAMANHO_MINIMO_UTIL:
-                conteudo = resultado.stdout or "(saída vazia)"
+                conteudo = resultado.stdout or self._t("lg_as_saida_vazia")
                 vazios.append(nome_arquivo)
-                self.log("    (saída vazia ou insuficiente — registrada como tal)")
+                self.log(self._t("lg_as_vazia"))
             else:
                 conteudo = resultado.stdout
                 obtidos.append(nome_arquivo)
-                self.log(f"    -> {len(conteudo)} caracteres coletados")
+                self.log(self._t("lg_as_coletados", n=len(conteudo)))
 
             (pasta / nome_arquivo).write_text(conteudo, encoding="utf-8")
             self.progresso(int(indice / total * 100))
@@ -140,47 +114,44 @@ class ArtefatosSistemaExtractor(AndroidExtractor):
         }
 
         if not obtidos:
-            self.log("[FALHA] Nenhum artefato de sistema pôde ser coletado.")
+            self.log(self._t("lg_falha", valor=self._t("lg_as_falha_log")))
             return ResultadoExtracao(
                 False,
-                "Nenhum artefato de atividade do sistema foi obtido.",
+                self._t("lg_as_falha_msg"),
                 caminho_saida=pasta,
                 detalhes=detalhes,
             )
 
-        mensagem = f"{len(obtidos)} artefato(s) de atividade coletados."
+        mensagem = self._t("lg_as_msg_ok", n=len(obtidos))
         if recusados or vazios:
             # Coleta parcial não pode passar por completa: o exame precisa
             # saber qual artefato não veio antes de concluir sobre ausência de uso.
             detalhes["copia_incompleta"] = True
-            mensagem += f" Ressalva: {len(recusados + vazios)} sem conteúdo útil."
-            self.log(f"[RESSALVA] Sem conteúdo útil: {', '.join(recusados + vazios)}")
+            mensagem += self._t("lg_as_ress_msg", n=len(recusados + vazios))
+            self.log(self._t("lg_ressalva", valor=self._t(
+                "lg_as_sem_conteudo", lista=', '.join(recusados + vazios))))
 
-        self.log(f"[CONCLUÍDO] {mensagem}")
+        self.log(self._t("lg_concluido", valor=mensagem))
         return ResultadoExtracao(True, mensagem, caminho_saida=pasta, detalhes=detalhes)
 
-    @staticmethod
-    def _gravar_indice(pasta: Path, obtidos, vazios, recusados) -> None:
+    def _gravar_indice(self, pasta: Path, obtidos, vazios, recusados) -> None:
         """
         Índice do que cada arquivo contém e do que não foi obtido.
 
         Sem ele, uma pasta com oito arquivos de `dumpsys` é ilegível para
         quem não conhece o Android — e o que **não** veio fica invisível.
         """
-        linhas = ["ÍNDICE DOS ARTEFATOS DE ATIVIDADE DO SISTEMA", "=" * 66, ""]
-        for nome_arquivo, (_, descricao) in COLETAS.items():
+        linhas = [self._t("lg_as_idx_titulo"), "=" * 66, ""]
+        for nome_arquivo, (_, chave_desc) in COLETAS.items():
             if nome_arquivo in obtidos:
-                situacao = "COLETADO"
+                situacao = self._t("lg_as_idx_coletado")
             elif nome_arquivo in vazios:
-                situacao = "SEM CONTEÚDO (o aparelho respondeu vazio)"
+                situacao = self._t("lg_as_idx_sem_conteudo")
             else:
-                situacao = "NÃO OBTIDO (a coleta falhou)"
-            linhas += [f"{nome_arquivo}", f"    Conteúdo: {descricao}", f"    Situação: {situacao}", ""]
+                situacao = self._t("lg_as_idx_nao_obtido")
+            linhas += [f"{nome_arquivo}",
+                       self._t("lg_as_idx_conteudo", descricao=self._t(chave_desc)),
+                       self._t("lg_as_idx_situacao", situacao=situacao), ""]
 
-        linhas += [
-            "=" * 66,
-            "NOTA: a ausência de registro em qualquer destes artefatos NÃO autoriza",
-            "concluir que o evento não ocorreu. O Android limita a retenção desses",
-            "dados e os descarta ao reiniciar o aparelho.",
-        ]
+        linhas += ["=" * 66] + self._t("lg_as_idx_nota").split("\n")
         (pasta / "INDICE.txt").write_text("\n".join(linhas), encoding="utf-8")
