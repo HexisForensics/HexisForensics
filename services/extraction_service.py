@@ -78,7 +78,7 @@ def listar_extratores(nome_plataforma: str) -> List[Type[BaseExtractor]]:
     return funcao_catalogo() if funcao_catalogo else []
 
 
-def detectar_sobreposicao(extratores: List[BaseExtractor]) -> List[str]:
+def detectar_sobreposicao(extratores: List[BaseExtractor], idioma: str = None) -> List[str]:
     """
     Aponta pares de módulos que adquirem o mesmo material do dispositivo.
 
@@ -96,10 +96,12 @@ def detectar_sobreposicao(extratores: List[BaseExtractor]) -> List[str]:
         for outro in extratores[posicao + 1:]:
             comuns = _caminhos_sobrepostos(extrator, outro)
             if comuns:
-                avisos.append(
-                    f"'{extrator.nome_exibicao}' e '{outro.nome_exibicao}' adquirem o mesmo "
-                    f"material ({', '.join(comuns)}). O conteúdo será copiado duas vezes."
-                )
+                avisos.append(traduzir(
+                    "xs_sobreposicao", idioma,
+                    nome1=extrator.nome_no_idioma(idioma),
+                    nome2=outro.nome_no_idioma(idioma),
+                    caminhos=', '.join(comuns),
+                ))
     return avisos
 
 
@@ -200,19 +202,21 @@ class ExtractionService(QThread):
             parcial = indica_ressalva(detalhes)
             if sucesso and not parcial:
                 return
+            status = traduzir("xs_erro_falhou" if not sucesso else "xs_erro_ressalva", idi_caso)
             linhas = [
-                f"Módulo: {extrator.nome_exibicao} (id={extrator.id})",
-                f"Status: {'FALHOU' if not sucesso else 'SUCESSO COM RESSALVAS'}",
-                f"Mensagem: {mensagem}",
+                traduzir("xs_erro_modulo", idi_caso,
+                         nome=extrator.nome_no_idioma(idi_caso), id=extrator.id),
+                traduzir("xs_erro_status", idi_caso, valor=status),
+                traduzir("xs_erro_mensagem", idi_caso, valor=mensagem),
             ]
             for chave, valor in (detalhes or {}).items():
                 linhas.append(f"  - {chave}: {valor}")
             logger_erros.warning("\n" + "\n".join(linhas) + "\n" + ("-" * 40))
 
-        for aviso in detectar_sobreposicao(self.extratores):
+        for aviso in detectar_sobreposicao(self.extratores, idi_caso):
             registrar(traduzir("xs_atencao", idi_caso, aviso=aviso))
             RegistroProcedimento(self.pasta_caso).registrar_observacao(
-                f"Sobreposição de módulos: {aviso}"
+                traduzir("xs_obs_sobreposicao", idi_caso, aviso=aviso)
             )
 
         # O alcance declarado dos módulos escolhidos é gravado ANTES da
@@ -276,7 +280,8 @@ class ExtractionService(QThread):
                 # exame precisa saber que aquele dado não foi buscado, e por
                 # quê, sem depender de alguém cruzar dois arquivos de log.
                 RegistroProcedimento(self.pasta_caso).registrar_decisao(
-                    f"Módulo '{extrator.nome_exibicao}' NÃO foi executado.", motivo
+                    traduzir("xs_dec_nao_executado", idi_caso,
+                             nome=extrator.nome_no_idioma(idi_caso)), motivo
                 )
                 self._registrar_execucao(execucao,
                     extrator.id, nome_idi, False, motivo, {}
@@ -389,12 +394,10 @@ class ExtractionService(QThread):
         ressalva e quantos falharam. Módulo com ressalva não é módulo bem
         sucedido — misturar os dois é o que produz conclusão negativa falsa.
         """
-        resumo = (
-            f"{total} módulo(s) executado(s): "
-            f"{desfechos['sucesso']} com sucesso pleno, "
-            f"{desfechos['ressalva']} com ressalva, "
-            f"{desfechos['falha']} com falha. "
-            "Módulos com ressalva e com falha estão detalhados em erros/erros.log."
+        resumo = traduzir(
+            "xs_encerramento", idioma_do_caso(self.pasta_caso),
+            total=total, sucesso=desfechos['sucesso'],
+            ressalva=desfechos['ressalva'], falha=desfechos['falha'],
         )
         RegistroProcedimento(self.pasta_caso).encerrar(resumo)
 
