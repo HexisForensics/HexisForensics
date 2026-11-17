@@ -68,10 +68,11 @@ _LINHA_GETPROP = re.compile(r"^\[([^\]]+)\]: \[(.*)\]$")
 # Comandos cujo texto vai inteiro para o relatório, sem interpretação: o
 # formato muda entre versões e fabricantes, e extrair número dali seria
 # apresentar palpite como medida.
+# (arquivo, comando, chave de idioma do título no relatório)
 COMANDOS_BRUTOS = (
-    ("kernel.txt", ["shell", "uname", "-a"], "KERNEL"),
-    ("armazenamento.txt", ["shell", "df"], "ARMAZENAMENTO (df)"),
-    ("bateria.txt", ["shell", "dumpsys", "battery"], "BATERIA"),
+    ("kernel.txt", ["shell", "uname", "-a"], "lg_di_bruto_kernel"),
+    ("armazenamento.txt", ["shell", "df"], "lg_di_bruto_armazenamento"),
+    ("bateria.txt", ["shell", "dumpsys", "battery"], "lg_di_bruto_bateria"),
 )
 
 
@@ -118,11 +119,12 @@ class DeviceInfoExtractor(AndroidExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta_info = pasta_caso / "device_specs"
         pasta_info.mkdir(parents=True, exist_ok=True)
         caminho_arquivo = pasta_info / "caracteristicas_tecnicas.txt"
 
-        self.log("[*] Lendo as propriedades do sistema (getprop)...")
+        self.log(self._t("lg_di_lendo"))
         self.progresso(10)
         leitura = self.adb.executar_detalhado(["shell", "getprop"], timeout=60)
         (pasta_info / "getprop_bruto.txt").write_text(leitura.stdout or "", encoding="utf-8")
@@ -137,41 +139,37 @@ class DeviceInfoExtractor(AndroidExtractor):
         complementares = _apurar(propriedades, COMPLEMENTARES)
 
         if not nucleo:
-            motivo = leitura.motivo_falha or (
-                "o comando respondeu sem nenhuma propriedade de identificação"
-            )
-            mensagem = (
-                "Características técnicas NÃO obtidas — nenhuma propriedade de "
-                f"identificação foi lida do aparelho ({motivo}). A tentativa foi "
-                "preservada em getprop_bruto.txt."
-            )
-            self.log(f"[FALHA] {mensagem}")
+            motivo = leitura.motivo_falha or self._t("lg_di_sem_nucleo")
+            mensagem = self._t("lg_di_falha_msg", motivo=motivo)
+            self.log(self._t("lg_falha", valor=mensagem))
             return ResultadoExtracao(False, mensagem, caminho_saida=pasta_info)
 
         blocos_brutos = self._coletar_brutos(pasta_info)
         id_conexao = getattr(self.adb, "serial", None) or self.device.obter_id_dispositivo()
         self.progresso(80)
 
-        nucleo_faltante = [NUCLEO[c][0] for c in NUCLEO if c not in nucleo]
+        nucleo_faltante = [self._t(f"lg_di_{c}") for c in NUCLEO if c not in nucleo]
         complementar_faltante = [
-            COMPLEMENTARES[c][0] for c in COMPLEMENTARES if c not in complementares
+            self._t(f"lg_di_{c}") for c in COMPLEMENTARES if c not in complementares
         ]
 
+        nao_apurado = self._t("lg_di_nao_apurado")
         linhas = [
             "=" * 58,
-            "RELATÓRIO DE CARACTERÍSTICAS TÉCNICAS".center(58),
+            self._t("lg_di_rel_titulo").center(58),
             "=" * 58,
-            "Data/Hora da Coleta (estação, com fuso): "
-            f"{datetime.now().astimezone().isoformat(timespec='seconds')}",
-            f"ID de Conexão ADB: {id_conexao}",
+            self._t("lg_di_rel_data",
+                    valor=datetime.now().astimezone().isoformat(timespec='seconds')),
+            self._t("lg_di_rel_id", valor=id_conexao),
             "-" * 58,
         ]
         for tabela, apurado in ((NUCLEO, nucleo), (COMPLEMENTARES, complementares)):
-            for campo, (rotulo, _candidatas) in tabela.items():
-                linhas.append(f"{rotulo + ':':<32}{apurado.get(campo, 'NÃO APURADO')}")
+            for campo in tabela:
+                rotulo = self._t(f"lg_di_{campo}")
+                linhas.append(f"{rotulo + ':':<32}{apurado.get(campo, nao_apurado)}")
             linhas.append("-" * 58)
-        for titulo, texto in blocos_brutos:
-            linhas += ["", f"[{titulo}]", texto or "NÃO APURADO (o comando não devolveu saída)"]
+        for titulo_chave, texto in blocos_brutos:
+            linhas += ["", f"[{self._t(titulo_chave)}]", texto or self._t("lg_di_bruto_vazio")]
         linhas.append("=" * 58)
         caminho_arquivo.write_text("\n".join(linhas), encoding="utf-8")
 
@@ -183,26 +181,16 @@ class DeviceInfoExtractor(AndroidExtractor):
         self.progresso(100)
 
         detalhes = {"campos_apurados": len(nucleo) + len(complementares)}
-        mensagem = (
-            f"Relatório técnico gerado: {len(nucleo) + len(complementares)} "
-            "característica(s) lida(s) do aparelho."
-        )
+        mensagem = self._t("lg_di_sucesso_msg", n=len(nucleo) + len(complementares))
         if nucleo_faltante:
             detalhes["campos_nao_apurados"] = nucleo_faltante
-            mensagem += (
-                " Ressalva: o aparelho não declarou "
-                + ", ".join(nucleo_faltante)
-                + "."
-            )
+            mensagem += self._t("lg_di_ressalva", campos=", ".join(nucleo_faltante))
         if complementar_faltante:
             detalhes["complementares_nao_declarados"] = complementar_faltante
-            self.log(
-                "[AVISO] Não declarado por este aparelho: "
-                + ", ".join(complementar_faltante)
-                + "."
-            )
+            self.log(self._t("lg_aviso", valor=self._t(
+                "lg_di_nao_declarado", campos=", ".join(complementar_faltante))))
 
-        self.log(f"[CONCLUÍDO] {mensagem}")
+        self.log(self._t("lg_concluido", valor=mensagem))
         return ResultadoExtracao(
             True, mensagem, caminho_saida=caminho_arquivo, detalhes=detalhes
         )

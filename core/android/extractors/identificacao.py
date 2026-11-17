@@ -148,7 +148,7 @@ def extrair_identificadores_sim(conteudo: str) -> Tuple[str, str]:
     return iccid, numero
 
 
-def diagnostico_sim(conteudo: str) -> Tuple[str, str]:
+def diagnostico_sim(conteudo: str, idioma: str = None) -> Tuple[str, str]:
     """
     (nota_numero, nota_iccid): explica, em uma frase, POR QUE número e ICCID
     não foram apurados, quando for o caso.
@@ -159,23 +159,18 @@ def diagnostico_sim(conteudo: str) -> Tuple[str, str]:
     seco — é o mesmo tratamento que já se dá à recusa do IMEI. Devolve string
     vazia quando o campo foi obtido ou quando não há o que explicar.
     """
+    from core.idioma import traduzir
     iccid, numero = extrair_identificadores_sim(conteudo)
 
     nota_iccid = ""
     # ICCID ausente, mas há um `iccId=` com valor mascarado (dígitos seguidos
     # de um caractere de máscara: `[`, `*`, `.`, `x`/`X`).
     if not iccid and re.search(r"iccId=\d*[\[\*xX.]", conteudo):
-        nota_iccid = (
-            "ICCID mascarado pelo sistema (comportamento do Android 12+): não exposto "
-            "por inteiro ao shell sem privilégio elevado."
-        )
+        nota_iccid = traduzir("lg_id_nota_iccid", idioma)
 
     nota_numero = ""
     if not numero and "number=" in conteudo:
-        nota_numero = (
-            "número não exposto pelo sistema (pode não estar provisionado no chip pela "
-            "operadora)."
-        )
+        nota_numero = traduzir("lg_id_nota_numero", idioma)
 
     return nota_numero, nota_iccid
 
@@ -202,12 +197,13 @@ class IdentificacaoExtractor(AndroidExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta = pasta_caso / "identificacao"
         pasta.mkdir(parents=True, exist_ok=True)
 
         self._sdk_detectado = self._detectar_sdk()
 
-        self.log("[*] Coletando identificadores do aparelho...")
+        self.log(self._t("lg_id_coletando"))
         imei, vias_registradas = self._coletar_imei(pasta)
         self.progresso(50)
 
@@ -220,7 +216,7 @@ class IdentificacaoExtractor(AndroidExtractor):
         if caminho_sim.is_file():
             conteudo_sim = caminho_sim.read_text(encoding="utf-8", errors="ignore")
             iccid, numero = extrair_identificadores_sim(conteudo_sim)
-            nota_numero, nota_iccid = diagnostico_sim(conteudo_sim)
+            nota_numero, nota_iccid = diagnostico_sim(conteudo_sim, self._idi_selo)
 
         contas = self._extrair_contas(pasta / "contas_cadastradas.txt")
         self._gravar_resumo(
@@ -255,31 +251,24 @@ class IdentificacaoExtractor(AndroidExtractor):
         }
 
         if imei:
-            self.log(f"[CONCLUÍDO] IMEI identificado e validado: {imei}")
-            mensagem = f"IMEI {imei} e {len(contas)} conta(s) identificados."
+            self.log(self._t("lg_concluido", valor=self._t("lg_id_imei_ok", imei=imei)))
+            mensagem = self._t("lg_id_msg_ok", imei=imei, n=len(contas))
         else:
             # Não obter o IMEI é limitação conhecida do Android sem root, e
             # precisa aparecer como ressalva — não pode passar por sucesso liso.
             detalhes["acesso_negado"] = True
-            self.log(
-                "[RESSALVA] O IMEI não pôde ser lido pelo shell (restrição do Android). "
-                "A saída bruta de cada tentativa foi preservada para conferência."
-            )
+            self.log(self._t("lg_ressalva", valor=self._t("lg_id_imei_ressalva")))
             self.registrar_decisao(
                 pasta_caso,
-                "IMEI não obtido por via lógica; identificação do aparelho apoiada em "
-                "número de série e contas cadastradas.",
+                self._t("lg_id_decisao"),
                 self._justificar_ausencia_do_imei(vias_registradas),
             )
-            mensagem = (
-                f"{len(contas)} conta(s) identificadas. Ressalva: IMEI não obtido pelo shell "
-                "(restrição do sistema) — verifique a etiqueta do aparelho ou a bandeja do SIM."
-            )
+            mensagem = self._t("lg_id_msg_ressalva", n=len(contas))
 
         if not contas and not imei:
-            return ResultadoExtracao(False, "Nenhum identificador pôde ser obtido.", pasta, detalhes)
+            return ResultadoExtracao(False, self._t("lg_id_nada"), pasta, detalhes)
 
-        self.log(f"[*] Contas cadastradas localizadas: {len(contas)}")
+        self.log(self._t("lg_id_contas_localizadas", n=len(contas)))
         return ResultadoExtracao(True, mensagem, caminho_saida=pasta, detalhes=detalhes)
 
     def _detectar_sdk(self) -> Optional[int]:
@@ -308,29 +297,17 @@ class IdentificacaoExtractor(AndroidExtractor):
         """
         partes = []
         if getattr(self, "_motivo_recusa", ""):
-            partes.append(f"O sistema recusou a leitura com a mensagem: {self._motivo_recusa!r}.")
+            partes.append(self._t("lg_id_just_recusa", motivo=repr(self._motivo_recusa)))
         else:
-            partes.append("Nenhuma das vias consultadas retornou um número válido.")
+            partes.append(self._t("lg_id_just_nenhuma"))
 
         sdk = getattr(self, "_sdk_detectado", None)
         if sdk is not None and sdk >= 29:
-            partes.append(
-                f"O aparelho roda API {sdk}: a partir do Android 10 (API 29) o sistema "
-                "deixou de expor o IMEI ao shell sem privilégio elevado."
-            )
+            partes.append(self._t("lg_id_just_api_10", sdk=sdk))
         elif sdk is not None:
-            partes.append(
-                f"O aparelho roda API {sdk}, anterior ao Android 10, de modo que a recusa "
-                "decorre da permissão exigida do shell, e não da restrição introduzida "
-                "naquela versão."
-            )
+            partes.append(self._t("lg_id_just_api_antiga", sdk=sdk))
 
-        partes.append(
-            f"Foram percorridas {len(vias_registradas)} vias distintas, todas com saída "
-            "bruta preservada em 'leituras_brutas/'. Vias alternativas (etiqueta, bandeja "
-            "do SIM, *#06#, operadora) exigem acesso físico ou requisição, fora do alcance "
-            "deste módulo."
-        )
+        partes.append(self._t("lg_id_just_vias", n=len(vias_registradas)))
         return " ".join(partes)
 
     # ------------------------------------------------------------------
@@ -398,40 +375,35 @@ class IdentificacaoExtractor(AndroidExtractor):
     ) -> None:
         linhas = [
             "=" * 66,
-            "IDENTIFICAÇÃO DO APARELHO E CONTAS".center(66),
+            self._t("lg_id_resumo_titulo").center(66),
             "=" * 66,
             "",
-            "[IMEI]",
+            self._t("lg_id_resumo_imei"),
         ]
         if imei:
             linhas += [
-                f"IMEI: {imei}",
-                "Dígito verificador (Luhn): VÁLIDO",
+                self._t("lg_id_imei_valor", imei=imei),
+                self._t("lg_id_luhn"),
             ]
         else:
-            linhas += [
-                "IMEI: NÃO OBTIDO pelo shell ADB.",
-                "",
-                "Não se trata de ausência de IMEI no aparelho, e sim de recusa do",
-                "sistema em expô-lo ao shell sem privilégio elevado — comportamento",
-                "padrão do Android a partir da versão 10. A saída bruta de cada via",
-                "tentada está em 'leituras_brutas/', documentando a tentativa.",
-                "Vias alternativas: etiqueta sob a bateria, bandeja do SIM, embalagem,",
-                "*#06# na discagem do aparelho, ou consulta à operadora.",
-            ]
+            linhas += [self._t("lg_id_imei_nao_obtido"), ""]
+            linhas += self._t("lg_id_imei_expl").split("\n")
 
         def _linha_sim(rotulo: str, valor: str, nota: str) -> str:
             if valor:
-                return f"{rotulo}: {valor}"
-            return f"{rotulo}: NÃO APURADO" + (f" — {nota}" if nota else ".")
+                return self._t("lg_id_sim_linha_valor", rotulo=rotulo, valor=valor)
+            if nota:
+                return self._t("lg_id_sim_linha_nota", rotulo=rotulo, nota=nota)
+            return self._t("lg_id_sim_linha_vazio", rotulo=rotulo)
 
-        linhas += ["", "[LINHA / CHIP (SIM)]"]
-        linhas.append(_linha_sim("Número de telefone", numero, nota_numero))
-        linhas.append(_linha_sim("ICCID do chip", iccid, nota_iccid))
+        linhas += ["", self._t("lg_id_sim_titulo")]
+        linhas.append(_linha_sim(self._t("lg_id_sim_numero_rotulo"), numero, nota_numero))
+        linhas.append(_linha_sim(self._t("lg_id_sim_iccid_rotulo"), iccid, nota_iccid))
 
-        linhas += ["", f"Vias de leitura percorridas: {', '.join(vias) or 'nenhuma'}", ""]
-        linhas += ["[CONTAS CADASTRADAS NO APARELHO]"]
-        linhas += [f"  - {conta}" for conta in contas] or ["  (nenhuma conta localizada)"]
+        linhas += ["", self._t("lg_id_vias_percorridas",
+                               vias=', '.join(vias) or self._t("lg_id_vias_nenhuma")), ""]
+        linhas += [self._t("lg_id_contas_titulo")]
+        linhas += [f"  - {conta}" for conta in contas] or [self._t("lg_id_contas_nenhuma")]
         linhas += ["", "=" * 66]
 
         (pasta / "resumo_identificacao.txt").write_text("\n".join(linhas), encoding="utf-8")
