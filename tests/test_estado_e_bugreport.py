@@ -136,7 +136,7 @@ dois = montar(EstadoDispositivoExtractor, ADBEstado(usuarios=DOIS_PERFIS))
 checar("um perfil e contado corretamente", um.contar_perfis_de_usuario() == 1)
 checar("dois perfis sao contados corretamente", dois.contar_perfis_de_usuario() == 2)
 
-aviso = EstadoDispositivoExtractor.restricao_de_multiplos_usuarios(2)
+aviso = EstadoDispositivoExtractor().restricao_de_multiplos_usuarios(2)
 checar("a ressalva informa a quantidade", "2 perfis" in aviso)
 checar("a ressalva diz que so o perfil principal foi alcancado", "usuario 0" in aviso)
 checar("a ressalva nomeia a area nao adquirida", "/data/user/" in aviso)

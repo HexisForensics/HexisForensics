@@ -312,7 +312,7 @@ checar("e a mensagem continua nomeando o aparelho do caso", "51183d8f" in motivo
 # ---------------------------------------------------------------------------
 print("\n[4] Provider consultado sem retorno nao e 'extraido'")
 # ---------------------------------------------------------------------------
-avaliar = AndroidExtractor.avaliar_consulta_a_provider
+avaliar = FilesystemDumpExtractor().avaliar_consulta_a_provider
 
 sucesso, mensagem = avaliar("Mensagens SMS/MMS", False, True, [])
 checar("nada obtido COM recusa e FALHA", sucesso is False)
@@ -429,7 +429,7 @@ contraditoria = ResultadoAquisicao(
 checar("a contradicao e detectada", contraditoria.inconsistente is True)
 checar("completude NAO e afirmada", contraditoria.completa is None)
 
-descricao = FilesystemDumpExtractor._descrever_completude(contraditoria)
+descricao = FilesystemDumpExtractor()._descrever_completude(contraditoria)
 checar("a descricao NAO diz 'ORIGEM VAZIA'", "ORIGEM VAZIA" not in descricao)
 checar("a descricao expoe os dois numeros", "273" in descricao and "0" in descricao)
 checar("a descricao diz que o inventario nao e confiavel", "não é confiável" in descricao)

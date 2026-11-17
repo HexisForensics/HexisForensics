@@ -106,6 +106,11 @@ class Inventario:
     arquivos: Optional[List[str]] = None
     motivo_indisponivel: str = ""
     metodo: str = ""
+    # `True` quando a via `find` não existe no aparelho (não quando a pasta
+    # não existe): é o sinal de que vale tentar `ls -R`. Fica num booleano,
+    # e não no texto do motivo, para a decisão não depender do idioma em que
+    # a mensagem foi escrita.
+    ferramenta_ausente: bool = False
 
     @property
     def disponivel(self) -> bool:
@@ -130,6 +135,10 @@ class ResultadoAquisicao:
     metodo_inventario: str = ""
     restricao_do_sistema: str = ""
     verificacao_na_origem: str = ""
+    # A fidelidade na origem foi de fato realizada (não dispensada nem
+    # impossível). Fica num booleano para `integra` não depender do texto de
+    # `verificacao_na_origem`, que agora sai no idioma do caso.
+    fidelidade_realizada: bool = False
     divergencias: List[str] = field(default_factory=list)
     hashes: dict = field(default_factory=dict)
     # Arquivos que o `adb pull` não trouxe e foram lidos um a um.
@@ -156,7 +165,7 @@ class ResultadoAquisicao:
         prova que ele nao mudou desde que chegou; nao prova que a
         transferencia foi fiel.
         """
-        if not self.verificacao_na_origem.startswith("realizada"):
+        if not self.fidelidade_realizada:
             return None
         return not self.divergencias
 
@@ -329,8 +338,7 @@ class AndroidExtractor(BaseExtractor):
         perfis = re.findall(r"UserInfo\{(\d+):", resultado.stdout)
         return len(perfis) if perfis else None
 
-    @staticmethod
-    def restricao_de_multiplos_usuarios(quantidade: int) -> str:
+    def restricao_de_multiplos_usuarios(self, quantidade: int) -> str:
         """
         Texto da ressalva quando o aparelho tem mais de um perfil.
 
@@ -340,13 +348,7 @@ class AndroidExtractor(BaseExtractor):
         Concluir sobre o conteudo do aparelho sem saber disso e concluir
         sobre uma fracao dele.
         """
-        return (
-            f"O aparelho possui {quantidade} perfis de usuario. Esta extracao alcanca "
-            "apenas o perfil principal (usuario 0). Perfis adicionais -- segundo usuario "
-            "ou perfil de trabalho -- mantem area de dados propria em /data/user/<n>/, "
-            "inacessivel por esta via e nao adquirida. A ausencia desses dados no material "
-            "extraido NAO autoriza concluir que o aparelho nao os continha."
-        )
+        return self._t("lg_ab_multiusuario", quantidade=quantidade)
 
     def definir_serial(self, serial: Optional[str]) -> None:
         """
@@ -444,9 +446,8 @@ class AndroidExtractor(BaseExtractor):
 
         return resultado
 
-    @staticmethod
     def avaliar_consulta_a_provider(
-        rotulo: str, obteve_dado: bool, acesso_negado: bool, arquivos_backup: list
+        self, rotulo: str, obteve_dado: bool, acesso_negado: bool, arquivos_backup: list
     ) -> Tuple[bool, str]:
         """
         Decide o desfecho de um módulo que consulta Content Providers.
@@ -462,23 +463,17 @@ class AndroidExtractor(BaseExtractor):
           veio vazia: isso é um fato verificado sobre o aparelho.
         """
         if obteve_dado:
-            mensagem = f"{rotulo}: dados obtidos."
+            mensagem = self._t("lg_ab_prov_obtidos", rotulo=rotulo)
             if arquivos_backup:
-                mensagem += f" {len(arquivos_backup)} backup(s) .ab como alternativa."
+                mensagem += self._t("lg_ab_prov_backup", n=len(arquivos_backup))
             if acesso_negado:
-                mensagem += " Ressalva: parte das consultas foi recusada pelo sistema (ver log)."
+                mensagem += self._t("lg_ab_prov_ressalva")
             return True, mensagem
 
         if acesso_negado:
-            return False, (
-                f"{rotulo}: NENHUM dado obtido — o sistema recusou o acesso ao provider. "
-                "A recusa foi preservada como evidência da tentativa. NÃO se pode concluir, "
-                "a partir deste módulo, que o aparelho não continha esses dados."
-            )
+            return False, self._t("lg_ab_prov_negado", rotulo=rotulo)
 
-        return True, (
-            f"{rotulo}: o provider respondeu à consulta e não retornou nenhum registro."
-        )
+        return True, self._t("lg_ab_prov_vazio", rotulo=rotulo)
 
     @staticmethod
     def aspas_para_shell(caminho: str) -> str:
@@ -515,7 +510,7 @@ class AndroidExtractor(BaseExtractor):
         vias falham, devolve `Inventario` indisponível com o motivo.
         """
         inventario = self._inventariar_por_find(caminho_remoto)
-        if inventario.disponivel or "não existe" not in inventario.motivo_indisponivel:
+        if inventario.disponivel or not inventario.ferramenta_ausente:
             return inventario
 
         # Aparelho sem `find`: a alternativa recupera a reconciliação, que
@@ -526,9 +521,10 @@ class AndroidExtractor(BaseExtractor):
             return alternativa
 
         return Inventario(
-            motivo_indisponivel=(
-                f"{inventario.motivo_indisponivel}; a alternativa 'ls -R' também não "
-                f"funcionou ({alternativa.motivo_indisponivel})"
+            motivo_indisponivel=self._t(
+                "lg_ab_inv_ambas_falharam",
+                principal=inventario.motivo_indisponivel,
+                alternativa=alternativa.motivo_indisponivel,
             )
         )
 
@@ -558,10 +554,10 @@ class AndroidExtractor(BaseExtractor):
         # Tratar isso como lista de arquivos foi o que fez a mensagem de
         # erro do shell ser contada como cinco arquivos faltantes.
         if "permission denied" in bruto or saida_indica_acesso_negado(saida):
-            return Inventario(motivo_indisponivel="acesso negado ao listar a origem")
+            return Inventario(motivo_indisponivel=self._t("lg_ab_inv_acesso_negado"))
         if "not found" in bruto and "no such file" not in bruto:
             return Inventario(
-                motivo_indisponivel="o comando 'find' não existe neste aparelho"
+                motivo_indisponivel=self._t("lg_ab_inv_sem_find"), ferramenta_ausente=True
             )
         if "no such file" in bruto:
             return Inventario(arquivos=[], metodo="find")
@@ -575,12 +571,10 @@ class AndroidExtractor(BaseExtractor):
         # Saída inteiramente irreconhecível: o inventário não é confiável, e
         # afirmar completude sobre ele seria pior do que não afirmar nada.
         if descartadas and not arquivos:
-            return Inventario(
-                motivo_indisponivel="a saída do 'find' não foi reconhecida como lista de arquivos"
-            )
+            return Inventario(motivo_indisponivel=self._t("lg_ab_inv_find_irreconhecivel"))
         if len(arquivos) > LIMITE_INVENTARIO:
             return Inventario(
-                motivo_indisponivel=f"inventário acima do limite de {LIMITE_INVENTARIO} arquivos"
+                motivo_indisponivel=self._t("lg_ab_inv_limite", limite=LIMITE_INVENTARIO)
             )
         return Inventario(arquivos=arquivos, metodo="find")
 
@@ -613,11 +607,11 @@ class AndroidExtractor(BaseExtractor):
         bruto = f"{saida}\n{resultado.stderr}".lower()
 
         if "permission denied" in bruto or saida_indica_acesso_negado(saida):
-            return Inventario(motivo_indisponivel="acesso negado ao listar a origem")
+            return Inventario(motivo_indisponivel=self._t("lg_ab_inv_acesso_negado"))
         if "no such file" in bruto:
             return Inventario(arquivos=[], metodo="ls -R")
         if "not found" in bruto:
-            return Inventario(motivo_indisponivel="o comando 'ls' não respondeu neste aparelho")
+            return Inventario(motivo_indisponivel=self._t("lg_ab_inv_sem_ls"))
         if not saida.strip():
             return Inventario(arquivos=[], metodo="ls -R")
 
@@ -626,16 +620,11 @@ class AndroidExtractor(BaseExtractor):
         # cabecalho algum significa que o `ls` NAO recursou -- e reportar
         # zero arquivo nesse caso seria afirmar vazio o que nao se listou.
         if not any(linha.strip().endswith(":") for linha in saida.splitlines()):
-            return Inventario(
-                motivo_indisponivel=(
-                    "o 'ls -R' não recursou neste caminho (nenhuma listagem de diretório "
-                    "foi devolvida)"
-                )
-            )
+            return Inventario(motivo_indisponivel=self._t("lg_ab_inv_ls_sem_recursao"))
 
         blocos = self._separar_blocos_do_ls(saida, caminho_remoto)
         if not blocos:
-            return Inventario(motivo_indisponivel="a saída do 'ls -R' não foi reconhecida")
+            return Inventario(motivo_indisponivel=self._t("lg_ab_inv_ls_irreconhecivel"))
 
         # A propria raiz e diretorio por definicao. Sem isso, um aparelho que
         # imprime a raiz como entrada solta (observado ao listar /sdcard, que
@@ -654,7 +643,7 @@ class AndroidExtractor(BaseExtractor):
         arquivos, _ = self._relativizar_linhas(caminhos_absolutos, caminho_remoto)
         if len(arquivos) > LIMITE_INVENTARIO:
             return Inventario(
-                motivo_indisponivel=f"inventário acima do limite de {LIMITE_INVENTARIO} arquivos"
+                motivo_indisponivel=self._t("lg_ab_inv_limite", limite=LIMITE_INVENTARIO)
             )
         return Inventario(arquivos=arquivos, metodo="ls -R")
 
@@ -756,7 +745,7 @@ class AndroidExtractor(BaseExtractor):
 
         for inicio in range(0, len(relativos), LOTE_HASH_ORIGEM):
             if self.cancelado:
-                return None, "verificacao interrompida pelo examinador"
+                return None, self._t("lg_ab_hash_interrompido")
 
             lote = relativos[inicio:inicio + LOTE_HASH_ORIGEM]
             alvos = " ".join(self.aspas_para_shell(prefixo + nome) for nome in lote)
@@ -764,7 +753,7 @@ class AndroidExtractor(BaseExtractor):
 
             bruto = f"{resultado.stdout}\n{resultado.stderr}".lower()
             if "not found" in bruto or "inaccessible" in bruto:
-                return None, "o aparelho nao possui o comando 'sha256sum'"
+                return None, self._t("lg_ab_hash_sem_sha256sum")
 
             for linha in resultado.stdout.splitlines():
                 partes = linha.strip().split(None, 1)
@@ -775,7 +764,7 @@ class AndroidExtractor(BaseExtractor):
                 hashes[nome] = valor
 
         if not hashes:
-            return None, "o aparelho nao devolveu nenhum hash"
+            return None, self._t("lg_ab_hash_sem_retorno")
         return hashes, ""
 
     def verificar_fidelidade(
@@ -789,14 +778,14 @@ class AndroidExtractor(BaseExtractor):
         ja concluida.
         """
         if not aquisicao.hashes:
-            aquisicao.verificacao_na_origem = "dispensada: nenhum arquivo adquirido"
+            aquisicao.verificacao_na_origem = self._t("lg_ab_fid_dispensada")
             return
 
         if aquisicao.copia.bytes_copiados > LIMITE_VERIFICACAO_ORIGEM:
-            aquisicao.verificacao_na_origem = (
-                f"NAO realizada: volume adquirido "
-                f"({formatar_bytes(aquisicao.copia.bytes_copiados)}) acima do limite de "
-                f"{formatar_bytes(LIMITE_VERIFICACAO_ORIGEM)} para hashear no aparelho"
+            aquisicao.verificacao_na_origem = self._t(
+                "lg_ab_fid_acima_limite",
+                volume=formatar_bytes(aquisicao.copia.bytes_copiados),
+                limite=formatar_bytes(LIMITE_VERIFICACAO_ORIGEM),
             )
             return
 
@@ -812,7 +801,7 @@ class AndroidExtractor(BaseExtractor):
         na_origem, motivo = self.hashear_na_origem(caminho_remoto, sorted(no_destino))
 
         if na_origem is None:
-            aquisicao.verificacao_na_origem = f"NAO realizada: {motivo}"
+            aquisicao.verificacao_na_origem = self._t("lg_ab_fid_nao_realizada", motivo=motivo)
             self.log(self._t("lg_ab_fidelidade_nao_verificada", motivo=motivo))
             return
 
@@ -824,9 +813,10 @@ class AndroidExtractor(BaseExtractor):
         ausentes = [nome for nome in no_destino if nome not in na_origem]
 
         aquisicao.divergencias = sorted(divergentes)
-        aquisicao.verificacao_na_origem = (
-            f"realizada: {len(na_origem)} arquivo(s) conferidos no aparelho, "
-            f"{len(divergentes)} divergencia(s), {len(ausentes)} sem hash de origem"
+        aquisicao.fidelidade_realizada = True
+        aquisicao.verificacao_na_origem = self._t(
+            "lg_ab_fid_realizada",
+            conferidos=len(na_origem), divergencias=len(divergentes), ausentes=len(ausentes),
         )
 
         if divergentes:
@@ -1070,46 +1060,40 @@ class AndroidExtractor(BaseExtractor):
             )
 
             if aquisicao.arquivos_na_origem is None:
-                motivo = aquisicao.inventario_indisponivel or "origem não inventariada"
-                situacao_origem = f"NÃO VERIFICÁVEL ({motivo})"
+                motivo = aquisicao.inventario_indisponivel or self._t("lg_ab_rec_origem_nao_inv")
+                situacao_origem = self._t("lg_ab_rec_nao_verificavel", motivo=motivo)
             else:
-                situacao_origem = f"{aquisicao.arquivos_na_origem} arquivo(s)"
+                situacao_origem = self._t("lg_ab_rec_narquivos", n=aquisicao.arquivos_na_origem)
 
             relatorio = [
-                "RECONCILIAÇÃO DE AQUISIÇÃO",
-                f"Módulo:              {self.id}",
-                f"Origem (aparelho):   {caminho_remoto}",
-                f"Destino:             {aquisicao.copia.caminho_local}",
-                f"Arquivos na origem:  {situacao_origem}",
-                f"Via do inventário:   {aquisicao.metodo_inventario or 'nenhuma (não inventariado)'}",
-                f"Arquivos adquiridos: {aquisicao.copia.arquivos_copiados}",
-                f"Bytes adquiridos:    {aquisicao.copia.bytes_copiados}",
-                f"Desfecho da cópia:   {aquisicao.copia.situacao.value}",
-                f"Completude:          {self._descrever_completude(aquisicao)}",
-                f"Fidelidade:          {aquisicao.verificacao_na_origem or 'não avaliada'}",
+                self._t("lg_ab_rec_titulo"),
+                self._t("lg_ab_rec_modulo", valor=self.id),
+                self._t("lg_ab_rec_origem", valor=caminho_remoto),
+                self._t("lg_ab_rec_destino", valor=aquisicao.copia.caminho_local),
+                self._t("lg_ab_rec_na_origem", valor=situacao_origem),
+                self._t("lg_ab_rec_via",
+                        valor=aquisicao.metodo_inventario or self._t("lg_ab_rec_via_nenhuma")),
+                self._t("lg_ab_rec_adquiridos", valor=aquisicao.copia.arquivos_copiados),
+                self._t("lg_ab_rec_bytes", valor=aquisicao.copia.bytes_copiados),
+                self._t("lg_ab_rec_desfecho", valor=aquisicao.copia.situacao.value),
+                self._t("lg_ab_rec_completude", valor=self._descrever_completude(aquisicao)),
+                self._t("lg_ab_rec_fidelidade",
+                        valor=aquisicao.verificacao_na_origem or self._t("lg_ab_rec_fid_nao_avaliada")),
             ]
             if aquisicao.divergencias:
-                relatorio += [
-                    "",
-                    "ARQUIVOS CUJO CONTEUDO DIVERGE DO APARELHO (possivel corrupcao "
-                    "na transferencia):",
-                ]
+                relatorio += ["", self._t("lg_ab_rec_divergem_titulo")]
                 relatorio += [f"  - {nome}" for nome in aquisicao.divergencias]
             if aquisicao.faltantes:
-                relatorio += ["", "ARQUIVOS QUE EXISTIAM NA ORIGEM E NÃO FORAM ADQUIRIDOS:"]
+                relatorio += ["", self._t("lg_ab_rec_faltantes_titulo")]
                 relatorio += [f"  - {nome}" for nome in aquisicao.faltantes]
             if aquisicao.nomes_trocados:
-                relatorio += [
-                    "",
-                    "ARQUIVOS GRAVADOS COM NOME ALTERADO (o Windows não aceita o nome do "
-                    "aparelho; o conteúdo é o mesmo e foi conferido pelo hash):",
-                ]
-                relatorio += [f"  - no aparelho: {original}\n    na aquisição: {gravado}"
+                relatorio += ["", self._t("lg_ab_rec_nomes_titulo")]
+                relatorio += [self._t("lg_ab_rec_nome_par", original=original, gravado=gravado)
                               for gravado, original in sorted(aquisicao.nomes_trocados.items())]
             if aquisicao.restricao_do_sistema:
-                relatorio += ["", "RESTRIÇÃO DO SISTEMA OPERACIONAL:", aquisicao.restricao_do_sistema]
+                relatorio += ["", self._t("lg_ab_rec_restricao_titulo"), aquisicao.restricao_do_sistema]
             if aquisicao.copia.stderr:
-                relatorio += ["", "SAÍDA DE ERRO DO ADB (evidência da tentativa):", aquisicao.copia.stderr]
+                relatorio += ["", self._t("lg_ab_rec_stderr_titulo"), aquisicao.copia.stderr]
 
             (pasta / f"{rotulo}_reconciliacao.txt").write_text(
                 "\n".join(relatorio) + "\n", encoding="utf-8"
@@ -1117,26 +1101,22 @@ class AndroidExtractor(BaseExtractor):
         except OSError as exc:
             self.log(self._t("lg_ab_prova_erro", exc=exc))
 
-    @staticmethod
-    def _descrever_completude(aquisicao: ResultadoAquisicao) -> str:
+    def _descrever_completude(self, aquisicao: ResultadoAquisicao) -> str:
         completa = aquisicao.completa
         if aquisicao.inconsistente:
-            return (
-                "NÃO VERIFICÁVEL — o inventário da origem "
-                f"({aquisicao.arquivos_na_origem}) é MENOR que o adquirido "
-                f"({aquisicao.copia.arquivos_copiados}); o inventário não é confiável "
-                "para este caminho"
-            )
+            return self._t("lg_ab_compl_inconsistente",
+                           origem=aquisicao.arquivos_na_origem,
+                           adquirido=aquisicao.copia.arquivos_copiados)
         if completa is None:
-            return "NÃO VERIFICÁVEL — a origem não pôde ser inventariada"
+            return self._t("lg_ab_compl_nao_inventariada")
         if aquisicao.arquivos_na_origem == 0:
             # Dizer "COMPLETA" quando não havia nada a adquirir sugere, a quem
             # lê o relatório, que algo foi obtido. O caminho existia e estava
             # vazio: é isso que precisa estar escrito.
-            return "ORIGEM VAZIA — o caminho existe no aparelho e não continha arquivo algum"
+            return self._t("lg_ab_compl_vazia")
         if completa:
-            return "COMPLETA — todo arquivo inventariado na origem foi adquirido"
-        return f"INCOMPLETA — {len(aquisicao.faltantes)} arquivo(s) faltando"
+            return self._t("lg_ab_compl_completa")
+        return self._t("lg_ab_compl_incompleta", n=len(aquisicao.faltantes))
 
     @staticmethod
     def consolidar_reconciliacao(aquisicoes: List[ResultadoAquisicao]) -> dict:
@@ -1253,28 +1233,19 @@ class AndroidExtractor(BaseExtractor):
         arquivos_gerados: List[Path] = []
 
         if sdk is not None and sdk >= NIVEL_API_ANDROID_12:
-            self.log(
-                "[*] 'adb backup' não tentado: a partir do Android 12 (API 31) a Google "
-                "removeu esse recurso do sistema. Neste aparelho, a via para SMS e chamadas "
-                "é o módulo 'Agenda, Chamadas e SMS por aplicativo agente'."
-            )
+            self.log(self._t("lg_ab_bkp_nao_tentado"))
             return arquivos_gerados
 
         candidatos_instalados = [pacote for pacote in candidatos if self.adb.pacote_instalado(pacote)]
         if not candidatos_instalados:
-            self.log("[*] Nenhum app candidato para 'adb backup' foi encontrado instalado no aparelho.")
+            self.log(self._t("lg_ab_bkp_sem_candidato"))
             return arquivos_gerados
 
         for pacote in candidatos_instalados:
             if self.cancelado:
                 break
             caminho_ab = pasta_destino / f"backup_{pacote}.ab"
-            self.log(
-                f"[*] Tentando 'adb backup' de '{pacote}' como alternativa ao provider negado. "
-                "A suíte confirma o pedido na tela do aparelho por comando; mantenha a tela "
-                "DESBLOQUEADA. Se o pedido ficar parado na tela, toque em 'Fazer backup dos "
-                "meus dados'."
-            )
+            self.log(self._t("lg_ab_bkp_tentando", pacote=pacote))
             if pasta_caso is not None:
                 self.registrar_alteracao(
                     pasta_caso,
@@ -1290,41 +1261,26 @@ class AndroidExtractor(BaseExtractor):
                 pacote, caminho_ab, chave_valor=pacote in backup_android.PACOTES_CHAVE_VALOR
             )
             if not obtido:
-                self.log(
-                    f"    -> Sem sucesso para '{pacote}' (app pode ter allowBackup=false, ou a "
-                    "confirmação não foi feita a tempo)."
-                )
+                self.log(self._t("lg_ab_bkp_sem_sucesso", pacote=pacote))
                 continue
 
             conteudo = backup_android.abrir(caminho_ab)
             if conteudo.cifrado:
                 # Não dá para olhar dentro: fica, e fica dito que não foi lido.
                 arquivos_gerados.append(caminho_ab)
-                self.log(
-                    f"    -> Backup de '{pacote}' obtido, porém CIFRADO (foi digitada senha "
-                    "na tela). O conteúdo não foi verificado."
-                )
+                self.log(self._t("lg_ab_bkp_cifrado", pacote=pacote))
             elif not conteudo.legivel:
                 arquivos_gerados.append(caminho_ab)
-                self.log(
-                    f"    -> Backup de '{pacote}' obtido, mas não pôde ser aberto: "
-                    f"{conteudo.motivo}. Preservado como veio."
-                )
+                self.log(self._t("lg_ab_bkp_ilegivel", pacote=pacote, motivo=conteudo.motivo))
             elif not conteudo.arquivos_de_dados:
                 try:
                     caminho_ab.unlink()
                 except OSError:
                     pass
-                self.log(
-                    f"    -> O backup de '{pacote}' veio SEM DADOS (só o manifesto do pacote): "
-                    "o aplicativo não entrega conteúdo por esta via. Arquivo descartado; a "
-                    "tentativa está registrada."
-                )
+                self.log(self._t("lg_ab_bkp_sem_dados", pacote=pacote))
             else:
                 arquivos_gerados.append(caminho_ab)
-                self.log(
-                    f"    -> Backup obtido: {caminho_ab.name}, com "
-                    f"{len(conteudo.arquivos_de_dados)} arquivo(s) de dados."
-                )
+                self.log(self._t("lg_ab_bkp_obtido", nome=caminho_ab.name,
+                                 n=len(conteudo.arquivos_de_dados)))
 
         return arquivos_gerados
