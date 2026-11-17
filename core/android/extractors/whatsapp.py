@@ -105,10 +105,11 @@ class WhatsAppExtractor(AndroidExtractor):
             "\n\n".join(bruto) + "\n", encoding="utf-8")
         for registro in registros:
             if registro["gravado_no_aparelho_epoch"]:
-                self.log(f"    backup {registro['arquivo']}: gravado no aparelho em epoch "
-                         f"{registro['gravado_no_aparelho_epoch']}")
+                self.log(self._t("lg_wa_backup_epoch", arquivo=registro['arquivo'],
+                                 epoch=registro['gravado_no_aparelho_epoch']))
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta_whatsapp = pasta_caso / "whatsapp"
         pasta_whatsapp.mkdir(parents=True, exist_ok=True)
 
@@ -117,9 +118,9 @@ class WhatsAppExtractor(AndroidExtractor):
 
         for indice, (nome, caminho_android) in enumerate(CAMINHOS_CANDIDATOS.items(), 1):
             if self.cancelado:
-                return ResultadoExtracao(False, "Extração cancelada pelo usuário.")
+                return ResultadoExtracao(False, self._t("lg_cancelada_modulo"))
 
-            self.log(f"[*] Tentando extrair '{caminho_android}'...")
+            self.log(self._t("lg_wa_tentando", caminho=caminho_android))
             faixa = (int((indice - 1) / total * 100), int(indice / total * 100))
             aquisicoes.append(
                 self.adquirir_caminho(
@@ -137,11 +138,7 @@ class WhatsAppExtractor(AndroidExtractor):
         consolidado.update(self.consolidar_reconciliacao(aquisicoes))
         localizacoes_com_dados = len(consolidado["caminhos_com_dados"])
 
-        self.log(
-            "[AVISO] Banco de mensagens ativo (msgstore.db) e chave de criptografia NÃO foram "
-            "extraídos por este módulo — ficam na área privada do aplicativo. Apenas mídia e "
-            "backups criptografados acessíveis no armazenamento externo foram coletados."
-        )
+        self.log(self._t("lg_aviso", valor=self._t("lg_wa_aviso_banco")))
 
         if localizacoes_com_dados == 0:
             # Nenhum caminho foi copiado por INTEIRO — mas isso não é o mesmo
@@ -158,24 +155,15 @@ class WhatsAppExtractor(AndroidExtractor):
                     detalhes["acesso_negado"] = True
                 return ResultadoExtracao(
                     sucesso=True,
-                    mensagem=(
-                        "Cópia PARCIAL do WhatsApp: "
-                        f"{consolidado['arquivos_copiados']} arquivo(s), "
-                        f"{consolidado['bytes_copiados']} byte(s) obtidos — porém NENHUM "
-                        "caminho foi copiado por inteiro (erro do ADB ou o aparelho deixou "
-                        "de responder durante a cópia). O que não veio não foi examinado, e "
-                        "sua ausência não autoriza concluir que não exista no aparelho."
-                    ),
+                    mensagem=self._t("lg_wa_parcial",
+                                     arquivos=consolidado['arquivos_copiados'],
+                                     bytes=consolidado['bytes_copiados']),
                     caminho_saida=pasta_whatsapp,
                     detalhes=detalhes,
                 )
             return ResultadoExtracao(
                 sucesso=False,
-                mensagem=(
-                    "Nenhum dado do WhatsApp foi encontrado nos caminhos conhecidos "
-                    "(app pode não estar instalado, ou o Android restringiu o acesso via "
-                    "scoped storage)."
-                ),
+                mensagem=self._t("lg_wa_nada"),
                 caminho_saida=pasta_whatsapp,
             )
 
@@ -189,22 +177,13 @@ class WhatsAppExtractor(AndroidExtractor):
         if consolidado["bytes_copiados"] == 0:
             return ResultadoExtracao(
                 sucesso=False,
-                mensagem=(
-                    f"As pastas do WhatsApp existem no armazenamento externo "
-                    f"({consolidado['arquivos_copiados']} arquivo(s) encontrado(s)), porém "
-                    "somam ZERO byte: só há marcadores vazios (.nomedia) e pastas sem "
-                    "conteúdo. Nenhuma mídia e nenhum backup local foi adquirido. ISSO NÃO "
-                    "SIGNIFICA AUSÊNCIA DE MENSAGENS NO APARELHO — o banco ativo exige root, "
-                    "e o backup local pode nunca ter sido gerado."
-                ),
+                mensagem=self._t("lg_wa_zero_byte", arquivos=consolidado['arquivos_copiados']),
                 caminho_saida=pasta_whatsapp,
                 detalhes=dict(consolidado, localizacoes_com_dados=localizacoes_com_dados),
             )
 
-        self.log(
-            f"[CONCLUÍDO] Extração best-effort do WhatsApp finalizada! "
-            f"({localizacoes_com_dados} localização(ões) com dados)"
-        )
+        self.log(self._t("lg_concluido",
+                         valor=self._t("lg_wa_concluido", n=localizacoes_com_dados)))
         detalhes = dict(consolidado)
         detalhes["localizacoes_com_dados"] = localizacoes_com_dados
         if consolidado["caminhos_negados"]:
@@ -212,11 +191,8 @@ class WhatsAppExtractor(AndroidExtractor):
 
         return ResultadoExtracao(
             sucesso=True,
-            mensagem=(
-                "Dados de mídia/backup do WhatsApp extraídos (best effort, sem root): "
-                f"{consolidado['arquivos_copiados']} arquivo(s), "
-                f"{consolidado['bytes_copiados']} byte(s)."
-            ),
+            mensagem=self._t("lg_wa_msg_ok", arquivos=consolidado['arquivos_copiados'],
+                             bytes=consolidado['bytes_copiados']),
             caminho_saida=pasta_whatsapp,
             detalhes=detalhes,
         )

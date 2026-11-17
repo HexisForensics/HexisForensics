@@ -101,6 +101,7 @@ class MensageirosExtractor(AndroidExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta = pasta_caso / "mensageiros"
         pasta.mkdir(parents=True, exist_ok=True)
 
@@ -110,7 +111,7 @@ class MensageirosExtractor(AndroidExtractor):
 
         for indice, (rotulo, (pacote, caminhos)) in enumerate(MENSAGEIROS.items(), 1):
             if self.cancelado:
-                return ResultadoExtracao(False, "Extração cancelada pelo usuário.", pasta)
+                return ResultadoExtracao(False, self._t("lg_cancelada_modulo"), pasta)
 
             self.progresso(int(indice / total * 100))
 
@@ -119,7 +120,7 @@ class MensageirosExtractor(AndroidExtractor):
                 continue
 
             instalados.append(rotulo)
-            self.log(f"[*] {rotulo} está instalado ({pacote}) — procurando mídia externa...")
+            self.log(self._t("lg_ms_instalado", rotulo=rotulo, pacote=pacote))
 
             teve_dado = False
             for posicao, caminho_remoto in enumerate(caminhos, 1):
@@ -154,72 +155,56 @@ class MensageirosExtractor(AndroidExtractor):
             detalhes["copia_incompleta"] = True
 
         if not instalados:
-            self.log("[*] Nenhum dos mensageiros conhecidos está instalado neste aparelho.")
+            self.log(self._t("lg_ms_nenhum_log"))
             return ResultadoExtracao(
                 True,
-                "Nenhum dos mensageiros pesquisados está instalado no aparelho.",
+                self._t("lg_ms_nenhum_msg"),
                 caminho_saida=pasta,
                 detalhes=detalhes,
             )
 
-        self.log(
-            "[AVISO] Bancos de mensagens NÃO foram extraídos — ficam em área privada dos "
-            "aplicativos e exigem root."
-        )
+        self.log(self._t("lg_aviso", valor=self._t("lg_ms_aviso_bancos")))
 
-        mensagem = (
-            f"{len(instalados)} mensageiro(s) instalado(s); {len(com_dados)} com mídia externa "
-            f"adquirida ({consolidado['arquivos_copiados']} arquivo(s))."
-        )
+        mensagem = self._t("lg_ms_msg_ok", instalados=len(instalados), com_dados=len(com_dados),
+                           arquivos=consolidado['arquivos_copiados'])
         if sem_dados:
-            mensagem += f" Sem mídia externa: {', '.join(sem_dados)}."
-        self.log(f"[CONCLUÍDO] {mensagem}")
+            mensagem += self._t("lg_ms_sem_midia", lista=', '.join(sem_dados))
+        self.log(self._t("lg_concluido", valor=mensagem))
 
         return ResultadoExtracao(True, mensagem, caminho_saida=pasta, detalhes=detalhes)
 
-    @staticmethod
     def _gravar_relatorio(
-        pasta: Path, instalados, nao_instalados, com_dados, sem_dados, negados
+        self, pasta: Path, instalados, nao_instalados, com_dados, sem_dados, negados
     ) -> None:
         """
         Relatório que separa as três situações que não podem ser confundidas:
         aplicativo ausente, aplicativo presente sem mídia externa, e acesso
         recusado pelo sistema.
         """
+        nenhum = self._t("lg_ms_rel_nenhum")
         linhas = [
             "=" * 70,
-            "MENSAGEIROS — RESULTADO DA PESQUISA".center(70),
+            self._t("lg_ms_rel_titulo").center(70),
             "=" * 70,
             "",
-            "[INSTALADOS NO APARELHO]",
+            self._t("lg_ms_rel_instalados"),
         ]
-        linhas += [f"  - {app}" for app in instalados] or ["  (nenhum)"]
+        linhas += [f"  - {app}" for app in instalados] or [nenhum]
 
-        linhas += ["", "[COM MÍDIA EXTERNA ADQUIRIDA]"]
-        linhas += [f"  - {app}" for app in com_dados] or ["  (nenhum)"]
+        linhas += ["", self._t("lg_ms_rel_com_midia")]
+        linhas += [f"  - {app}" for app in com_dados] or [nenhum]
 
-        linhas += ["", "[INSTALADOS, PORÉM SEM MÍDIA EM ARMAZENAMENTO EXTERNO]"]
-        linhas += [f"  - {app}" for app in sem_dados] or ["  (nenhum)"]
+        linhas += ["", self._t("lg_ms_rel_sem_midia")]
+        linhas += [f"  - {app}" for app in sem_dados] or [nenhum]
 
-        linhas += ["", "[NÃO INSTALADOS]"]
-        linhas += [f"  - {app}" for app in nao_instalados] or ["  (nenhum)"]
+        linhas += ["", self._t("lg_ms_rel_nao_instalados")]
+        linhas += [f"  - {app}" for app in nao_instalados] or [nenhum]
 
         if negados:
-            linhas += ["", "[ACESSO RECUSADO PELO SISTEMA]"]
+            linhas += ["", self._t("lg_ms_rel_negados")]
             linhas += [f"  - {item}" for item in negados]
 
-        linhas += [
-            "",
-            "=" * 70,
-            "RESSALVA METODOLÓGICA",
-            "",
-            "Este módulo alcança apenas o que cada aplicativo grava em armazenamento",
-            "externo. O banco de mensagens fica em /data/data/<pacote>/ e exige",
-            "privilégio elevado (root).",
-            "",
-            "Portanto: um aplicativo listado como INSTALADO, PORÉM SEM MÍDIA EXTERNA",
-            "pode conter conversas extensas no aparelho. A ausência de resultado aqui",
-            "não sustenta conclusão sobre ausência de comunicação.",
-            "=" * 70,
-        ]
+        linhas += ["", "=" * 70, self._t("lg_ms_rel_ressalva_titulo"), ""]
+        linhas += self._t("lg_ms_rel_ressalva").split("\n")
+        linhas += ["=" * 70]
         (pasta / "RELATORIO_MENSAGEIROS.txt").write_text("\n".join(linhas), encoding="utf-8")
