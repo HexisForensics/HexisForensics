@@ -118,5 +118,21 @@ with tempfile.TemporaryDirectory() as tmp:
     checar("método PT traz as limitações literais",
            m_pt.modulos[0].limitacoes == list(EST.limitacoes_conhecidas))
 
+print("\n[5] O nome selado no desfecho sobrevive no idioma carimbado")
+# A extração passa extrator.nome_no_idioma(idioma_do_caso) ao registrar a
+# execução; aqui provamos que o desfecho sela e relê esse nome tal como veio,
+# para a tabela de resultados do laudo sair no idioma do caso.
+from core.desfecho import descrever_execucao, gravar_desfecho, ler_desfecho  # noqa: E402
+with tempfile.TemporaryDirectory() as tmp:
+    aq = Path(tmp) / "aq"
+    aq.mkdir()
+    nome_en = EST.nome_no_idioma("en")
+    registros = [(EST.id, nome_en, True, "ok", {})]
+    gravar_desfecho(aq, descrever_execucao(registros))
+    d = ler_desfecho(aq)
+    checar("o desfecho relê o nome em inglês", d.modulos[0].nome == nome_en)
+    checar("e o txt selado traz o nome em inglês",
+           nome_en in (aq / "desfecho" / "desfecho_da_coleta.txt").read_text(encoding="utf-8"))
+
 print("\n" + ("TODOS OS TESTES PASSARAM" if not falhas else f"{len(falhas)} FALHA(S): {falhas}"))
 sys.exit(1 if falhas else 0)

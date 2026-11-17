@@ -236,6 +236,11 @@ class ExtractionService(QThread):
             else:
                 desfechos["sucesso"] += 1
 
+        # O nome do módulo viaja selado no desfecho (a tabela de resultados do
+        # laudo) no idioma CARIMBADO no caso, como o método declarado. A
+        # moldura dessa tabela já sai no idioma do laudo; o nome do módulo
+        # acompanha, em vez de ficar uma célula em português no meio.
+        idi_caso = idioma_do_caso(self.pasta_caso)
         total = len(self.extratores)
         for indice, extrator in enumerate(self.extratores, 1):
             if self._cancelar:
@@ -250,7 +255,8 @@ class ExtractionService(QThread):
             # anterior) enquanto o backup do iPhone esperava o código na tela.
             self.progresso_emitido.emit(0)
 
-            self.extrator_iniciado.emit(extrator.id, extrator.nome_exibicao)
+            nome_idi = extrator.nome_no_idioma(idi_caso)
+            self.extrator_iniciado.emit(extrator.id, nome_idi)
             registrar("")
             registrar("=" * 60)
             registrar(f"[MÓDULO {indice}/{total}] {extrator.nome_exibicao}")
@@ -267,8 +273,8 @@ class ExtractionService(QThread):
                 RegistroProcedimento(self.pasta_caso).registrar_decisao(
                     f"Módulo '{extrator.nome_exibicao}' NÃO foi executado.", motivo
                 )
-                self._registrar_execucao(execucao, 
-                    extrator.id, extrator.nome_exibicao, False, motivo, {}
+                self._registrar_execucao(execucao,
+                    extrator.id, nome_idi, False, motivo, {}
                 )
                 continue
 
@@ -278,9 +284,9 @@ class ExtractionService(QThread):
                     extrator, resultado.sucesso, resultado.mensagem, resultado.detalhes
                 )
                 contabilizar(resultado.sucesso, resultado.detalhes or {})
-                self._registrar_execucao(execucao, 
+                self._registrar_execucao(execucao,
                     extrator.id,
-                    extrator.nome_exibicao,
+                    nome_idi,
                     resultado.sucesso,
                     resultado.mensagem,
                     resultado.detalhes or {},
@@ -289,8 +295,8 @@ class ExtractionService(QThread):
                 registrar(f"[ERRO] Falha inesperada em {extrator.nome_exibicao}: {exc}")
                 registrar_erro_se_necessario(extrator, False, str(exc), {})
                 contabilizar(False, {})
-                self._registrar_execucao(execucao, 
-                    extrator.id, extrator.nome_exibicao, False, str(exc), {}
+                self._registrar_execucao(execucao,
+                    extrator.id, nome_idi, False, str(exc), {}
                 )
 
         # Ultima oportunidade de escrever no caso: tudo o que a interface
