@@ -106,6 +106,7 @@ class SMSExtractor(AndroidExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta_sms = pasta_caso / "sms"
         pasta_sms.mkdir(parents=True, exist_ok=True)
 
@@ -118,9 +119,9 @@ class SMSExtractor(AndroidExtractor):
 
         for indice, (nome_arquivo, uri) in enumerate(URIS_SMS.items(), 1):
             if self.cancelado:
-                return ResultadoExtracao(False, "Extração cancelada pelo usuário.")
+                return ResultadoExtracao(False, self._t("lg_cancelada_modulo"))
 
-            self.log(f"[*] Consultando {uri} ...")
+            self.log(self._t("lg_sms_consultando", uri=uri))
             saida, recusou = self.consultar_provider(
                 uri, pasta_sms / f"{nome_arquivo}.txt"
             )
@@ -134,7 +135,7 @@ class SMSExtractor(AndroidExtractor):
             self.progresso(int(indice / total * 90))
 
         if self.cancelado:
-            return ResultadoExtracao(False, "Extração cancelada pelo usuário.")
+            return ResultadoExtracao(False, self._t("lg_cancelada_modulo"))
         recusa_no_mms, anexos_obtidos, anexos_falhos = self._complementar_mms(
             pasta_sms, saidas
         )
@@ -143,11 +144,7 @@ class SMSExtractor(AndroidExtractor):
 
         arquivos_backup: list[Path] = []
         if algum_acesso_negado:
-            self.log(
-                "[ALERTA] O dispositivo negou acesso ao provider de SMS em pelo menos uma "
-                "consulta (Permission Denial). As respostas brutas de erro foram preservadas "
-                "como evidência da tentativa."
-            )
+            self.log(self._t("lg_sms_negado"))
             arquivos_backup = self.tentar_fallback_backup(
                 sdk, PACOTES_SMS_CANDIDATOS, pasta_sms, pasta_caso
             )
@@ -155,7 +152,7 @@ class SMSExtractor(AndroidExtractor):
                 alguma_extracao_ok = True
 
         sucesso, mensagem = self.avaliar_consulta_a_provider(
-            "Mensagens SMS/MMS", alguma_extracao_ok, algum_acesso_negado, arquivos_backup
+            self._t("lg_sms_rotulo"), alguma_extracao_ok, algum_acesso_negado, arquivos_backup
         )
         detalhes = {
             "acesso_negado": algum_acesso_negado,
@@ -167,11 +164,9 @@ class SMSExtractor(AndroidExtractor):
         if anexos_falhos:
             detalhes["copia_incompleta"] = True
             detalhes["anexos_mms_nao_obtidos"] = anexos_falhos
-            mensagem += (
-                f" Ressalva: {len(anexos_falhos)} anexo(s) de MMS não foi(ram) lido(s) "
-                f"(partes {', '.join(anexos_falhos)}); a tentativa está em {PASTA_ANEXOS_MMS}/."
-            )
-        self.log(f"[{'CONCLUÍDO' if sucesso else 'FALHA'}] {mensagem}")
+            mensagem += self._t("lg_sms_ress_anexos", n=len(anexos_falhos),
+                                lista=', '.join(anexos_falhos), pasta=PASTA_ANEXOS_MMS)
+        self.log(self._t("lg_concluido" if sucesso else "lg_falha", valor=mensagem))
         return ResultadoExtracao(
             sucesso=sucesso,
             mensagem=mensagem,
@@ -189,7 +184,7 @@ class SMSExtractor(AndroidExtractor):
         houve_recusa = False
         mensagens = registros_brutos(saidas.get("mms_cabecalhos", ""))
         if mensagens:
-            self.log(f"[*] MMS: consultando os endereços de {len(mensagens)} mensagem(ns)...")
+            self.log(self._t("lg_sms_mms_enderecos", n=len(mensagens)))
         for campos in mensagens:
             identificador = campos.get("_id")
             if not identificador or self.cancelado:
@@ -214,7 +209,7 @@ class SMSExtractor(AndroidExtractor):
             else:
                 falhos.append(identificador)
         if obtidos or falhos:
-            self.log(f"[*] MMS: {obtidos} anexo(s) lido(s), {len(falhos)} não lido(s).")
+            self.log(self._t("lg_sms_mms_anexos", obtidos=obtidos, n=len(falhos)))
         return houve_recusa, obtidos, falhos
 
     def _ler_anexo_mms(self, pasta_anexos: Path, identificador: str) -> bool:
@@ -241,9 +236,9 @@ class SMSExtractor(AndroidExtractor):
         if resultado.codigo_saida != 0 or escritor.bytes_gravados == 0:
             destino.unlink(missing_ok=True)
             destino.with_name(f"parte_{identificador}_NAO_OBTIDA.txt").write_text(
-                f"Leitura de content://mms/part/{identificador} não rendeu conteúdo "
-                f"(código {resultado.codigo_saida}, {escritor.bytes_gravados} byte(s)).\n"
-                f"stderr: {resultado.stderr or '(vazio)'}\n",
+                self._t("lg_sms_anexo_nao_obtido", id=identificador,
+                        codigo=resultado.codigo_saida, bytes=escritor.bytes_gravados,
+                        stderr=resultado.stderr or self._t("lg_sms_stderr_vazio")),
                 encoding="utf-8",
             )
             return False

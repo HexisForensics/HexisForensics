@@ -71,6 +71,7 @@ class ContatosChamadasExtractor(AndroidExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta_dump = pasta_caso / "contacts_calls"
         pasta_dump.mkdir(parents=True, exist_ok=True)
 
@@ -79,7 +80,7 @@ class ContatosChamadasExtractor(AndroidExtractor):
         algum_acesso_negado = False
         alguma_extracao_ok = False
 
-        self.log("[*] Extraindo Registro de Chamadas (Call Logs)...")
+        self.log(self._t("lg_cc_extraindo_chamadas"))
         chamadas, recusou_chamadas = self.consultar_provider(
             "content://call_log/calls", pasta_dump / "registro_chamadas_bruto.txt"
         )
@@ -87,10 +88,7 @@ class ContatosChamadasExtractor(AndroidExtractor):
         arquivos_backup: list[Path] = []
         if recusou_chamadas:
             algum_acesso_negado = True
-            self.log(
-                "[ALERTA] Acesso negado ao provider de Call Log (Permission Denial). "
-                "A resposta bruta de erro foi preservada como evidência da tentativa."
-            )
+            self.log(self._t("lg_cc_negado_calllog"))
             arquivos_backup = self.tentar_fallback_backup(
                 sdk, PACOTES_DISCADOR_CANDIDATOS, pasta_dump, pasta_caso
             )
@@ -101,30 +99,27 @@ class ContatosChamadasExtractor(AndroidExtractor):
         self.progresso(50)
 
         if self.cancelado:
-            return ResultadoExtracao(False, "Extração cancelada pelo usuário.")
+            return ResultadoExtracao(False, self._t("lg_cancelada_modulo"))
 
-        self.log("[*] Extraindo Agenda Telefônica (Contatos)...")
+        self.log(self._t("lg_cc_extraindo_contatos"))
         contatos, recusou_contatos = self.consultar_provider(
             "content://com.android.contacts/data/phones",
             pasta_dump / "agenda_contatos_bruta.txt",
         )
         if recusou_contatos:
             algum_acesso_negado = True
-            self.log(
-                "[ALERTA] Acesso negado ao provider de Contatos (Permission Denial). "
-                "A resposta bruta de erro foi preservada como evidência da tentativa."
-            )
+            self.log(self._t("lg_cc_negado_contatos"))
         elif contatos:
             alguma_extracao_ok = True
         self.progresso(100)
 
         sucesso, mensagem = self.avaliar_consulta_a_provider(
-            "Contatos e histórico de chamadas",
+            self._t("lg_cc_rotulo"),
             alguma_extracao_ok,
             algum_acesso_negado,
             arquivos_backup,
         )
-        self.log(f"[{'CONCLUÍDO' if sucesso else 'FALHA'}] {mensagem}")
+        self.log(self._t("lg_concluido" if sucesso else "lg_falha", valor=mensagem))
         return ResultadoExtracao(
             sucesso=sucesso,
             mensagem=mensagem,
