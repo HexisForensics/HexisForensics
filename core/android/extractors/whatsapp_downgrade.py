@@ -107,11 +107,7 @@ class WhatsAppDowngradeExtractor(AndroidExtractor):
         if not disponivel:
             return disponivel, motivo
         if not caminho_do_apk_legado().is_file():
-            return False, (
-                f"O APK antigo do WhatsApp não está em '{caminho_do_apk_legado()}'. Ele não "
-                "acompanha a suíte: o examinador o fornece, e o SHA-256 dele é registrado "
-                "na aquisição. Sem ele este módulo não tem como rodar."
-            )
+            return False, self._t("lg_wd_sem_apk_disp", caminho=caminho_do_apk_legado())
         return True, ""
 
     # ------------------------------------------------------------------
@@ -151,22 +147,22 @@ class WhatsAppDowngradeExtractor(AndroidExtractor):
         """
         remotos = self._caminhos_dos_apks()
         if not remotos:
-            return [], "o sistema não informou onde estão os APKs do aplicativo instalado"
+            return [], self._t("lg_wd_sem_caminho_apks")
         locais = []
         for remoto in remotos:
             local = pasta / Path(remoto).name
             motivo = self._copiar_arquivo_avulso(remoto, local)
             if motivo:
-                return [], f"não foi possível copiar '{remoto}': {motivo}"
+                return [], self._t("lg_wd_copia_falhou", remoto=remoto, motivo=motivo)
             if not local.is_file() or local.stat().st_size == 0:
-                return [], f"a cópia de '{remoto}' veio vazia"
+                return [], self._t("lg_wd_copia_vazia", remoto=remoto)
             # Conferência contra o aparelho: o que será reinstalado tem de
             # ser, byte a byte, o que estava instalado.
             remoto_sha = self.adb.executar(
                 ["shell", f"sha256sum {self.aspas_para_shell(remoto)}"]
             ).split()
             if remoto_sha and remoto_sha[0].lower() != calcular_sha256(local).lower():
-                return [], f"a cópia de '{remoto}' NÃO confere com o hash calculado no aparelho"
+                return [], self._t("lg_wd_copia_divergente", remoto=remoto)
             locais.append(local)
         return locais, ""
 
@@ -206,147 +202,115 @@ class WhatsAppDowngradeExtractor(AndroidExtractor):
 
     # ------------------------------------------------------------------
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta = pasta_caso / PASTA
         pasta.mkdir(parents=True, exist_ok=True)
         apk_legado = caminho_do_apk_legado()
 
         if not apk_legado.is_file():
             return ResultadoExtracao(
-                False,
-                f"Não executado: o APK antigo não está em '{apk_legado}'. O dispositivo NÃO "
-                "foi alterado.",
-                pasta,
+                False, self._t("lg_wd_sem_apk_exec", apk=apk_legado), pasta,
             )
 
         sdk = self.nivel_api()
         if sdk is not None and sdk >= NIVEL_API_ANDROID_12:
             return ResultadoExtracao(
-                False,
-                f"Não executado: o aparelho tem Android com API {sdk}, e o 'adb backup' foi "
-                "removido do sistema a partir do Android 12 (API 31). O dispositivo NÃO foi "
-                "alterado. Isto não diz nada sobre haver ou não mensagens no aparelho.",
-                pasta,
+                False, self._t("lg_wd_api12", sdk=sdk), pasta,
             )
         if not self.adb.pacote_instalado(PACOTE):
             return ResultadoExtracao(
-                False,
-                f"Não executado: o pacote '{PACOTE}' não está instalado no aparelho. O "
-                "dispositivo NÃO foi alterado.",
-                pasta,
+                False, self._t("lg_wd_nao_instalado", pacote=PACOTE), pasta,
             )
 
         codigo_original, nome_original = self._versao_instalada()
         sha_legado = calcular_sha256(apk_legado)
         (pasta / "0_metodo.txt").write_text(
-            "SUBSTITUIÇÃO TEMPORÁRIA DO APLICATIVO (downgrade)\n"
-            f"Pacote: {PACOTE}\n"
-            f"Versão instalada antes: {nome_original or 'não apurada'} "
-            f"(versionCode {codigo_original or 'não apurado'})\n"
-            f"APK antigo empregado: {apk_legado.name}\n"
-            f"SHA-256 do APK antigo: {sha_legado}\n"
-            f"Tamanho do APK antigo: {apk_legado.stat().st_size} bytes\n",
+            self._t("lg_wd_metodo", pacote=PACOTE,
+                    nome=nome_original or self._t("lg_wd_nao_apurada"),
+                    codigo=codigo_original or self._t("lg_wd_nao_apurado"),
+                    apk=apk_legado.name, sha=sha_legado, tamanho=apk_legado.stat().st_size),
             encoding="utf-8",
         )
-        self.log(f"[*] WhatsApp instalado: {nome_original} (versionCode {codigo_original}).")
-        self.log(f"[*] APK antigo: {apk_legado.name} — SHA-256 {sha_legado}")
+        self.log(self._t("lg_wd_instalado_log", nome=nome_original, codigo=codigo_original))
+        self.log(self._t("lg_wd_apk_log", apk=apk_legado.name, sha=sha_legado))
 
         # --- 1. Cópia dos originais: nada é tocado antes disto dar certo.
-        self.log("[*] Copiando os APKs originais para a estação (é o que permite desfazer)...")
+        self.log(self._t("lg_wd_copiando"))
         originais, motivo = self._copiar_originais(pasta / "apk_original")
         if motivo:
             return ResultadoExtracao(
-                False,
-                f"Não executado: {motivo}. Sem a cópia conferida do aplicativo original não "
-                "há como desfazer a substituição, e por isso o dispositivo NÃO foi alterado.",
-                pasta,
+                False, self._t("lg_wd_nao_exec_copia", motivo=motivo), pasta,
             )
         self.progresso(20)
         if self.cancelado:
-            return ResultadoExtracao(False, "Cancelado antes de alterar o dispositivo.", pasta)
+            return ResultadoExtracao(False, self._t("lg_wd_cancelado_antes"), pasta)
 
         # --- 2. Substituição.
         self.registrar_alteracao(
             pasta_caso,
-            f"WhatsApp {nome_original} desinstalado com preservação dos dados "
-            f"('pm uninstall -k') e substituído pelo APK antigo (SHA-256 {sha_legado}).",
-            "Única via de obter o banco de mensagens em claro sem privilégio elevado. Os "
-            f"{len(originais)} APK(s) originais foram copiados e conferidos na estação antes.",
+            self._t("lg_wd_alt_substitui", nome=nome_original, sha=sha_legado),
+            self._t("lg_wd_alt_substitui_motivo", n=len(originais)),
         )
-        self.log("[*] Desinstalando o WhatsApp COM preservação dos dados...")
+        self.log(self._t("lg_wd_desinstalando"))
         desinstalacao = self._comando(
             ["shell", "pm", "uninstall", "-k", PACOTE], pasta / "1_desinstalacao_saida.txt"
         )
         if "Success" not in desinstalacao.stdout:
+            saida = desinstalacao.stdout or desinstalacao.stderr or "sem resposta"
             return ResultadoExtracao(
-                False,
-                "O aparelho recusou a desinstalação com preservação dos dados "
-                f"({desinstalacao.stdout or desinstalacao.stderr or 'sem resposta'}). O "
-                "aplicativo original permanece instalado.",
-                pasta,
+                False, self._t("lg_wd_recusou_desinstalacao", saida=saida), pasta,
             )
 
         ab = pasta / f"backup_{PACOTE}.ab"
         motivo_da_falha = ""
         try:
-            self.log("[*] Instalando a versão antiga (ela NÃO deve ser aberta no aparelho)...")
+            self.log(self._t("lg_wd_instalando_antigo"))
             instalacao = self._comando(
                 ["install", "-r", "-d", str(apk_legado)],
                 pasta / "2_instalacao_do_antigo_saida.txt", 300,
             )
             self.progresso(45)
             if "Success" not in instalacao.stdout:
-                motivo_da_falha = (
-                    "o aparelho recusou a instalação da versão antiga ("
-                    + (instalacao.stdout + " " + instalacao.stderr).strip()[:300] + ")"
-                )
+                saida = (instalacao.stdout + " " + instalacao.stderr).strip()[:300]
+                motivo_da_falha = self._t("lg_wd_recusou_antigo", saida=saida)
             elif self.cancelado:
-                motivo_da_falha = "a execução foi cancelada antes do backup"
+                motivo_da_falha = self._t("lg_wd_cancelado_backup")
             else:
-                self.log(
-                    "[*] Iniciando o backup — OLHE A TELA DO APARELHO e toque em 'Fazer "
-                    "backup dos meus dados', SEM digitar senha."
-                )
+                self.log(self._t("lg_wd_iniciando_backup"))
                 self.registrar_alteracao(
                     pasta_caso,
-                    "Interação com a tela do aparelho para autorizar o 'adb backup' do WhatsApp.",
-                    "O Android exige confirmação manual na tela para concluir o backup.",
+                    self._t("lg_wd_alt_backup"),
+                    self._t("lg_wd_alt_backup_motivo"),
                 )
                 if not self.adb.backup_pacote(PACOTE, ab, timeout=TEMPO_DO_BACKUP):
-                    motivo_da_falha = (
-                        "o backup não foi obtido (a confirmação na tela pode não ter sido "
-                        "feita a tempo, ou o sistema não entregou arquivo algum)"
-                    )
+                    motivo_da_falha = self._t("lg_wd_backup_nao_obtido")
         finally:
             # --- 3. Restauração: SEMPRE, aconteça o que acontecer acima.
             self.progresso(70)
-            self.log("[*] Reinstalando o WhatsApp original...")
+            self.log(self._t("lg_wd_reinstalando"))
             restaurado, saida_da_restauracao = self._restaurar(originais, pasta)
             codigo_final, nome_final = self._versao_instalada()
             restaurado = restaurado and codigo_final == codigo_original
             self.registrar_alteracao(
                 pasta_caso,
-                (f"WhatsApp reinstalado na versão original ({nome_final})."
+                (self._t("lg_wd_alt_restaurado", nome=nome_final)
                  if restaurado else
-                 "A reinstalação do WhatsApp original NÃO foi confirmada: versão instalada "
-                 f"agora '{nome_final or 'nenhuma'}' (versionCode {codigo_final or '—'}), "
-                 f"esperada '{nome_original}' (versionCode {codigo_original})."),
-                "Encerramento da substituição temporária do aplicativo.",
+                 self._t("lg_wd_alt_nao_restaurado", nome=nome_final or 'nenhuma',
+                         codigo=codigo_final or '—', nome_orig=nome_original,
+                         codigo_orig=codigo_original)),
+                self._t("lg_wd_alt_restaurar_motivo"),
             )
 
         nao_restaurado = (
             "" if restaurado else
-            " ATENÇÃO — O APARELHO NÃO VOLTOU AO ESTADO ORIGINAL: a versão instalada agora é "
-            f"'{nome_final or 'nenhuma'}', e era '{nome_original}'. NÃO ABRA O WHATSAPP NO "
-            f"APARELHO. Os APKs originais estão em '{PASTA}/apk_original' e devem ser "
-            f"reinstalados manualmente ('adb install-multiple -r'). Resposta do ADB: "
-            f"{saida_da_restauracao[:300]}"
+            self._t("lg_wd_nao_restaurado", nome=nome_final or 'nenhuma', nome_orig=nome_original,
+                    pasta=PASTA, saida=saida_da_restauracao[:300])
         )
 
         if motivo_da_falha:
             return ResultadoExtracao(
                 False,
-                f"Nenhuma mensagem foi obtida: {motivo_da_falha}. Isto NÃO significa ausência "
-                "de mensagens no aparelho." + nao_restaurado,
+                self._t("lg_wd_nenhuma_msg", motivo=motivo_da_falha) + nao_restaurado,
                 pasta,
                 {"restauracao_pendente": True} if nao_restaurado else {},
             )
@@ -356,8 +320,7 @@ class WhatsAppDowngradeExtractor(AndroidExtractor):
         if not conteudo.legivel:
             return ResultadoExtracao(
                 False,
-                f"O backup foi obtido ({ab.name}), mas não pôde ser lido: {conteudo.motivo}. "
-                "Está preservado como veio; nenhuma mensagem foi extraída dele." + nao_restaurado,
+                self._t("lg_wd_ilegivel", ab=ab.name, motivo=conteudo.motivo) + nao_restaurado,
                 pasta,
                 {"restauracao_pendente": True} if nao_restaurado else {},
             )
@@ -367,10 +330,7 @@ class WhatsAppDowngradeExtractor(AndroidExtractor):
         if not banco.is_file() or banco.stat().st_size == 0:
             return ResultadoExtracao(
                 False,
-                f"O backup veio com {len(extraidos)} arquivo(s), mas SEM o banco de mensagens "
-                "(msgstore.db): a versão antiga instalada não entregou a área privada. "
-                "Nenhuma mensagem foi obtida — o que não significa ausência de mensagens no "
-                "aparelho." + nao_restaurado,
+                self._t("lg_wd_sem_banco", n=len(extraidos)) + nao_restaurado,
                 pasta,
                 {"restauracao_pendente": True} if nao_restaurado else {},
             )
@@ -381,18 +341,18 @@ class WhatsAppDowngradeExtractor(AndroidExtractor):
             # como sucesso com ressalva.
             return ResultadoExtracao(
                 False,
-                f"O banco de mensagens FOI obtido ({banco.stat().st_size} bytes, em "
-                f"'{PASTA}/extraido')." + nao_restaurado,
+                self._t("lg_wd_banco_sem_restaurar", bytes=banco.stat().st_size, pasta=PASTA)
+                + nao_restaurado,
                 pasta,
                 {"restauracao_pendente": True, "arquivos_extraidos": len(extraidos)},
             )
 
-        self.log(f"[CONCLUÍDO] msgstore.db obtido: {banco.stat().st_size} bytes.")
+        self.log(self._t("lg_concluido",
+                         valor=self._t("lg_wd_concluido_log", bytes=banco.stat().st_size)))
         return ResultadoExtracao(
             True,
-            f"Banco de mensagens do WhatsApp obtido em claro ({banco.stat().st_size} bytes), "
-            f"com {len(extraidos)} arquivo(s) da área privada do aplicativo. O aplicativo "
-            f"original ({nome_original}) foi reinstalado e conferido.",
+            self._t("lg_wd_msg_ok", bytes=banco.stat().st_size, n=len(extraidos),
+                    nome=nome_original),
             pasta,
             {
                 "arquivos_extraidos": len(extraidos),
