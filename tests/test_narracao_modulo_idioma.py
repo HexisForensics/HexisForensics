@@ -62,6 +62,17 @@ msg_pt = (ext._t("lg_estado_msg", n=5) + ext._t("lg_estado_com_captura"))
 checar("mensagem PT idêntica",
        msg_pt == "Estado inicial registrado: 5 item(ns) de estado, com captura de tela.")
 
+print("\n[3b] A narração compartilhada da base Android no idioma do selo")
+from core.idioma import traduzir as _t  # noqa: E402
+checar("fidelidade EN", _t("lg_ab_fidelidade_ok", "en", n=3) == "    Fidelity confirmed: 3 file(s) identical to the source.")
+checar("fidelidade PT idêntica",
+       _t("lg_ab_fidelidade_ok", "pt", n=3) == "    Fidelidade confirmada: 3 arquivo(s) identicos a origem.")
+checar("inventário EN",
+       _t("lg_ab_origem_inventariada", "en", metodo="find", n=5, caminho="/sdcard")
+       == "    Source inventoried via 'find': 5 file(s) in /sdcard")
+checar("scoped storage EN em inglês",
+       "no longer exposes" in _t("lg_ab_restricao_scoped", "en", api=33, caminho="/sdcard/Android/data"))
+
 print("\n[4] Os marcadores compartilhados")
 checar("concluído EN", ext._t("lg_concluido", valor="x") == "[CONCLUÍDO] x")  # ext ainda em pt
 ext._idi_selo = "en"

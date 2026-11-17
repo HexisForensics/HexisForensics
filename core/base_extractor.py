@@ -156,6 +156,11 @@ class BaseExtractor(ABC):
     # Competência técnica que a operação deste módulo exige.
     perfil_minimo: Perfil = Perfil.DEFR
 
+    # Idioma em que a narração deste módulo é escrita (ver __init__). Atributo
+    # de classe para que exista mesmo quando um teste constrói o extrator por
+    # um caminho que não passa pelo __init__; None cai para o idioma ativo.
+    _idi_selo: Optional[str] = None
+
     # ------------------------------------------------------------------
     # Metadados no idioma pedido (i18n — Fase 4).
     #

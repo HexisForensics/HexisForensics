@@ -312,13 +312,7 @@ class AndroidExtractor(BaseExtractor):
         if not abrange:
             return ""
 
-        return (
-            f"Aparelho com Android API {api}: a partir do Android 11 (API 30) o sistema "
-            f"nao expoe {CAMINHO_DADOS_DE_APP} ao shell do ADB. Os dados privados dos "
-            "aplicativos NAO foram adquiridos por este caminho, e a copia obtida NAO "
-            "abrange essa subarvore. A ausencia desses dados aqui decorre de restricao "
-            "do sistema, e nao autoriza concluir que o aparelho nao os continha."
-        )
+        return self._t("lg_ab_restricao_scoped", api=api, caminho=CAMINHO_DADOS_DE_APP)
 
     def contar_perfis_de_usuario(self) -> Optional[int]:
         """
@@ -526,7 +520,7 @@ class AndroidExtractor(BaseExtractor):
 
         # Aparelho sem `find`: a alternativa recupera a reconciliação, que
         # de outro modo ficaria indisponível em todo Android antigo.
-        self.log("    Aparelho sem 'find'; inventariando a origem por 'ls -R'.")
+        self.log(self._t("lg_ab_sem_find"))
         alternativa = self._inventariar_por_ls(caminho_remoto)
         if alternativa.disponivel:
             return alternativa
@@ -814,12 +808,12 @@ class AndroidExtractor(BaseExtractor):
             # tem no aparelho.
             no_destino[aquisicao.nomes_trocados.get(chave, chave)] = valor
 
-        self.log("    Verificando fidelidade da copia contra o aparelho...")
+        self.log(self._t("lg_ab_fidelidade_verificando"))
         na_origem, motivo = self.hashear_na_origem(caminho_remoto, sorted(no_destino))
 
         if na_origem is None:
             aquisicao.verificacao_na_origem = f"NAO realizada: {motivo}"
-            self.log(f"    [RESSALVA] Fidelidade nao verificada na origem: {motivo}.")
+            self.log(self._t("lg_ab_fidelidade_nao_verificada", motivo=motivo))
             return
 
         divergentes = [
@@ -836,12 +830,10 @@ class AndroidExtractor(BaseExtractor):
         )
 
         if divergentes:
-            self.log(
-                f"    [ALERTA] {len(divergentes)} arquivo(s) DIVERGEM do aparelho: "
-                f"{', '.join(divergentes[:5])}"
-            )
+            self.log(self._t("lg_ab_divergem", n=len(divergentes),
+                             amostra=', '.join(divergentes[:5])))
         else:
-            self.log(f"    Fidelidade confirmada: {len(na_origem)} arquivo(s) identicos a origem.")
+            self.log(self._t("lg_ab_fidelidade_ok", n=len(na_origem)))
 
     @staticmethod
     def _chave_relativa(caminho_relativo: str, base_remota: str) -> str:
@@ -876,7 +868,7 @@ class AndroidExtractor(BaseExtractor):
         tamanho_origem = self.estimar_tamanho_origem(caminho_remoto)
         tem_espaco, motivo_espaco = verificar_espaco(destino_local, tamanho_origem)
         if not tem_espaco:
-            self.log(f"    [FALHA] {motivo_espaco}")
+            self.log(self._t("lg_ab_falha_espaco", motivo=motivo_espaco))
             return ResultadoAquisicao(
                 copia=ResultadoPull(
                     caminho_remoto=caminho_remoto,
@@ -892,18 +884,17 @@ class AndroidExtractor(BaseExtractor):
             )
 
         if tamanho_origem:
-            self.log(f"    Origem ocupa aproximadamente {formatar_bytes(tamanho_origem)}.")
+            self.log(self._t("lg_ab_origem_ocupa", valor=formatar_bytes(tamanho_origem)))
 
         inventario = self.inventariar_origem(caminho_remoto)
         arquivos_origem = inventario.arquivos
 
         if inventario.disponivel:
-            self.log(
-                f"    Origem inventariada por '{inventario.metodo}': "
-                f"{len(arquivos_origem)} arquivo(s) em {caminho_remoto}"
-            )
+            self.log(self._t("lg_ab_origem_inventariada", metodo=inventario.metodo,
+                             n=len(arquivos_origem), caminho=caminho_remoto))
         elif inventario.motivo_indisponivel:
-            self.log(f"    Inventário da origem indisponível ({inventario.motivo_indisponivel}).")
+            self.log(self._t("lg_ab_inventario_indisponivel",
+                             motivo=inventario.motivo_indisponivel))
 
         copia = self.copiar_caminho(caminho_remoto, destino_local, faixa_progresso)
 
@@ -920,19 +911,16 @@ class AndroidExtractor(BaseExtractor):
             if aquisicao.faltantes and copia.situacao in (SituacaoPull.OK, SituacaoPull.ERRO):
                 self._recuperar_faltantes(caminho_remoto, Path(destino_local), aquisicao)
             if aquisicao.faltantes:
-                self.log(
-                    f"    [RESSALVA] {len(aquisicao.faltantes)} arquivo(s) existiam na origem e "
-                    "NÃO chegaram ao destino."
-                )
+                self.log(self._t("lg_ab_faltantes", n=len(aquisicao.faltantes)))
                 for nome in aquisicao.faltantes[:5]:
                     motivo = aquisicao.motivos_dos_faltantes.get(nome)
                     if motivo:
-                        self.log(f"        {nome}: {motivo}")
+                        self.log(self._t("lg_ab_faltante_motivo", nome=nome, motivo=motivo))
 
         restricao = self.restricao_de_dados_de_app(caminho_remoto)
         if restricao:
             aquisicao.restricao_do_sistema = restricao
-            self.log(f"    [RESSALVA] {restricao}")
+            self.log(self._t("lg_ab_ressalva", valor=restricao))
 
         aquisicao.hashes = self._hashear_destino(destino_local)
         self.verificar_fidelidade(caminho_remoto, destino_local, aquisicao)
@@ -961,10 +949,7 @@ class AndroidExtractor(BaseExtractor):
         base_remota = caminho_remoto.rstrip("/").rsplit("/", 1)[-1]
         raiz_local = destino_local / base_remota
         total = len(aquisicao.faltantes)
-        self.log(
-            f"    A cópia em bloco deixou {total} arquivo(s) para trás. "
-            "Lendo cada um individualmente..."
-        )
+        self.log(self._t("lg_ab_bloco_deixou", total=total))
 
         restantes = []
         for relativo in aquisicao.faltantes:
@@ -990,14 +975,11 @@ class AndroidExtractor(BaseExtractor):
                 aquisicao.recuperados_um_a_um += 1
                 if gravado_como != relativo:
                     aquisicao.nomes_trocados[gravado_como] = relativo
-                    self.log(f"    [NOME ALTERADO] '{relativo}' gravado como '{local.name}': "
-                             "o Windows não aceita o nome original nesta pasta.")
+                    self.log(self._t("lg_ab_nome_alterado", relativo=relativo, nome=local.name))
 
         aquisicao.faltantes = restantes
-        self.log(
-            f"    Leitura individual: {aquisicao.recuperados_um_a_um} recuperado(s), "
-            f"{len(restantes)} ainda ausente(s)."
-        )
+        self.log(self._t("lg_ab_leitura_individual",
+                         recuperados=aquisicao.recuperados_um_a_um, restantes=len(restantes)))
 
         # A contagem em disco é a fonte da verdade, e mudou.
         arquivos = [a for a in destino_local.rglob("*") if a.is_file()]
@@ -1133,7 +1115,7 @@ class AndroidExtractor(BaseExtractor):
                 "\n".join(relatorio) + "\n", encoding="utf-8"
             )
         except OSError as exc:
-            self.log(f"    [AVISO] Não foi possível gravar a prova de aquisição: {exc}")
+            self.log(self._t("lg_ab_prova_erro", exc=exc))
 
     @staticmethod
     def _descrever_completude(aquisicao: ResultadoAquisicao) -> str:
@@ -1241,10 +1223,9 @@ class AndroidExtractor(BaseExtractor):
         except (ValueError, AttributeError):
             pass
 
-        self.log(
-            f"[*] Dispositivo: {especs.fabricante} {especs.modelo} — "
-            f"Android {especs.versao_android or '?'} (API {especs.versao_sdk or '?'})"
-        )
+        self.log(self._t("lg_ab_dispositivo", fabricante=especs.fabricante,
+                         modelo=especs.modelo, versao=especs.versao_android or '?',
+                         sdk=especs.versao_sdk or '?'))
         return sdk
 
     def tentar_fallback_backup(
