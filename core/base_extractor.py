@@ -229,6 +229,25 @@ class BaseExtractor(ABC):
         self._log_callback: LogCallback = log_callback or (lambda mensagem: None)
         self._progress_callback: ProgressCallback = progress_callback or (lambda percentual: None)
         self._cancelado = False
+        # Idioma em que a narração deste módulo é escrita. É SELADO (vai para o
+        # extracao.log e a mensagem do resultado entra no desfecho), por isso
+        # segue o carimbo do caso. Definido no início de `executar` por
+        # `definir_idioma_do_selo`; None até lá cai para o idioma ativo.
+        self._idi_selo: Optional[str] = None
+
+    def definir_idioma_do_selo(self, pasta_caso) -> None:
+        """Lê o idioma carimbado no caso e o fixa para a narração deste módulo."""
+        from core.case import idioma_para_selar
+        self._idi_selo = idioma_para_selar(pasta_caso)
+
+    def _t(self, chave: str, **campos) -> str:
+        """Texto da `chave` no idioma do selo deste módulo (ou no ativo)."""
+        return traduzir(chave, self._idi_selo, **campos)
+
+    def log_t(self, chave: str, **campos) -> None:
+        """Loga uma frase do catálogo no idioma do selo. A saída crua do
+        aparelho NÃO passa por aqui — vai por `self.log`, intocada."""
+        self.log(self._t(chave, **campos))
 
     # ------------------------------------------------------------------
     # Utilitários usados pelas subclasses durante a execução
