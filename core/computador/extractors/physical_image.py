@@ -126,13 +126,11 @@ class ImagemFisicaExtractor(ComputadorExtractor):
             return disponivel_base, motivo
 
         if not disk_client.usuario_e_administrador():
-            return False, (
-                "A imagem do volume exige privilégios de Administrador — execute o "
-                "HexisForensics como Administrador para usar este módulo."
-            )
+            return False, self._t("lg_pi_sem_admin")
         return True, ""
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         caminho_unidade = self.unidade_obrigatoria()
         pasta_fisica = pasta_caso / "physical"
         pasta_fisica.mkdir(parents=True, exist_ok=True)
@@ -142,7 +140,7 @@ class ImagemFisicaExtractor(ComputadorExtractor):
 
         kernel32 = kernel32_tipado()
 
-        self.log(f"[*] Abrindo dispositivo bruto '{caminho_bruto}' para leitura...")
+        self.log(self._t("lg_pi_abrindo", caminho=caminho_bruto))
         handle = kernel32.CreateFileW(
             caminho_bruto,
             GENERIC_READ,
@@ -155,23 +153,15 @@ class ImagemFisicaExtractor(ComputadorExtractor):
 
         if not handle or handle == INVALID_HANDLE_VALUE:
             erro = kernel32.GetLastError()
-            mensagem = (
-                f"Não foi possível abrir o volume '{caminho_bruto}' para leitura bruta "
-                f"(erro do Windows {erro}). Nenhuma imagem foi gerada. Confirme que o "
-                "processo está rodando como Administrador, que a unidade continua "
-                "conectada e que não está bloqueada por criptografia ou por outro programa."
-            )
-            self.log(f"[FALHA] {mensagem}")
+            mensagem = self._t("lg_pi_nao_abriu", caminho=caminho_bruto, erro=erro)
+            self.log(self._t("lg_falha", valor=mensagem))
             return ResultadoExtracao(False, mensagem, detalhes={"acesso_negado": True})
 
         tamanho_volume = self._obter_tamanho_volume(kernel32, handle)
         if tamanho_volume:
-            self.log(f"[*] Comprimento do volume: {self._formatar(tamanho_volume)}")
+            self.log(self._t("lg_pi_comprimento", valor=self._formatar(tamanho_volume)))
         else:
-            self.log(
-                "[RESSALVA] Não foi possível obter o comprimento do volume. A aquisição "
-                "prossegue, mas sem conferência de completude do tamanho final."
-            )
+            self.log(self._t("lg_ressalva", valor=self._t("lg_pi_sem_comprimento")))
 
         erro_leitura: Optional[int] = None
         try:
@@ -181,8 +171,8 @@ class ImagemFisicaExtractor(ComputadorExtractor):
                 bytes_lidos = ctypes.c_uint32(0)
                 blocos = 0
 
-                self.log("\n[*] Iniciando a clonagem bit-a-bit do volume...")
-                self.log("[*] Transmitindo blocos. AGUARDE (pode levar muito tempo)...")
+                self.log(self._t("lg_pi_iniciando"))
+                self.log(self._t("lg_pi_transmitindo"))
 
                 while not self.cancelado:
                     sucesso = kernel32.ReadFile(
@@ -208,9 +198,8 @@ class ImagemFisicaExtractor(ComputadorExtractor):
                     # total: uma leitura curta desalinha o total e o aviso
                     # de progresso some sem que nada indique isso.
                     if blocos % BLOCOS_ENTRE_AVISOS == 0:
-                        self.log(
-                            f"  -> {self._formatar(escritor.bytes_gravados)} transmitidos..."
-                        )
+                        self.log(self._t("lg_pi_progresso",
+                                         valor=self._formatar(escritor.bytes_gravados)))
 
                 bytes_gravados = escritor.bytes_gravados
                 hash_imagem = escritor.hash_hex
@@ -219,16 +208,13 @@ class ImagemFisicaExtractor(ComputadorExtractor):
 
         # --- Hash gravado antes de qualquer conclusão ---------------------
         caminho_hash = gravar_hash_avulso(caminho_imagem, hash_imagem)
-        self.log(f"[*] SHA-256 do que foi gravado: {hash_imagem}")
-        self.log(f"[*] Hash gravado em: {caminho_hash.name}")
+        self.log(self._t("lg_pi_sha", hash=hash_imagem))
+        self.log(self._t("lg_px_hash_gravado", nome=caminho_hash.name))
 
         if erro_leitura is not None:
-            mensagem = (
-                f"Erro de leitura do volume após {self._formatar(bytes_gravados)} "
-                f"(erro do Windows {erro_leitura}). A imagem está INCOMPLETA e não "
-                "deve ser usada como cópia fiel do volume."
-            )
-            self.log(f"[FALHA] {mensagem}")
+            mensagem = self._t("lg_pi_erro_leitura",
+                               valor=self._formatar(bytes_gravados), erro=erro_leitura)
+            self.log(self._t("lg_falha", valor=mensagem))
             return ResultadoExtracao(
                 False,
                 mensagem,
@@ -243,11 +229,8 @@ class ImagemFisicaExtractor(ComputadorExtractor):
             )
 
         if self.cancelado:
-            mensagem = (
-                f"Extração cancelada pelo usuário após {self._formatar(bytes_gravados)}. "
-                "A imagem está INCOMPLETA."
-            )
-            self.log(f"[!] {mensagem}")
+            mensagem = self._t("lg_pi_cancelada", valor=self._formatar(bytes_gravados))
+            self.log(self._t("lg_cl_sem_pastas_log", valor=mensagem))
             return ResultadoExtracao(
                 False,
                 mensagem,
@@ -265,7 +248,7 @@ class ImagemFisicaExtractor(ComputadorExtractor):
         self.progresso(100)
 
         if not completa:
-            self.log(f"[FALHA] {ressalva}")
+            self.log(self._t("lg_falha", valor=ressalva))
             return ResultadoExtracao(
                 False,
                 ressalva,
@@ -278,10 +261,7 @@ class ImagemFisicaExtractor(ComputadorExtractor):
                 },
             )
 
-        mensagem = (
-            f"Imagem do volume gerada ({self._formatar(bytes_gravados)}). "
-            f"SHA-256: {hash_imagem}"
-        )
+        mensagem = self._t("lg_pi_msg_ok", valor=self._formatar(bytes_gravados), hash=hash_imagem)
         detalhes = {
             "bytes": bytes_gravados,
             "esperado": tamanho_volume,
@@ -289,11 +269,11 @@ class ImagemFisicaExtractor(ComputadorExtractor):
             "volume": caminho_bruto,
         }
         if ressalva:
-            mensagem += f" | Ressalva: {ressalva}"
-            self.log(f"[RESSALVA] {ressalva}")
+            mensagem += self._t("lg_px_ress_sep", ressalva=ressalva)
+            self.log(self._t("lg_ressalva", valor=ressalva))
             detalhes["copia_incompleta"] = ressalva
 
-        self.log("[CONCLUÍDO] Imagem do volume finalizada e integridade registrada.")
+        self.log(self._t("lg_concluido", valor=self._t("lg_pi_concluido")))
         return ResultadoExtracao(
             True, mensagem, caminho_saida=caminho_imagem, detalhes=detalhes
         )
@@ -327,8 +307,7 @@ class ImagemFisicaExtractor(ComputadorExtractor):
             return None
         return tamanho.value
 
-    @staticmethod
-    def _conferir_tamanho(gravados: int, esperado: Optional[int]) -> Tuple[bool, str]:
+    def _conferir_tamanho(self, gravados: int, esperado: Optional[int]) -> Tuple[bool, str]:
         """
         Compara o gravado com o comprimento do volume. Devolve
         `(completa, ressalva)`.
@@ -336,45 +315,27 @@ class ImagemFisicaExtractor(ComputadorExtractor):
         A regra é a mesma da extração física do Android, pela mesma razão.
         Falta pode vir de arredondamento do dispositivo; **excesso só pode
         vir de bytes que não são do volume**, e por isso é sempre fatal.
-        Lá isso apareceu na primeira execução real, com a mensagem de
-        diagnóstico do `dd` colada dentro da imagem.
         """
         if gravados == 0:
-            return False, (
-                "Nenhum byte foi lido do volume. Não há imagem: o arquivo gerado está "
-                "vazio e não constitui cópia de coisa alguma."
-            )
+            return False, self._t("lg_pi_zero")
 
         if not esperado:
-            return True, (
-                "Comprimento do volume não pôde ser obtido do dispositivo; a completude "
-                "da imagem não foi verificada."
-            )
+            return True, self._t("lg_pi_tam_nao_obtido")
 
         if gravados == esperado:
             return True, ""
 
         if gravados > esperado:
             excedente = gravados - esperado
-            return False, (
-                f"Imagem MAIOR que o volume: {ImagemFisicaExtractor._formatar(gravados)} "
-                f"contra {ImagemFisicaExtractor._formatar(esperado)} — {excedente} byte(s) "
-                "a mais. Bytes que não pertencem ao volume entraram no fluxo. A imagem "
-                "NÃO é cópia fiel e não deve ser usada como evidência."
-            )
+            return False, self._t("lg_pi_tam_maior", gravados=self._formatar(gravados),
+                                   esperado=self._formatar(esperado), excedente=excedente)
 
         proporcao = gravados / esperado
         if proporcao >= MARGEM_TOLERANCIA:
-            return True, (
-                f"Imagem com {proporcao:.2%} do comprimento do volume — diferença dentro "
-                "da margem, mas convém conferir antes do uso pericial."
-            )
+            return True, self._t("lg_pi_tam_margem", proporcao=f"{proporcao:.2%}")
 
-        return False, (
-            f"Imagem incompleta: {proporcao:.2%} do comprimento do volume "
-            f"({ImagemFisicaExtractor._formatar(gravados)} de "
-            f"{ImagemFisicaExtractor._formatar(esperado)})."
-        )
+        return False, self._t("lg_pi_tam_incompleta", proporcao=f"{proporcao:.2%}",
+                              gravados=self._formatar(gravados), esperado=self._formatar(esperado))
 
     @staticmethod
     def _formatar(quantidade_bytes: int) -> str:

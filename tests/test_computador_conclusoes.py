@@ -99,7 +99,7 @@ else:
 # ---------------------------------------------------------------------------
 print("\n[2] A conferencia de tamanho da imagem")
 # ---------------------------------------------------------------------------
-conferir = ImagemFisicaExtractor._conferir_tamanho
+conferir = ImagemFisicaExtractor()._conferir_tamanho
 
 completa, motivo = conferir(0, 1000)
 checar("zero byte lido e FALHA, nunca imagem", not completa)

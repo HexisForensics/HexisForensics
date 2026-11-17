@@ -103,10 +103,10 @@ class ComputadorExtractor(BaseExtractor):
 
     def disponivel(self) -> Tuple[bool, str]:
         if not disk_client.rodando_no_windows():
-            return False, "Este módulo funciona apenas no Windows."
+            return False, self._t("lg_cb_so_windows")
 
         if not self.caminho_unidade:
-            return False, "Nenhuma unidade de disco foi selecionada."
+            return False, self._t("lg_cb_sem_unidade")
 
         status = self.device.verificar_unidade(self.caminho_unidade)
         if not status.disponivel:

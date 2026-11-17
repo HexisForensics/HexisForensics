@@ -65,37 +65,35 @@ class IndiceArquivosExtractor(ComputadorExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         raiz_unidade = Path(self.unidade_obrigatoria())
         pasta_destino = pasta_caso / "indice"
         pasta_destino.mkdir(parents=True, exist_ok=True)
         caminho_csv = pasta_destino / NOME_INDICE
         pastas_ignoradas = self.pastas_a_ignorar(pasta_caso)
 
-        self.log(
-            f"[*] Enumerando arquivos em '{raiz_unidade}' (isso pode demorar bastante)..."
-        )
+        self.log(self._t("lg_fi_enumerando", raiz=raiz_unidade))
         arquivos, pastas_negadas = self._enumerar_arquivos(
             raiz_unidade, pastas_ignoradas
         )
         total = len(arquivos)
-        self.log(
-            f"[*] {total} arquivo(s) encontrado(s). Calculando hashes e gravando o índice..."
-        )
+        self.log(self._t("lg_fi_encontrados", total=total))
 
         gravados = 0
         pulados = 0
         with open(caminho_csv, "w", newline="", encoding="utf-8") as arquivo_csv:
             escritor = csv.writer(arquivo_csv)
             escritor.writerow(
-                ["caminho", "tamanho_bytes", "modificado_em", "criado_em", "sha256"]
+                [self._t("lg_fi_col_caminho"), self._t("lg_fi_col_tamanho"),
+                 self._t("lg_fi_col_modificado"), self._t("lg_fi_col_criado"),
+                 self._t("lg_fi_col_sha")]
             )
 
             for indice, caminho in enumerate(arquivos, 1):
                 if self.cancelado:
                     return ResultadoExtracao(
                         False,
-                        f"Extração cancelada pelo usuário ({gravados} de {total} "
-                        "arquivo(s) indexado(s)). O índice está INCOMPLETO.",
+                        self._t("lg_fi_cancelada", gravados=gravados, total=total),
                         caminho_saida=pasta_destino,
                         detalhes={"incompleta": True, "cancelada": True},
                     )
@@ -118,10 +116,10 @@ class IndiceArquivosExtractor(ComputadorExtractor):
                     gravados += 1
                 except OSError as exc:
                     pulados += 1
-                    self.log(f"    [!] Pulado (sem acesso): {caminho} — {exc}")
+                    self.log(self._t("lg_fi_pulado", caminho=caminho, exc=exc))
 
                 if indice % 200 == 0 or indice == total:
-                    self.log(f"  -> {indice}/{total} processado(s)")
+                    self.log(self._t("lg_fi_progresso", indice=indice, total=total))
                 if total:
                     self.progresso(int(indice / total * 100))
 
@@ -141,32 +139,20 @@ class IndiceArquivosExtractor(ComputadorExtractor):
         if gravados == 0:
             if recusas:
                 detalhes["acesso_negado"] = recusas
-                mensagem = (
-                    f"Nenhum arquivo pôde ser indexado: {recusas} recusa(s) de acesso "
-                    "do sistema. O índice está vazio por impedimento, e nada se pode "
-                    "afirmar sobre o conteúdo da unidade."
-                )
+                mensagem = self._t("lg_fi_vazio_recusa", recusas=recusas)
             else:
-                mensagem = (
-                    "Nenhum arquivo foi encontrado na unidade selecionada, e nenhum "
-                    "acesso foi negado. O índice está vazio porque a unidade não tem "
-                    "arquivos ao alcance desta varredura."
-                )
-            self.log(f"[FALHA] {mensagem}")
+                mensagem = self._t("lg_fi_vazio")
+            self.log(self._t("lg_falha", valor=mensagem))
             return ResultadoExtracao(
                 False, mensagem, caminho_saida=caminho_csv, detalhes=detalhes
             )
 
-        mensagem = f"Índice gerado com {gravados} arquivo(s)."
+        mensagem = self._t("lg_fi_msg_ok", gravados=gravados)
         if recusas:
             detalhes["acesso_negado"] = recusas
-            mensagem += (
-                f" RESSALVA: {pulados} arquivo(s) e {pastas_negadas} pasta(s) não "
-                "puderam ser lidos por recusa do sistema; o que ficou de fora do "
-                "índice por esse motivo não é ausência no disco."
-            )
+            mensagem += self._t("lg_fi_ress", pulados=pulados, pastas=pastas_negadas)
 
-        self.log(f"[CONCLUÍDO] {mensagem}")
+        self.log(self._t("lg_concluido", valor=mensagem))
         return ResultadoExtracao(
             True, mensagem, caminho_saida=caminho_csv, detalhes=detalhes
         )
@@ -188,7 +174,7 @@ class IndiceArquivosExtractor(ComputadorExtractor):
         def _ao_erro(erro: OSError) -> None:
             nonlocal pastas_negadas
             pastas_negadas += 1
-            self.log(f"    [!] Pasta sem acesso: {erro.filename} — {erro}")
+            self.log(self._t("lg_cl_pasta_sem_acesso", filename=erro.filename, erro=erro))
 
         for pasta_atual, subpastas, nomes_arquivos in os.walk(
             raiz_unidade, onerror=_ao_erro, followlinks=False
@@ -199,9 +185,7 @@ class IndiceArquivosExtractor(ComputadorExtractor):
                 pasta_atual, subpastas, pastas_ignoradas
             )
             for excluida in excluidas:
-                self.log(
-                    f"    [!] Pasta da própria suíte excluída do índice: {excluida}"
-                )
+                self.log(self._t("lg_fi_pasta_suite", excluida=excluida))
             for nome in nomes_arquivos:
                 arquivos.append(Path(pasta_atual) / nome)
 

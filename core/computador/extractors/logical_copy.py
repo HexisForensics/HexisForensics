@@ -121,20 +121,18 @@ class CopiaLogicaExtractor(ComputadorExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         raiz_unidade = Path(self.unidade_obrigatoria())
         pasta_destino = pasta_caso / "copia_logica"
         pasta_destino.mkdir(parents=True, exist_ok=True)
         pastas_ignoradas = self.pastas_a_ignorar(pasta_caso)
 
-        self.log(f"[*] Procurando pastas de usuário em '{raiz_unidade}'...")
+        self.log(self._t("lg_cl_procurando", raiz=raiz_unidade))
         candidatos = self._localizar_pastas_alvo(raiz_unidade)
 
         if not candidatos:
-            mensagem = (
-                "Nenhuma pasta de usuário reconhecida (Documentos/Desktop/Downloads/"
-                "Imagens) foi encontrada na unidade selecionada."
-            )
-            self.log(f"[!] {mensagem}")
+            mensagem = self._t("lg_cl_sem_pastas")
+            self.log(self._t("lg_cl_sem_pastas_log", valor=mensagem))
             return ResultadoExtracao(False, mensagem, caminho_saida=pasta_destino)
 
         # O que a copia NAO vai levar, levantado antes de comecar. Um
@@ -145,19 +143,14 @@ class CopiaLogicaExtractor(ComputadorExtractor):
             raiz_unidade, candidatos, pastas_ignoradas
         )
         if fora_do_alcance:
-            self.log(
-                f"[!] {len(fora_do_alcance)} item(ns) na raiz da unidade estao FORA "
-                "do alcance deste modulo (ele so copia pastas de usuario)."
-            )
+            self.log(self._t("lg_cl_fora_log", n=len(fora_do_alcance)))
 
-        self.log(
-            "[*] Contando arquivos a copiar (pode demorar um pouco em pastas grandes)..."
-        )
+        self.log(self._t("lg_cl_contando"))
         self._total_arquivos = sum(
             self._contar_arquivos(origem, pastas_ignoradas) for _, origem in candidatos
         )
         self._arquivos_processados = 0
-        self.log(f"[*] {self._total_arquivos} arquivo(s) a copiar.")
+        self.log(self._t("lg_cl_a_copiar", n=self._total_arquivos))
 
         arquivos_copiados = 0
         arquivos_pulados_nuvem = 0
@@ -172,16 +165,14 @@ class CopiaLogicaExtractor(ComputadorExtractor):
             if self.cancelado:
                 return ResultadoExtracao(
                     False,
-                    f"Extração cancelada pelo usuário ({arquivos_copiados} arquivo(s) "
-                    "copiado(s)). A cópia está INCOMPLETA.",
+                    self._t("lg_cl_cancelada", n=arquivos_copiados),
                     caminho_saida=pasta_destino,
                     detalhes={"incompleta": True, "cancelada": True},
                 )
 
             destino = pasta_destino / rotulo
-            self.log(
-                f" -> Copiando '{origem}' -> '{destino.relative_to(pasta_caso)}'..."
-            )
+            self.log(self._t("lg_cl_copiando", origem=origem,
+                             destino=destino.relative_to(pasta_caso)))
             try:
                 copiados, pulados, negados = self._copiar_pasta(
                     origem, destino, pastas_ignoradas
@@ -204,9 +195,9 @@ class CopiaLogicaExtractor(ComputadorExtractor):
                 # O caminho de origem, sempre: e o que identifica a pasta
                 # no disco periciado.
                 pastas_com_falha.append(str(origem))
-                self.log(f"    [!] Falha ao copiar '{origem}': {exc}")
+                self.log(self._t("lg_cl_falha_copiar", origem=origem, exc=exc))
 
-        self.log("\n[*] Gerando manifesto de hashes SHA-256 da cópia...")
+        self.log(self._t("lg_cl_manifesto"))
         gerar_manifesto(
             pasta_destino,
             log_callback=self.log,
@@ -223,52 +214,31 @@ class CopiaLogicaExtractor(ComputadorExtractor):
         if arquivos_negados:
             detalhes["acesso_negado"] = arquivos_negados
         if fora_do_alcance:
-            detalhes["itens_fora_do_alcance"] = (
-                f"{len(fora_do_alcance)} item(ns) na raiz da unidade não entram "
-                "nesta cópia, que só alcança pastas de usuário reconhecidas: "
-                + ", ".join(fora_do_alcance)
-            )
+            detalhes["itens_fora_do_alcance"] = self._t(
+                "lg_cl_fora_detalhe", n=len(fora_do_alcance), lista=", ".join(fora_do_alcance))
         if pastas_com_falha:
-            detalhes["copia_incompleta"] = (
-                "Pasta(s) que não puderam ser copiadas: " + ", ".join(pastas_com_falha)
-            )
+            detalhes["copia_incompleta"] = self._t(
+                "lg_cl_incompleta_detalhe", lista=", ".join(pastas_com_falha))
 
         if arquivos_copiados == 0:
             return ResultadoExtracao(
                 False,
-                f"Pastas encontradas, porém nenhum arquivo pôde ser copiado "
-                f"({arquivos_negados} recusa(s) de acesso; ver log de erros).",
+                self._t("lg_cl_nada_msg", n=arquivos_negados),
                 caminho_saida=pasta_destino,
                 detalhes=detalhes,
             )
 
-        mensagem = f"Cópia lógica concluída ({arquivos_copiados} arquivo(s))."
+        mensagem = self._t("lg_cl_msg_ok", n=arquivos_copiados)
         if arquivos_pulados_nuvem:
-            mensagem += (
-                f" {arquivos_pulados_nuvem} arquivo(s) sob demanda na nuvem pulado(s): "
-                "o conteúdo não estava fisicamente no disco."
-            )
+            mensagem += self._t("lg_cl_nuvem", n=arquivos_pulados_nuvem)
         if arquivos_negados:
-            mensagem += (
-                f" RESSALVA: {arquivos_negados} item(ns) não puderam ser lidos por "
-                "recusa do sistema; o que faltar na cópia por esse motivo não é "
-                "ausência no disco."
-            )
+            mensagem += self._t("lg_cl_ress_negado", n=arquivos_negados)
         if fora_do_alcance:
-            mensagem += (
-                f" RESSALVA: {len(fora_do_alcance)} item(ns) na raiz da unidade "
-                "ficaram fora — este módulo só copia pastas de usuário reconhecidas. "
-                "Numa mídia removível o material costuma estar justamente na raiz; "
-                "para alcançá-lo, use o Índice de Arquivos ou a Imagem do Volume."
-            )
+            mensagem += self._t("lg_cl_ress_fora", n=len(fora_do_alcance))
         if pastas_com_falha:
-            mensagem += (
-                " RESSALVA: pasta(s) integralmente fora da cópia — "
-                + ", ".join(pastas_com_falha)
-                + "."
-            )
+            mensagem += self._t("lg_cl_ress_pastas", lista=", ".join(pastas_com_falha))
 
-        self.log(f"[CONCLUÍDO] {mensagem}")
+        self.log(self._t("lg_concluido", valor=mensagem))
         return ResultadoExtracao(
             True, mensagem, caminho_saida=pasta_destino, detalhes=detalhes
         )
@@ -409,7 +379,7 @@ class CopiaLogicaExtractor(ComputadorExtractor):
             # rastro no resultado, e a cópia pareceria completa.
             nonlocal negados
             negados += 1
-            self.log(f"    [!] Pasta sem acesso: {erro.filename} — {erro}")
+            self.log(self._t("lg_cl_pasta_sem_acesso", filename=erro.filename, erro=erro))
 
         for pasta_atual, subpastas, nomes_arquivos in os.walk(
             origem, onerror=_ao_erro, followlinks=False
@@ -418,9 +388,7 @@ class CopiaLogicaExtractor(ComputadorExtractor):
                 pasta_atual, subpastas, pastas_ignoradas
             )
             for excluida in excluidas:
-                self.log(
-                    f"    [!] Pasta da própria suíte excluída da cópia: {excluida}"
-                )
+                self.log(self._t("lg_cl_pasta_suite", excluida=excluida))
 
             pasta_atual_path = Path(pasta_atual)
             destino_pasta = destino / pasta_atual_path.relative_to(origem)
@@ -435,9 +403,7 @@ class CopiaLogicaExtractor(ComputadorExtractor):
 
                 if _eh_arquivo_sob_demanda(caminho_origem):
                     pulados_nuvem += 1
-                    self.log(
-                        f"    [!] Pulado (arquivo sob demanda na nuvem, não baixado): {caminho_origem}"
-                    )
+                    self.log(self._t("lg_cl_pulado_nuvem", caminho=caminho_origem))
                     self._registrar_progresso_arquivo()
                     continue
 
@@ -446,9 +412,7 @@ class CopiaLogicaExtractor(ComputadorExtractor):
                     contador += 1
                 except OSError as exc:
                     negados += 1
-                    self.log(
-                        f"    [!] Não foi possível copiar '{caminho_origem}': {exc}"
-                    )
+                    self.log(self._t("lg_cl_nao_copiou", caminho=caminho_origem, exc=exc))
                 self._registrar_progresso_arquivo()
 
         return contador, pulados_nuvem, negados
@@ -458,6 +422,5 @@ class CopiaLogicaExtractor(ComputadorExtractor):
         if self._total_arquivos:
             self.progresso(int(self._arquivos_processados / self._total_arquivos * 80))
         if self._arquivos_processados % INTERVALO_LOG_PROGRESSO == 0:
-            self.log(
-                f"  -> {self._arquivos_processados}/{self._total_arquivos} arquivo(s) processado(s)"
-            )
+            self.log(self._t("lg_cl_progresso", n=self._arquivos_processados,
+                             total=self._total_arquivos))

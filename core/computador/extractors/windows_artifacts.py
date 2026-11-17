@@ -129,17 +129,18 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         raiz_unidade = Path(self.unidade_obrigatoria())
         pasta_destino = pasta_caso / "artefatos_windows"
         pasta_destino.mkdir(parents=True, exist_ok=True)
 
         etapas = (
-            ("Registro", self._coletar_registro),
-            ("Logs de Eventos", self._coletar_logs_evento),
-            ("Lixeira", self._coletar_lixeira),
-            ("Navegadores", self._coletar_navegadores),
-            ("Correio eletrônico", self._coletar_correio),
-            ("Prefetch", self._coletar_prefetch),
+            (self._t("lg_aw_et_registro"), self._coletar_registro),
+            (self._t("lg_aw_et_logs"), self._coletar_logs_evento),
+            (self._t("lg_aw_et_lixeira"), self._coletar_lixeira),
+            (self._t("lg_aw_et_navegadores"), self._coletar_navegadores),
+            (self._t("lg_aw_et_correio"), self._coletar_correio),
+            (self._t("lg_aw_et_prefetch"), self._coletar_prefetch),
         )
 
         copiados_por_etapa: Dict[str, int] = {}
@@ -151,27 +152,27 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
             if self.cancelado:
                 return ResultadoExtracao(
                     False,
-                    "Extração cancelada pelo usuário.",
+                    self._t("lg_cancelada_modulo"),
                     caminho_saida=pasta_destino,
                     detalhes={"incompleta": True, "cancelada": True},
                 )
-            self.log(f"[*] Coletando: {nome_etapa}...")
+            self.log(self._t("lg_aw_coletando", nome=nome_etapa))
             try:
                 copiados, negados = funcao(raiz_unidade, pasta_destino)
             except OSError as exc:
                 # A etapa inteira caiu. Isso não é ausência de artefato:
                 # é impossibilidade de verificar, e conta como recusa.
-                self.log(f"    [!] Falha ao coletar '{nome_etapa}': {exc}")
+                self.log(self._t("lg_aw_falha_etapa", nome=nome_etapa, exc=exc))
                 copiados, negados = 0, 1
 
             copiados_por_etapa[nome_etapa] = copiados
             negados_por_etapa[nome_etapa] = negados
             total_copiado += copiados
             total_negado += negados
-            self.log(
-                f"    -> {nome_etapa}: {copiados} arquivo(s) copiado(s)"
-                + (f", {negados} sem acesso" if negados else "")
-            )
+            linha = self._t("lg_aw_etapa_resultado", nome=nome_etapa, copiados=copiados)
+            if negados:
+                linha += self._t("lg_aw_sem_acesso_suffix", negados=negados)
+            self.log(linha)
             self.progresso(int(indice / len(etapas) * 100))
 
         detalhes: Dict[str, object] = {
@@ -184,42 +185,29 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
         # estrutura procurada. É a única leitura em que a ausência do
         # material autoriza uma conclusão, porque nada foi impedido.
         if total_copiado == 0 and total_negado == 0:
-            mensagem = (
-                "Nenhum artefato do Windows foi encontrado na unidade selecionada, e "
-                "nenhum acesso foi negado — a unidade provavelmente não contém uma "
-                "instalação do Windows."
-            )
-            self.log(f"[!] {mensagem}")
+            mensagem = self._t("lg_aw_nada")
+            self.log(self._t("lg_cl_sem_pastas_log", valor=mensagem))
             return ResultadoExtracao(
                 False, mensagem, caminho_saida=pasta_destino, detalhes=detalhes
             )
 
         if total_copiado == 0:
             detalhes["acesso_negado"] = total_negado
-            mensagem = (
-                f"Nenhum artefato pôde ser copiado: {total_negado} acesso(s) negado(s) "
-                "pelo sistema. Nada se pode afirmar sobre a presença ou ausência desses "
-                "artefatos no disco — execute como Administrador, ou sobre a unidade "
-                "desmontada em outra máquina."
-            )
-            self.log(f"[FALHA] {mensagem}")
+            mensagem = self._t("lg_aw_nada_negado", negados=total_negado)
+            self.log(self._t("lg_falha", valor=mensagem))
             return ResultadoExtracao(
                 False, mensagem, caminho_saida=pasta_destino, detalhes=detalhes
             )
 
         vazias = [nome for nome, quantos in copiados_por_etapa.items() if quantos == 0]
-        mensagem = f"Artefatos coletados: {total_copiado} arquivo(s)."
+        mensagem = self._t("lg_aw_msg_ok", copiados=total_copiado)
         if total_negado:
             detalhes["acesso_negado"] = total_negado
-            mensagem += (
-                f" RESSALVA: {total_negado} arquivo(s) não puderam ser lidos por recusa "
-                "do sistema; sua ausência no material extraído não significa ausência no "
-                "disco."
-            )
+            mensagem += self._t("lg_aw_ress", negados=total_negado)
         if vazias:
-            mensagem += " Categorias sem nenhum arquivo: " + ", ".join(vazias) + "."
+            mensagem += self._t("lg_aw_vazias", lista=", ".join(vazias))
 
-        self.log(f"[CONCLUÍDO] {mensagem}")
+        self.log(self._t("lg_concluido", valor=mensagem))
         return ResultadoExtracao(
             True, mensagem, caminho_saida=pasta_destino, detalhes=detalhes
         )
@@ -241,7 +229,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
         except FileNotFoundError:
             return AUSENTE
         except OSError as exc:
-            self.log(f"    [!] Sem acesso a '{origem}': {exc}")
+            self.log(self._t("lg_aw_sem_acesso", origem=origem, exc=exc))
             return NEGADO
 
         try:
@@ -249,7 +237,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
             shutil.copy2(origem, destino)
             return COPIADO
         except OSError as exc:
-            self.log(f"    [!] Não foi possível copiar '{origem}': {exc}")
+            self.log(self._t("lg_cl_nao_copiou", caminho=origem, exc=exc))
             return NEGADO
 
     def _copiar_com_companheiros(self, origem: Path, destino: Path) -> Tuple[str, int, int]:
@@ -285,9 +273,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
                 negados += 1
 
         if copiados:
-            self.log(
-                f"    -> {origem.name}: {copiados} arquivo(s) companheiro(s) copiado(s)"
-            )
+            self.log(self._t("lg_aw_companheiros", nome=origem.name, copiados=copiados))
         return estado, copiados, negados
 
     def _copiar_arvore(self, origem: Path, destino: Path) -> Tuple[int, int]:
@@ -306,7 +292,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
         except FileNotFoundError:
             return 0, 0
         except OSError as exc:
-            self.log(f"    [!] Sem acesso a '{origem}': {exc}")
+            self.log(self._t("lg_aw_sem_acesso", origem=origem, exc=exc))
             return 0, 1
 
         copiados = 0
@@ -316,7 +302,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
         def _ao_erro(erro: OSError) -> None:
             nonlocal houve_erro_de_walk
             houve_erro_de_walk = True
-            self.log(f"    [!] Pasta sem acesso: {erro.filename} — {erro}")
+            self.log(self._t("lg_cl_pasta_sem_acesso", filename=erro.filename, erro=erro))
 
         for pasta_atual, _subpastas, nomes in os.walk(
             origem, onerror=_ao_erro, followlinks=False
@@ -374,7 +360,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
         try:
             arquivos = sorted(pasta_logs.glob("*.evtx"))
         except OSError as exc:
-            self.log(f"    [!] Sem acesso a '{pasta_logs}': {exc}")
+            self.log(self._t("lg_aw_sem_acesso", origem=pasta_logs, exc=exc))
             return 0, 1
         if not pasta_logs.is_dir():
             return 0, 0
@@ -405,7 +391,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
         try:
             perfis_windows = [p for p in pasta_usuarios.iterdir() if p.is_dir()]
         except OSError as exc:
-            self.log(f"    [!] Sem acesso a '{pasta_usuarios}': {exc}")
+            self.log(self._t("lg_aw_sem_acesso", origem=pasta_usuarios, exc=exc))
             return 0, 1
 
         for perfil in perfis_windows:
@@ -437,7 +423,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
                     else []
                 )
             except OSError as exc:
-                self.log(f"    [!] Sem acesso a '{pasta_firefox}': {exc}")
+                self.log(self._t("lg_aw_sem_acesso", origem=pasta_firefox, exc=exc))
                 negados += 1
                 perfis_firefox = []
 
@@ -481,7 +467,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
         try:
             perfis = [p for p in pasta_usuarios.iterdir() if p.is_dir()]
         except OSError as exc:
-            self.log(f"    [!] Sem acesso a '{pasta_usuarios}': {exc}")
+            self.log(self._t("lg_aw_sem_acesso", origem=pasta_usuarios, exc=exc))
             return 0, 1
 
         copiados = 0
@@ -493,7 +479,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
                 origem = perfil / relativo
                 if not origem.is_dir():
                     continue
-                self.log(f"    -> Acervo de correio: {origem}")
+                self.log(self._t("lg_aw_acervo", origem=origem))
                 obtidos, recusados = self._copiar_arvore(
                     origem, pasta_saida / perfil.name / rotulo
                 )
@@ -516,7 +502,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
         valor = float(total)
         for unidade in ("B", "KiB", "MiB", "GiB"):
             if valor < 1024 or unidade == "GiB":
-                self.log(f"       {valor:.1f} {unidade} copiados")
+                self.log(self._t("lg_aw_volume", valor=f"{valor:.1f}", unidade=unidade))
                 return
             valor /= 1024
 
@@ -535,7 +521,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
                 and (p.name == "Default" or p.name.startswith("Profile "))
             )
         except OSError as exc:
-            self.log(f"    [!] Sem acesso a '{pasta_dados}': {exc}")
+            self.log(self._t("lg_aw_sem_acesso", origem=pasta_dados, exc=exc))
             return []
 
     def _coletar_prefetch(
@@ -546,7 +532,7 @@ class ArtefatosWindowsExtractor(ComputadorExtractor):
         try:
             arquivos = sorted(pasta_prefetch.glob("*.pf"))
         except OSError as exc:
-            self.log(f"    [!] Sem acesso a '{pasta_prefetch}': {exc}")
+            self.log(self._t("lg_aw_sem_acesso", origem=pasta_prefetch, exc=exc))
             return 0, 1
         if not pasta_prefetch.is_dir():
             return 0, 0
