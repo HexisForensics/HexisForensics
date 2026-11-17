@@ -57,24 +57,22 @@ class BackupCompletoExtractorIOS(IOSExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         self.registrar_alteracao(
             pasta_caso,
-            "Pareamento da estação com o iPhone e registro, no aparelho, da data do último "
-            "backup local.",
-            "Condição imposta pelo iOS para entregar o backup local; nenhum dado do usuário "
-            "é alterado.",
+            self._t("lg_ic_alt"),
+            self._t("lg_ic_alt_motivo"),
         )
         desfecho = self.fazer_backup(pasta_caso)
         if desfecho.erro:
             return ResultadoExtracao(
                 False,
-                f"Nenhum backup foi obtido: {desfecho.erro} Isto NÃO significa ausência de "
-                "dados no aparelho.",
+                self._t("lg_ic_sem_backup", erro=desfecho.erro),
                 desfecho.pasta or pasta_caso,
             )
         if not desfecho.arquivos:
             return ResultadoExtracao(
-                False, "O backup terminou sem nenhum arquivo. Nada foi adquirido.",
+                False, self._t("lg_ic_sem_arquivos"),
                 desfecho.pasta,
             )
 
@@ -82,24 +80,16 @@ class BackupCompletoExtractorIOS(IOSExtractor):
         detalhes = {"arquivos_copiados": desfecho.arquivos,
                     "bytes_copiados": desfecho.bytes_copiados,
                     "backup_cifrado": bool(desfecho.cifrado)}
-        mensagem = (
-            f"Backup local do iPhone obtido: {desfecho.arquivos} arquivo(s), "
-            f"{desfecho.bytes_copiados} byte(s), SHA-256 de cada um calculado na aquisição."
-        )
+        mensagem = self._t("lg_ic_msg_ok", arquivos=desfecho.arquivos,
+                           bytes=desfecho.bytes_copiados)
         if desfecho.cifrado:
             detalhes["itens_fora_do_alcance"] = True
-            mensagem += (
-                " O backup está CIFRADO com a senha de backup definida no aparelho: o conteúdo "
-                "só será lido com ela (botão 'Decifrar backup')."
-            )
-            self.log("[RESSALVA] Backup cifrado pelo aparelho — será preciso a senha de backup.")
+            mensagem += self._t("lg_ic_cifrado_msg")
+            self.log(self._t("lg_ressalva", valor=self._t("lg_ic_cifrado_log")))
         else:
             detalhes["itens_fora_do_alcance"] = True
-            mensagem += (
-                " Backup SEM criptografia: o iOS não incluiu " + EXCLUIDO_DO_BACKUP_SEM_CIFRA
-                + "."
-            )
-            self.log("[RESSALVA] Backup sem criptografia — o iOS deixou de fora "
-                     + EXCLUIDO_DO_BACKUP_SEM_CIFRA + ".")
-        self.log(f"[CONCLUÍDO] {mensagem}")
+            excluido = self._t("lg_ib_excluido")
+            mensagem += self._t("lg_ic_sem_cifra_msg", excluido=excluido)
+            self.log(self._t("lg_ressalva", valor=self._t("lg_ic_sem_cifra_log", excluido=excluido)))
+        self.log(self._t("lg_concluido", valor=mensagem))
         return ResultadoExtracao(True, mensagem, desfecho.pasta, detalhes)

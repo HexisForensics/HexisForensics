@@ -63,7 +63,7 @@ class IOSExtractor(BaseExtractor):
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
         return ResultadoExtracao(
             sucesso=False,
-            mensagem=f"{self.nome_exibicao}: módulo sem implementação nesta versão.",
+            mensagem=self._t("lg_ib_sem_implementacao", nome=self.nome_exibicao),
         )
 
     # ------------------------------------------------------------------
@@ -87,23 +87,19 @@ class IOSExtractor(BaseExtractor):
             self.progresso(10 + int(valor * 0.8))
             if valor >= ultimo[0] + 10:
                 ultimo[0] = valor
-                self.log(f"    backup: {valor}%")
+                self.log(self._t("lg_ib_backup_pct", valor=valor))
 
-        self.log("[*] Fazendo o backup local do iPhone (mantenha o cabo conectado e a tela "
-                 "desbloqueada; pode levar muitos minutos)...")
+        self.log(self._t("lg_ib_fazendo"))
         try:
             desfecho.pasta = self.client.fazer_backup(destino, progresso)
         except ErroIOS as erro:
             desfecho.erro = str(erro)
             if getattr(erro, "original", ""):
-                self.log(f"    resposta do iPhone: {erro.original}")
+                self.log(self._t("lg_ib_resposta", valor=erro.original))
             return desfecho
 
         if not (desfecho.pasta / backup_ios.NOME_MANIFEST_PLIST).is_file():
-            desfecho.erro = (
-                "O backup terminou sem o Manifest.plist: o material não é um backup completo "
-                "e não será interpretado."
-            )
+            desfecho.erro = self._t("lg_ib_sem_manifest")
             return desfecho
         try:
             desfecho.cifrado = backup_ios.esta_cifrado(desfecho.pasta)
@@ -111,7 +107,7 @@ class IOSExtractor(BaseExtractor):
             desfecho.erro = str(erro)
             return desfecho
 
-        self.log("[*] Calculando o SHA-256 de cada arquivo do backup...")
+        self.log(self._t("lg_ib_calculando_sha"))
         for arquivo in sorted(p for p in desfecho.pasta.rglob("*") if p.is_file()):
             tamanho = arquivo.stat().st_size
             desfecho.hashes.append(

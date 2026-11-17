@@ -65,14 +65,15 @@ class IdentificacaoExtractorIOS(IOSExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta = Path(pasta_caso) / PASTA_IDENTIFICACAO
         pasta.mkdir(parents=True, exist_ok=True)
         try:
             valores = self.client.informacoes()
         except ErroIOS as erro:
-            return ResultadoExtracao(False, f"O iPhone não se identificou: {erro}", pasta)
+            return ResultadoExtracao(False, self._t("lg_ii_nao_identificou", erro=erro), pasta)
         if not valores:
-            return ResultadoExtracao(False, "O iPhone respondeu sem nenhuma informação.", pasta)
+            return ResultadoExtracao(False, self._t("lg_ii_sem_info"), pasta)
 
         (pasta / "informacoes_do_ios.json").write_text(
             json.dumps(valores, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8"
@@ -81,7 +82,7 @@ class IdentificacaoExtractorIOS(IOSExtractor):
         for chave, campo in CAMPOS_DO_LOCKDOWN.items():
             valor = valores.get(chave, "")
             if campo == "backup_cifrado" and valor != "":
-                valor = "sim" if valor.lower() in ("true", "1") else "não"
+                valor = self._t("lg_fs_sim") if valor.lower() in ("true", "1") else self._t("lg_fs_nao")
             if valor:
                 apurados[campo] = valor
         apurados["fabricante"] = "Apple"
@@ -89,14 +90,13 @@ class IdentificacaoExtractorIOS(IOSExtractor):
 
         faltantes = [c for c in ("modelo", "versao_ios", "numero_serie", "imei")
                      if c not in apurados]
-        mensagem = (
-            f"iPhone identificado: {apurados.get('modelo', '?')}, iOS "
-            f"{apurados.get('versao_ios', '?')}, série {apurados.get('numero_serie', '?')}."
-        )
+        mensagem = self._t("lg_ii_msg_ok", modelo=apurados.get('modelo', '?'),
+                           versao=apurados.get('versao_ios', '?'),
+                           serie=apurados.get('numero_serie', '?'))
         detalhes = {}
         if faltantes:
             detalhes["campos_nao_apurados"] = faltantes
-            mensagem += " Não informados pelo aparelho: " + ", ".join(faltantes) + "."
+            mensagem += self._t("lg_ii_nao_informados", lista=", ".join(faltantes))
         self.progresso(100)
-        self.log(f"[CONCLUÍDO] {mensagem}")
+        self.log(self._t("lg_concluido", valor=mensagem))
         return ResultadoExtracao(True, mensagem, pasta, detalhes)

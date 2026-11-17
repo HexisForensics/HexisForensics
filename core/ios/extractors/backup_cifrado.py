@@ -78,86 +78,68 @@ class BackupCifradoExtractorIOS(IOSExtractor):
     )
 
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta = Path(pasta_caso) / self.pasta_do_backup
         pasta.mkdir(parents=True, exist_ok=True)
         try:
             ja_cifrava = self.client.cifragem_ativa()
         except ErroIOS as erro:
             return ResultadoExtracao(
-                False, f"Não executado: {erro} O dispositivo NÃO foi alterado.", pasta)
+                False, self._t("lg_iz_nao_exec_erro", erro=erro), pasta)
         if getattr(self.client, "cifragem_informada", None) is False:
-            self.log("[*] O iPhone não tem o valor 'WillEncrypt': nunca recebeu senha de "
-                     "backup (estado de fábrica). Tratado como 'sem senha'; o Manifest.plist "
-                     "do backup confirma se ele saiu cifrado.")
+            self.log(self._t("lg_iz_sem_willencrypt"))
         if ja_cifrava:
             return ResultadoExtracao(
-                False,
-                "Não executado: o iPhone JÁ tem senha de backup definida pelo dono. Trocá-la "
-                "seria alteração irreversível para o examinador. Use o backup comum, que sai "
-                "cifrado com a senha do dono, e decifre-o com ela. O dispositivo NÃO foi "
-                "alterado.",
-                pasta,
+                False, self._t("lg_iz_ja_cifra"), pasta,
             )
 
         senha = gerar_senha()
         (pasta / NOME_SENHA).write_text(
-            "SENHA DE BACKUP TEMPORÁRIA\n"
-            f"Senha: {senha}\n"
-            "Gerada pela suíte, definida no iPhone só durante esta coleta e retirada ao final.\n"
-            "É a senha que decifra o backup desta aquisição (botão 'Decifrar backup').\n",
+            self._t("lg_iz_senha_arquivo", senha=senha),
             encoding="utf-8",
         )
         self.registrar_alteracao(
             pasta_caso,
-            f"Senha de backup temporária '{senha}' definida no iPhone (o aparelho pediu o "
-            "código de desbloqueio na tela).",
-            "O iOS só inclui o registro de chamadas e outros dados sensíveis no backup "
-            "cifrado; o aparelho não tinha senha de backup.",
+            self._t("lg_iz_alt_define", senha=senha),
+            self._t("lg_iz_alt_define_motivo"),
         )
-        self.log("[*] Definindo a senha de backup temporária. DIGITE O CÓDIGO DE DESBLOQUEIO "
-                 "NA TELA DO IPHONE quando ele pedir.")
+        self.log(self._t("lg_iz_definindo"))
         try:
             self.client.alterar_senha_de_backup(nova=senha)
             cifrando = self.client.cifragem_ativa()
         except ErroIOS as erro:
             return self._encerrar(pasta_caso, pasta, senha, None,
-                                  f"o iPhone não aceitou a senha de backup ({erro})")
+                                  self._t("lg_iz_nao_aceitou", erro=erro))
         if not cifrando:
             return self._encerrar(pasta_caso, pasta, senha, None,
-                                  "o iPhone não passou a cifrar o backup")
+                                  self._t("lg_iz_nao_cifrou"))
         self.progresso(10)
         desfecho = self.fazer_backup(pasta_caso)
         return self._encerrar(pasta_caso, pasta, senha, desfecho, desfecho.erro)
 
     def _encerrar(self, pasta_caso, pasta, senha, desfecho, motivo_da_falha) -> ResultadoExtracao:
         """Retira a senha — SEMPRE — e confere."""
-        self.log("[*] Retirando a senha de backup temporária. Digite o código de desbloqueio "
-                 "na tela do iPhone se ele pedir.")
+        self.log(self._t("lg_iz_retirando"))
         try:
             if self.client.cifragem_ativa():
                 self.client.alterar_senha_de_backup(antiga=senha)
             retirada = not self.client.cifragem_ativa()
         except ErroIOS as erro:
-            self.log(f"[ALERTA] {erro}")
+            self.log(self._t("lg_iz_alerta", erro=erro))
             retirada = False
         self.registrar_alteracao(
             pasta_caso,
-            "Senha de backup temporária retirada do iPhone; conferido que o aparelho não cifra "
-            "mais o backup." if retirada else
-            f"A retirada da senha de backup temporária '{senha}' NÃO foi confirmada.",
-            "Encerramento do backup cifrado com senha temporária.",
+            self._t("lg_iz_alt_retirada") if retirada else
+            self._t("lg_iz_alt_nao_retirada", senha=senha),
+            self._t("lg_iz_alt_retirada_motivo"),
         )
-        pendente = "" if retirada else (
-            f" ATENÇÃO — A SENHA DE BACKUP '{senha}' CONTINUA DEFINIDA NO IPHONE. Retire-a em "
-            "Ajustes, ou por esta suíte, e registre."
-        )
+        pendente = "" if retirada else self._t("lg_iz_pendente", senha=senha)
         detalhes = {"restauracao_pendente": True} if pendente else {}
 
         if motivo_da_falha or desfecho is None:
             return ResultadoExtracao(
                 False,
-                f"Nenhum backup foi obtido: {motivo_da_falha}. Isto NÃO significa ausência de "
-                "dados no aparelho." + pendente,
+                self._t("lg_iz_sem_backup", motivo=motivo_da_falha) + pendente,
                 pasta, detalhes,
             )
         # O que vale é o Manifest.plist do backup, não a configuração lida antes.
@@ -165,27 +147,17 @@ class BackupCifradoExtractorIOS(IOSExtractor):
                         bytes_copiados=desfecho.bytes_copiados,
                         backup_cifrado=bool(desfecho.cifrado))
         if desfecho.cifrado:
-            mensagem = (
-                f"Backup cifrado do iPhone obtido: {desfecho.arquivos} arquivo(s), "
-                f"{desfecho.bytes_copiados} byte(s), SHA-256 de cada um calculado na "
-                f"aquisição. Senha de backup: {senha} (use-a em 'Decifrar backup')."
-            )
+            mensagem = self._t("lg_iz_msg_cifrado", arquivos=desfecho.arquivos,
+                               bytes=desfecho.bytes_copiados, senha=senha)
         else:
-            detalhes["itens_fora_do_alcance"] = (
-                "O backup saiu SEM cifragem (Manifest.plist): registro de chamadas, senhas e "
-                "outros dados que o iOS só inclui no backup cifrado não estão no material."
-            )
-            mensagem = (
-                f"Backup do iPhone obtido, mas SEM cifragem: {desfecho.arquivos} arquivo(s), "
-                f"{desfecho.bytes_copiados} byte(s), SHA-256 de cada um calculado na "
-                "aquisição. O Manifest.plist diz que o backup não foi cifrado; os dados que o "
-                "iOS reserva ao backup cifrado não foram obtidos."
-            )
+            detalhes["itens_fora_do_alcance"] = self._t("lg_iz_fora_alcance")
+            mensagem = self._t("lg_iz_msg_sem_cifra", arquivos=desfecho.arquivos,
+                               bytes=desfecho.bytes_copiados)
         self.progresso(100)
         if pendente:
             return ResultadoExtracao(False, mensagem + pendente, desfecho.pasta, detalhes)
-        self.log(f"[CONCLUÍDO] {mensagem} A senha foi retirada e a retirada, conferida.")
+        self.log(self._t("lg_concluido",
+                         valor=mensagem + self._t("lg_iz_concluido_sufixo")))
         return ResultadoExtracao(
-            True, mensagem + " A senha temporária foi retirada do aparelho e a retirada, "
-            "conferida.", desfecho.pasta, detalhes,
+            True, mensagem + self._t("lg_iz_msg_sufixo"), desfecho.pasta, detalhes,
         )
