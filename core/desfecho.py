@@ -27,6 +27,8 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from core.idioma import idioma_ativo, traduzir
+
 PASTA_DESFECHO = "desfecho"
 NOME_DESFECHO = "desfecho_da_coleta.txt"
 NOME_DESFECHO_DADOS = "desfecho_da_coleta.json"
@@ -37,10 +39,16 @@ SUCESSO = "sucesso"
 RESSALVA = "ressalva"
 FALHA = "falha"
 
+# A situação é a CHAVE estável (sucesso/ressalva/falha); o rótulo é por idioma.
 ROTULOS = {
     SUCESSO: "Concluído",
     RESSALVA: "Concluído com ressalva",
     FALHA: "Não obteve dado",
+}
+_CHAVE_ROTULO = {
+    SUCESSO: "df_rotulo_concluido",
+    RESSALVA: "df_rotulo_ressalva",
+    FALHA: "df_rotulo_falha",
 }
 
 
@@ -56,7 +64,15 @@ class ModuloExecutado:
 
     @property
     def rotulo(self) -> str:
-        return ROTULOS.get(self.situacao, self.situacao)
+        """Rótulo da situação no idioma ATIVO (para a tela/laudo ao vivo)."""
+        return self.rotulo_no_idioma(idioma_ativo())
+
+    def rotulo_no_idioma(self, idioma: str) -> str:
+        chave = _CHAVE_ROTULO.get(self.situacao)
+        if chave is None:
+            return self.situacao
+        texto = traduzir(chave, idioma)
+        return ROTULOS.get(self.situacao, self.situacao) if texto == chave else texto
 
 
 @dataclass
@@ -105,17 +121,21 @@ class DesfechoDaColeta:
 
     @property
     def resumo(self) -> str:
+        """Resumo no idioma ATIVO. O selo usa `resumo_no_idioma` (carimbo)."""
+        return self.resumo_no_idioma(idioma_ativo())
+
+    def resumo_no_idioma(self, idioma: str) -> str:
         if self.vazio:
-            return "Nenhum módulo foi executado nesta aquisição."
-        partes = [f"{self.total} módulo(s) executado(s)"]
-        partes.append(f"{self.concluidos} concluído(s)")
+            return traduzir("df_resumo_vazio", idioma)
+        cabeca = traduzir("df_resumo_modulos", idioma, total=self.total)
+        partes = [traduzir("df_resumo_concluidos", idioma, n=self.concluidos)]
         if self.com_ressalva:
-            partes.append(f"{self.com_ressalva} com ressalva")
+            partes.append(traduzir("df_resumo_ressalva", idioma, n=self.com_ressalva))
         if self.falharam:
-            partes.append(f"{self.falharam} sem obter dado")
-        texto = ": ".join([partes[0], ", ".join(partes[1:])])
+            partes.append(traduzir("df_resumo_falha", idioma, n=self.falharam))
+        texto = ": ".join([cabeca, ", ".join(partes)])
         if self.cancelada:
-            texto += ". A execução foi INTERROMPIDA antes de percorrer todos os módulos."
+            texto += traduzir("df_resumo_cancelada", idioma)
         return texto + "."
 
 
@@ -165,13 +185,21 @@ def _e_ressalva(chave: str, valor) -> bool:
 # ---------------------------------------------------------------------------
 # Persistência
 # ---------------------------------------------------------------------------
-def gravar_desfecho(pasta_aquisicao: Path, desfecho: DesfechoDaColeta) -> Path:
-    """Grava o desfecho na aquisição, antes do selo, como o método."""
+def gravar_desfecho(pasta_aquisicao: Path, desfecho: DesfechoDaColeta,
+                    idioma: str = None) -> Path:
+    """
+    Grava o desfecho na aquisição, antes do selo, como o método.
+
+    O `.txt` é selado: sua moldura, o resumo e o rótulo da situação saem no
+    idioma CARIMBADO no caso (passado por `idioma`). A mensagem de cada
+    módulo e as chaves de ressalva são conteúdo declarado pelo módulo (dado)
+    e seguem como estão.
+    """
     pasta = Path(pasta_aquisicao) / PASTA_DESFECHO
     pasta.mkdir(parents=True, exist_ok=True)
 
     caminho = pasta / NOME_DESFECHO
-    caminho.write_text("\n".join(_linhas(desfecho)) + "\n", encoding="utf-8")
+    caminho.write_text("\n".join(_linhas(desfecho, idioma)) + "\n", encoding="utf-8")
     (pasta / NOME_DESFECHO_DADOS).write_text(
         json.dumps(_para_dicionario(desfecho), ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -219,36 +247,31 @@ def _para_dicionario(desfecho: DesfechoDaColeta) -> dict:
     }
 
 
-def _linhas(desfecho: DesfechoDaColeta) -> list:
+def _linhas(desfecho: DesfechoDaColeta, idioma: str = None) -> list:
+    def t(chave, **campos):
+        return traduzir(chave, idioma, **campos)
+
     linhas = [
         "=" * LARGURA,
-        "DESFECHO DA COLETA".center(LARGURA),
+        t("df_txt_titulo").center(LARGURA),
         "=" * LARGURA,
         "",
-        desfecho.resumo,
+        desfecho.resumo_no_idioma(idioma or idioma_ativo()),
         "",
     ]
 
     for ordem, modulo in enumerate(desfecho.modulos, start=1):
         linhas.append(f"[{ordem}] {modulo.nome}")
-        linhas.append(f"      Situação: {modulo.rotulo}")
+        linhas.append(t("df_txt_situacao", valor=modulo.rotulo_no_idioma(idioma or idioma_ativo())))
         if modulo.mensagem:
             linhas.append(f"      {modulo.mensagem}")
         if modulo.ressalvas:
-            linhas.append(f"      Ressalvas: {', '.join(modulo.ressalvas)}")
+            linhas.append(t("df_txt_ressalvas", valor=', '.join(modulo.ressalvas)))
         linhas.append("")
 
-    linhas += [
-        "-" * LARGURA,
-        "COMO LER ESTE REGISTRO",
-        "",
-        "  'Concluído com ressalva' NÃO é equivalente a 'Concluído'. Significa",
-        "  que o módulo obteve parte do material e declarou o que não alcançou",
-        "  — o detalhe está na mensagem e em erros/erros.log.",
-        "",
-        "  'Não obteve dado' significa que aquele material não foi adquirido.",
-        "  Não significa que ele não exista no aparelho.",
-        "-" * LARGURA,
-        "=" * LARGURA,
-    ]
+    linhas += ["-" * LARGURA, t("df_txt_como_ler"), ""]
+    linhas += t("df_txt_nota_ressalva").split("\n")
+    linhas += [""]
+    linhas += t("df_txt_nota_falha").split("\n")
+    linhas += ["-" * LARGURA, "=" * LARGURA]
     return linhas

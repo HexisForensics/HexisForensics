@@ -327,10 +327,11 @@ def _corpo_desfecho(pasta_aquisicao: Path) -> str:
         if modulo.ressalvas:
             itens = "".join(f"<li>{escapar(r)}</li>" for r in modulo.ressalvas)
             detalhe += f"<ul>{itens}</ul>"
-        linhas.append([escapar(modulo.nome), f"<b>{escapar(modulo.rotulo)}</b>", detalhe])
+        linhas.append([escapar(modulo.nome),
+                       f"<b>{escapar(modulo.rotulo_no_idioma(idi))}</b>", detalhe])
 
     return (
-        f"<p>{escapar(desfecho.resumo)}</p>"
+        f"<p>{escapar(desfecho.resumo_no_idioma(idi))}</p>"
         + tabela([traduzir("cad_des_h_modulo", idi), traduzir("cad_des_h_situacao", idi),
                   traduzir("cad_des_h_resultado", idi)], linhas, ["30%", "20%", "50%"])
         + traduzir("cad_des_nota", idi)

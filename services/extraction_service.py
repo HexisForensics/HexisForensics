@@ -32,6 +32,7 @@ import core.ios as _ios
 from core.base_extractor import BaseExtractor
 from core.case import idioma_do_caso
 from core.desfecho import SUCESSO, descrever_execucao, gravar_desfecho
+from core.idioma import idioma_ativo, traduzir
 from core.hashing import gerar_manifesto
 from core.logger import configurar_logger_arquivo, configurar_logger_erros
 from core.metodo import descrever, gravar_metodo
@@ -180,6 +181,12 @@ class ExtractionService(QThread):
         logger_arquivo = configurar_logger_arquivo(self.pasta_caso)
         logger_erros = configurar_logger_erros(self.pasta_caso)
 
+        # A moldura do console/log de execução (que é selado em extracao.log)
+        # sai no idioma CARIMBADO no caso. A narração interna de cada módulo
+        # (o self.log do extrator) segue em português — é rastro operacional
+        # misturado ao stdout/stderr do aparelho, que é dado e fica verbatim.
+        idi_caso = idioma_do_caso(self.pasta_caso)
+
         def registrar(mensagem: str) -> None:
             self.log_emitido.emit(mensagem)
             logger_arquivo.info(mensagem)
@@ -203,7 +210,7 @@ class ExtractionService(QThread):
             logger_erros.warning("\n" + "\n".join(linhas) + "\n" + ("-" * 40))
 
         for aviso in detectar_sobreposicao(self.extratores):
-            registrar(f"[ATENÇÃO] {aviso}")
+            registrar(traduzir("xs_atencao", idi_caso, aviso=aviso))
             RegistroProcedimento(self.pasta_caso).registrar_observacao(
                 f"Sobreposição de módulos: {aviso}"
             )
@@ -216,11 +223,11 @@ class ExtractionService(QThread):
         try:
             caminho_metodo = gravar_metodo(
                 self.pasta_caso,
-                descrever(self.extratores, idioma_do_caso(self.pasta_caso)),
+                descrever(self.extratores, idi_caso),
             )
-            registrar(f"[*] Método declarado registrado em: {caminho_metodo.name}")
+            registrar(traduzir("xs_metodo_registrado", idi_caso, nome=caminho_metodo.name))
         except OSError as exc:
-            registrar(f"[ERRO] Não foi possível registrar o método declarado: {exc}")
+            registrar(traduzir("xs_metodo_erro", idi_caso, exc=exc))
 
         desfechos = {"sucesso": 0, "ressalva": 0, "falha": 0}
         # Registro por modulo, para o laudo nao precisar interpretar prosa.
@@ -240,13 +247,10 @@ class ExtractionService(QThread):
         # laudo) no idioma CARIMBADO no caso, como o método declarado. A
         # moldura dessa tabela já sai no idioma do laudo; o nome do módulo
         # acompanha, em vez de ficar uma célula em português no meio.
-        idi_caso = idioma_do_caso(self.pasta_caso)
         total = len(self.extratores)
         for indice, extrator in enumerate(self.extratores, 1):
             if self._cancelar:
-                registrar(
-                    "[*] Execução cancelada pelo usuário antes de concluir todos os módulos."
-                )
+                registrar(traduzir("xs_cancelada", idi_caso))
                 break
 
             extrator._log_callback = registrar
@@ -259,12 +263,13 @@ class ExtractionService(QThread):
             self.extrator_iniciado.emit(extrator.id, nome_idi)
             registrar("")
             registrar("=" * 60)
-            registrar(f"[MÓDULO {indice}/{total}] {extrator.nome_exibicao}")
+            registrar(traduzir("xs_modulo_cabecalho", idi_caso,
+                               indice=indice, total=total, nome=nome_idi))
             registrar("=" * 60)
 
             disponivel, motivo = extrator.disponivel()
             if not disponivel:
-                registrar(f"[IGNORADO] {motivo}")
+                registrar(traduzir("xs_ignorado", idi_caso, motivo=motivo))
                 registrar_erro_se_necessario(extrator, False, motivo, {})
                 contabilizar(False, {})
                 # Módulo previsto e não executado é fato metodológico: o
@@ -292,7 +297,7 @@ class ExtractionService(QThread):
                     resultado.detalhes or {},
                 )
             except Exception as exc:  # pragma: no cover - defesa contra falhas inesperadas de hardware/SO
-                registrar(f"[ERRO] Falha inesperada em {extrator.nome_exibicao}: {exc}")
+                registrar(traduzir("xs_erro_inesperado", idi_caso, nome=nome_idi, exc=exc))
                 registrar_erro_se_necessario(extrator, False, str(exc), {})
                 contabilizar(False, {})
                 self._registrar_execucao(execucao,
@@ -308,7 +313,7 @@ class ExtractionService(QThread):
                 if mensagem_final:
                     registrar(f"[*] {mensagem_final}")
             except Exception as exc:  # pragma: no cover - defesa contra falha externa
-                registrar(f"[ERRO] Falha na finalização do caso: {exc}")
+                registrar(traduzir("xs_final_erro", idi_caso, exc=exc))
 
         # A ORDEM aqui e parte da cadeia de custodia: o manifesto sela o
         # caso e, depois dele, NADA pode ser escrito na pasta -- nem o log,
@@ -322,10 +327,10 @@ class ExtractionService(QThread):
         self.desfecho = descrever_execucao(execucao, cancelada=self._cancelar)
         try:
             desfecho = self.desfecho
-            caminho_desfecho = gravar_desfecho(self.pasta_caso, desfecho)
-            registrar(f"[*] Desfecho da coleta registrado em: {caminho_desfecho.name}")
+            caminho_desfecho = gravar_desfecho(self.pasta_caso, desfecho, idi_caso)
+            registrar(traduzir("xs_desfecho_registrado", idi_caso, nome=caminho_desfecho.name))
         except OSError as exc:
-            registrar(f"[ERRO] Nao foi possivel registrar o desfecho da coleta: {exc}")
+            registrar(traduzir("xs_desfecho_erro", idi_caso, exc=exc))
 
         self._encerrar_registro_procedimento(desfechos, total)
         self._fechar_loggers(logger_arquivo, logger_erros)
@@ -346,16 +351,18 @@ class ExtractionService(QThread):
         desfecho = self.desfecho
         if desfecho is None:
             return []
+        # Só console (idioma ativo). O desfecho SELADO (desfecho_da_coleta.txt)
+        # é gravado no idioma carimbado, em gravar_desfecho.
         linhas = ["", "=" * 60]
         if desfecho.integral:
-            linhas.append(f"[DESFECHO] {desfecho.resumo}")
+            linhas.append(traduzir("xs_desfecho", resumo=desfecho.resumo))
         else:
-            linhas.append(f"[DESFECHO — ATENÇÃO] {desfecho.resumo}")
+            linhas.append(traduzir("xs_desfecho_atencao", resumo=desfecho.resumo))
             for modulo in desfecho.modulos:
                 if modulo.situacao != SUCESSO:
-                    linhas.append(f"    {modulo.rotulo.upper()}: {modulo.nome}")
-            linhas.append("    'Não obteve dado' NÃO significa ausência de dado no aparelho. "
-                          "Detalhes em desfecho/desfecho_da_coleta.txt.")
+                    linhas.append(traduzir("xs_desfecho_modulo",
+                                           rotulo=modulo.rotulo.upper(), nome=modulo.nome))
+            linhas.append(traduzir("xs_desfecho_nota"))
         linhas.append("=" * 60)
         return linhas
 
@@ -423,9 +430,7 @@ class ExtractionService(QThread):
         """
         try:
             self.log_emitido.emit("")
-            self.log_emitido.emit("[*] Gerando manifesto de integridade (SHA-256) do caso...")
+            self.log_emitido.emit(traduzir("xs_manifesto_gerando"))
             gerar_manifesto(self.pasta_caso, log_callback=self.log_emitido.emit)
         except OSError as exc:
-            self.log_emitido.emit(
-                f"[ERRO] Não foi possível gerar o manifesto de integridade: {exc}"
-            )
+            self.log_emitido.emit(traduzir("xs_manifesto_erro", exc=exc))
