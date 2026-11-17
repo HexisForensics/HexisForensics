@@ -106,7 +106,8 @@ class Autorizacao:
     @property
     def resumo(self) -> str:
         if self.vazia:
-            return "nenhum documento de autorização anexado ao caso"
+            from core.idioma import traduzir
+            return traduzir("fd_autorizacao_vazia")
         return "; ".join(
             f"{documento.rotulo}: {Path(documento.arquivo).name}"
             for documento in self.documentos

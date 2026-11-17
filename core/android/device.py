@@ -62,17 +62,16 @@ class RelogioDispositivo:
     def data_estacao_iso(self) -> str:
         return datetime.fromtimestamp(self.epoch_estacao, tz=timezone.utc).astimezone().isoformat()
 
-    def resumo(self) -> str:
+    def resumo(self, idioma: str = None) -> str:
+        from core.idioma import traduzir
         if self.desvio_segundos is None:
-            return "Relogio do aparelho: NAO FOI POSSIVEL LER (desvio desconhecido)."
+            return traduzir("rel_resumo_ilegivel", idioma)
 
         from core.relogio import descrever_desvio
 
-        desvio = descrever_desvio(self.desvio_segundos)
-        return (
-            f"Relogio do aparelho: {self.data_dispositivo_texto} "
-            f"(fuso {self.fuso_dispositivo}) | Estacao: {self.data_estacao_iso} | Desvio: {desvio}"
-        )
+        return traduzir("rel_resumo", idioma, data=self.data_dispositivo_texto,
+                        fuso=self.fuso_dispositivo, estacao=self.data_estacao_iso,
+                        desvio=descrever_desvio(self.desvio_segundos, idioma))
 
 
 @dataclass
@@ -93,6 +92,7 @@ class AndroidDevice:
         self.adb = adb_client or ADBClient()
 
     def verificar_conexao(self) -> StatusConexao:
+        from core.idioma import traduzir
         binario_ok, motivo = self.adb.verificar_binario()
         if not binario_ok:
             return StatusConexao(False, False, None, motivo)
@@ -100,10 +100,7 @@ class AndroidDevice:
         dispositivos = self.adb.listar_dispositivos()
         if not dispositivos:
             return StatusConexao(
-                False, False, None,
-                "Nenhum celular Android foi detectado via USB. Verifique o cabo e "
-                "certifique-se de que a 'Depuração USB' está ativa nas Opções do "
-                "Desenvolvedor.",
+                False, False, None, traduzir("dev_sem_dispositivo"),
             )
 
         seriais = [serial for serial, _ in dispositivos]
@@ -113,10 +110,7 @@ class AndroidDevice:
         if len(dispositivos) > 1:
             return StatusConexao(
                 True, False, None,
-                "MAIS DE UM dispositivo Android está conectado "
-                f"({', '.join(seriais)}). Mantenha conectado apenas o aparelho que será "
-                "periciado e verifique a conexão novamente — a extração não pode prosseguir "
-                "sem que o aparelho do caso esteja inequivocamente identificado.",
+                traduzir("dev_multiplos", seriais=', '.join(seriais)),
                 seriais_detectados=seriais,
             )
 
@@ -124,19 +118,18 @@ class AndroidDevice:
         if status == "device":
             return StatusConexao(
                 True, True, serial,
-                f"Dispositivo '{serial}' conectado e autorizado.",
+                traduzir("dev_conectado", serial=serial),
                 seriais_detectados=seriais,
             )
         if status == "unauthorized":
             return StatusConexao(
                 True, False, serial,
-                "Celular detectado, mas NÃO AUTORIZADO. Olhe a tela do celular e aceite "
-                "a depuração USB marcando 'Sempre permitir deste computador'.",
+                traduzir("dev_nao_autorizado"),
                 seriais_detectados=seriais,
             )
         return StatusConexao(
             True, False, serial,
-            f"Status inesperado do dispositivo: '{status}'.",
+            traduzir("dev_status_inesperado", status=status),
             seriais_detectados=seriais,
         )
 
@@ -147,6 +140,7 @@ class AndroidDevice:
         Executado no inicio do procedimento: o desvio precisa ser o do
         momento da aquisicao, nao o de uma medicao posterior.
         """
+        from core.idioma import traduzir
         epoch_estacao = int(time.time())
         epoch_bruto = self.adb.executar(["shell", "date", "+%s"], timeout=20).strip()
 
@@ -157,8 +151,10 @@ class AndroidDevice:
         return RelogioDispositivo(
             epoch_dispositivo=epoch_dispositivo,
             epoch_estacao=epoch_estacao,
-            data_dispositivo_texto=self.adb.executar(["shell", "date"], timeout=20).strip() or "(ilegivel)",
-            fuso_dispositivo=self.adb.obter_propriedade("persist.sys.timezone").strip() or "(desconhecido)",
+            data_dispositivo_texto=self.adb.executar(["shell", "date"], timeout=20).strip()
+            or traduzir("rel_ilegivel_data"),
+            fuso_dispositivo=self.adb.obter_propriedade("persist.sys.timezone").strip()
+            or traduzir("rel_fuso_desconhecido"),
         )
 
     def obter_id_dispositivo(self) -> str:

@@ -169,7 +169,8 @@ def dados() -> dict:
     if not _examinador:
         return {}
     if _forensic_admin:
-        return {"nome": NOME_FORENSIC_ADMIN, "unidade": "conta de testes da versão de desenvolvimento",
+        from core.idioma import traduzir
+        return {"nome": NOME_FORENSIC_ADMIN, "unidade": traduzir("sess_conta_dev"),
                 "papel": acesso.PAPEL_TESTE}
     cadastro, _ = acesso.resumo_do_cadastro(_examinador, _pasta)
     return cadastro

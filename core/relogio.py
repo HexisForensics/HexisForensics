@@ -24,8 +24,9 @@ from typing import Optional
 LIMITE_DE_DESVIO_SEGUNDOS = 120
 
 
-def por_extenso(segundos: int) -> str:
+def por_extenso(segundos: int, idioma: str = None) -> str:
     """`46588884` → "539 dias, 5 h e 21 min"; sem sinal."""
+    from core.idioma import traduzir
     segundos = abs(int(segundos))
     if segundos < 60:
         return f"{segundos} s"
@@ -34,39 +35,38 @@ def por_extenso(segundos: int) -> str:
     minutos = resto // 60
     partes = []
     if dias:
-        partes.append(f"{dias} dia" + ("s" if dias != 1 else ""))
+        partes.append(traduzir("rel_dias_um" if dias == 1 else "rel_dias_varios",
+                               idioma, n=dias))
     if horas:
         partes.append(f"{horas} h")
     if minutos:
         partes.append(f"{minutos} min")
     if len(partes) == 1:
         return partes[0]
-    return ", ".join(partes[:-1]) + " e " + partes[-1]
+    return ", ".join(partes[:-1]) + traduzir("rel_joiner", idioma) + partes[-1]
 
 
-def descrever_desvio(segundos: int) -> str:
+def descrever_desvio(segundos: int, idioma: str = None) -> str:
     """O texto da linha "Desvio:" — por extenso, com os segundos exatos ao lado."""
+    from core.idioma import traduzir
     if segundos == 0:
-        return "nenhum"
-    sentido = "adiantado" if segundos > 0 else "atrasado"
-    return f"{por_extenso(segundos)} {sentido} ({segundos:+d} s)"
+        return traduzir("rel_nenhum", idioma)
+    sentido = traduzir("rel_adiantado" if segundos > 0 else "rel_atrasado", idioma)
+    return traduzir("rel_desvio", idioma, extenso=por_extenso(segundos, idioma),
+                    sentido=sentido, sinal=f"{segundos:+d}")
 
 
 def e_relevante(segundos: Optional[int]) -> bool:
     return segundos is not None and abs(segundos) > LIMITE_DE_DESVIO_SEGUNDOS
 
 
-def alerta(segundos: Optional[int]) -> str:
+def alerta(segundos: Optional[int], idioma: str = None) -> str:
     """Frase de alerta, ou `""` quando o desvio está dentro do limite."""
+    from core.idioma import traduzir
     if not e_relevante(segundos):
         return ""
-    sentido = "adiantado" if segundos > 0 else "atrasado"
-    return (
-        f"O relógio do aparelho estava {por_extenso(segundos)} {sentido} em relação à "
-        "estação forense no momento da aquisição. As datas registradas pelo próprio "
-        "aparelho (arquivos, fotos, registros do sistema) estão deslocadas nessa medida e "
-        "devem ser lidas com essa correção."
-    )
+    sentido = traduzir("rel_adiantado" if segundos > 0 else "rel_atrasado", idioma)
+    return traduzir("rel_alerta", idioma, extenso=por_extenso(segundos, idioma), sentido=sentido)
 
 
 def ler_desvio_registrado(texto_do_registro: str) -> Optional[int]:
@@ -76,18 +76,23 @@ def ler_desvio_registrado(texto_do_registro: str) -> Optional[int]:
     Entende o formato atual ("... (-46588884 s)") e o anterior
     ("46588884s atrasado"). Relógio não lido, ou linha ausente: `None`.
     """
+    # O rótulo da linha sai no idioma do caso ("Desvio:"/"Deviation:"); a
+    # âncora que de fato lê o valor é o número em segundos, que é universal.
     for linha in texto_do_registro.splitlines():
-        if "Desvio:" not in linha:
+        if "Desvio:" in linha:
+            trecho = linha.split("Desvio:", 1)[1]
+        elif "Deviation:" in linha:
+            trecho = linha.split("Deviation:", 1)[1]
+        else:
             continue
-        trecho = linha.split("Desvio:", 1)[1]
         atual = re.search(r"\(([+-]?\d+) s\)", trecho)
         if atual:
             return int(atual.group(1))
-        antigo = re.search(r"(\d+)s (adiantado|atrasado)", trecho)
+        antigo = re.search(r"(\d+)s (adiantado|atrasado|ahead|behind)", trecho)
         if antigo:
             valor = int(antigo.group(1))
-            return valor if antigo.group(2) == "adiantado" else -valor
-        if trecho.strip().startswith("nenhum"):
+            return valor if antigo.group(2) in ("adiantado", "ahead") else -valor
+        if trecho.strip().startswith(("nenhum", "none")):
             return 0
     return None
 
