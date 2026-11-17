@@ -47,7 +47,9 @@ TEMPO_DA_COLETA = 180  # segundos até o agente gravar o estado.json
 
 # Fontes cujo conteúdo é o objetivo do módulo; as de MMS auxiliares não contam.
 FONTES_PRINCIPAIS = ("contatos", "chamadas", "sms", "mms")
-ROTULOS = {"contatos": "agenda", "chamadas": "chamadas", "sms": "SMS", "mms": "MMS"}
+# fonte -> chave de idioma do rótulo
+ROTULOS = {"contatos": "lg_ag_rot_contatos", "chamadas": "lg_ag_rot_chamadas",
+           "sms": "lg_ag_rot_sms", "mms": "lg_ag_rot_mms"}
 
 
 def caminho_do_apk() -> Path:
@@ -98,10 +100,7 @@ class AgenteExtractor(AndroidExtractor):
         if not disponivel:
             return disponivel, motivo
         if not caminho_do_apk().is_file():
-            return False, (
-                f"O aplicativo agente não está em '{caminho_do_apk()}'. Ele é gerado por "
-                "'py agente_android/compilar.py' e acompanha a suíte."
-            )
+            return False, self._t("lg_ag_sem_apk_disp", caminho=caminho_do_apk())
         return True, ""
 
     def _comando(self, argumentos, arquivo_de_saida: Path, timeout: int = 120):
@@ -130,8 +129,7 @@ class AgenteExtractor(AndroidExtractor):
             )
         return resultado.bytes_lidos, escritor.hash_hex
 
-    @staticmethod
-    def _quantidade(nome: str, registros: int, pasta: Path) -> str:
+    def _quantidade(self, nome: str, registros: int, pasta: Path) -> str:
         """
         Quanto veio de uma fonte, dito sem inflar.
 
@@ -141,7 +139,7 @@ class AgenteExtractor(AndroidExtractor):
         "4.668 agenda" sugeria o dobro de pessoas.
         """
         if nome != "contatos":
-            return f"{registros} {ROTULOS[nome]}"
+            return self._t("lg_ag_qtd_simples", registros=registros, rotulo=self._t(ROTULOS[nome]))
         contatos = set()
         try:
             for linha in (pasta / "contatos.jsonl").read_text(encoding="utf-8").splitlines():
@@ -151,62 +149,51 @@ class AgenteExtractor(AndroidExtractor):
                         contatos.add(identificador)
         except (OSError, ValueError):
             contatos = set()
-        texto = f"{registros} número(s) de agenda"
-        return texto + (f" em {len(contatos)} contato(s)" if contatos else "")
+        texto = self._t("lg_ag_qtd_agenda", registros=registros)
+        return texto + (self._t("lg_ag_qtd_agenda_contatos", n=len(contatos)) if contatos else "")
 
     # ------------------------------------------------------------------
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta = pasta_caso / PASTA
         pasta.mkdir(parents=True, exist_ok=True)
         apk = caminho_do_apk()
         if not apk.is_file():
             return ResultadoExtracao(
-                False, f"Não executado: o aplicativo agente não está em '{apk}'. O "
-                "dispositivo NÃO foi alterado.", pasta,
+                False, self._t("lg_ag_sem_apk_exec", apk=apk), pasta,
             )
 
         sha_do_apk = calcular_sha256(apk)
         ja_estava = self.adb.pacote_instalado(PACOTE)
         (pasta / "0_agente.txt").write_text(
-            "APLICATIVO AGENTE DE COLETA\n"
-            f"Pacote: {PACOTE}\n"
-            f"APK empregado: {apk.name}\n"
-            f"SHA-256 do APK: {sha_do_apk}\n"
-            f"Tamanho do APK: {apk.stat().st_size} bytes\n"
-            f"Já estava instalado no aparelho antes desta execução: {'SIM' if ja_estava else 'não'}\n",
+            self._t("lg_ag_cabecalho", pacote=PACOTE, apk=apk.name, sha=sha_do_apk,
+                    tamanho=apk.stat().st_size,
+                    ja=self._t("lg_ag_sim") if ja_estava else self._t("lg_ag_nao")),
             encoding="utf-8",
         )
-        self.log(f"[*] Aplicativo agente: {apk.name} — SHA-256 {sha_do_apk}")
+        self.log(self._t("lg_ag_apk_log", apk=apk.name, sha=sha_do_apk))
         if ja_estava:
-            self.log(
-                "[!] O agente JÁ estava instalado no aparelho (resto de uma execução "
-                "interrompida). Será substituído e removido ao final."
-            )
+            self.log(self._t("lg_ag_ja_instalado"))
 
         # --- 1. Instalação
         self.registrar_alteracao(
             pasta_caso,
-            f"Aplicativo agente '{PACOTE}' (SHA-256 {sha_do_apk}) instalado no aparelho, com "
-            "as permissões de leitura de contatos, chamadas e SMS concedidas na instalação.",
-            "Única via de leitura de SMS e chamadas sem privilégio elevado quando o backup "
-            "do sistema não existe ou não entrega os dados. O agente só lê e não tem "
-            "permissão de rede.",
+            self._t("lg_ag_alt_instala", pacote=PACOTE, sha=sha_do_apk),
+            self._t("lg_ag_alt_instala_motivo"),
         )
-        self.log("[*] Instalando o agente (mantenha a tela do aparelho DESBLOQUEADA)...")
+        self.log(self._t("lg_ag_instalando"))
         instalacao = self._comando(
             ["install", "-g", "-r", str(apk)], pasta / "1_instalacao_saida.txt", 180
         )
         self.progresso(20)
         if "Success" not in instalacao.stdout:
             ficou = self.adb.pacote_instalado(PACOTE)
+            saida = (instalacao.stdout + " " + instalacao.stderr).strip()[:300]
+            mensagem = self._t("lg_ag_recusou_instalacao", saida=saida)
+            if ficou:
+                mensagem += self._t("lg_ag_consta_instalado")
             return ResultadoExtracao(
-                False,
-                "O aparelho recusou a instalação do agente ("
-                + (instalacao.stdout + " " + instalacao.stderr).strip()[:300]
-                + "). Nenhum dado foi obtido por esta via — o que NÃO significa ausência de "
-                "dados no aparelho. Verifique se há um pedido de confirmação na tela."
-                + (" ATENÇÃO: o agente consta como instalado; remova-o." if ficou else ""),
-                pasta,
+                False, mensagem, pasta,
                 {"restauracao_pendente": True} if ficou else {},
             )
 
@@ -214,7 +201,7 @@ class AgenteExtractor(AndroidExtractor):
         motivo_da_falha = ""
         try:
             # --- 2. Coleta
-            self.log("[*] Executando a coleta no aparelho...")
+            self.log(self._t("lg_ag_executando"))
             self._comando(["shell", "am", "start", "-W", "-n", ATIVIDADE],
                           pasta / "2_execucao_saida.txt", 60)
             limite = time.time() + TEMPO_DA_COLETA
@@ -228,41 +215,35 @@ class AgenteExtractor(AndroidExtractor):
 
             if not estado_bruto.strip().startswith("{"):
                 motivo_da_falha = (
-                    "a execução foi cancelada" if self.cancelado else
-                    f"o agente não concluiu a coleta em {TEMPO_DA_COLETA} segundos"
+                    self._t("lg_ag_cancelada") if self.cancelado else
+                    self._t("lg_ag_nao_concluiu", n=TEMPO_DA_COLETA)
                 )
             else:
                 # --- 3. Recolhimento, com hash na gravação
                 for nome in (NOME_ESTADO,) + ARQUIVOS:
                     tamanho, resumo = self._recolher(nome, pasta / nome)
                     recolhidos[nome] = (tamanho, resumo)
-                    self.log(f"    {nome}: {tamanho} byte(s)")
+                    self.log(self._t("lg_ag_recolhido", nome=nome, tamanho=tamanho))
         finally:
             # --- 4. Remoção: SEMPRE, aconteça o que acontecer acima.
             self.progresso(85)
-            self.log("[*] Desinstalando o agente...")
+            self.log(self._t("lg_ag_desinstalando"))
             self._comando(["uninstall", PACOTE], pasta / "3_desinstalacao_saida.txt", 60)
             removido = not self.adb.pacote_instalado(PACOTE)
             self.registrar_alteracao(
                 pasta_caso,
-                f"Aplicativo agente '{PACOTE}' desinstalado; conferido que não consta mais "
-                "entre os pacotes do aparelho." if removido else
-                f"A desinstalação do agente '{PACOTE}' NÃO foi confirmada: o pacote ainda "
-                "consta no aparelho.",
-                "Encerramento da coleta por aplicativo agente.",
+                self._t("lg_ag_alt_remove_ok", pacote=PACOTE) if removido else
+                self._t("lg_ag_alt_remove_falhou", pacote=PACOTE),
+                self._t("lg_ag_alt_remove_motivo"),
             )
 
-        nao_removido = "" if removido else (
-            f" ATENÇÃO — O AGENTE CONTINUA INSTALADO NO APARELHO ('{PACOTE}'). Remova-o "
-            "manualmente (adb uninstall, ou pelas configurações do aparelho) e registre."
-        )
+        nao_removido = "" if removido else self._t("lg_ag_nao_removido", pacote=PACOTE)
         pendencia = {"restauracao_pendente": True} if nao_removido else {}
 
         if motivo_da_falha:
             return ResultadoExtracao(
                 False,
-                f"Nenhum dado foi obtido: {motivo_da_falha}. Isto NÃO significa ausência de "
-                "dados no aparelho." + nao_removido,
+                self._t("lg_ag_nenhum_dado", motivo=motivo_da_falha) + nao_removido,
                 pasta, pendencia,
             )
 
@@ -276,8 +257,7 @@ class AgenteExtractor(AndroidExtractor):
         if estado is None:
             return ResultadoExtracao(
                 False,
-                "O agente respondeu, mas o estado da coleta não pôde ser lido. Os arquivos "
-                "recolhidos foram preservados; nada se afirma sobre o que contêm." + nao_removido,
+                self._t("lg_ag_estado_ilegivel") + nao_removido,
                 pasta, pendencia,
             )
 
@@ -286,21 +266,21 @@ class AgenteExtractor(AndroidExtractor):
         for nome in FONTES_PRINCIPAIS:
             fonte = fontes.get(nome, {})
             if fonte.get("erro") or fonte.get("provedor_respondeu") is False or not fonte:
-                recusados.append(ROTULOS[nome])
+                recusados.append(self._t(ROTULOS[nome]))
             elif int(fonte.get("registros") or 0) > 0:
                 obtidos.append(self._quantidade(nome, int(fonte["registros"]), pasta))
             else:
-                vazios.append(ROTULOS[nome])
+                vazios.append(self._t(ROTULOS[nome]))
         for nome, fonte in fontes.items():
             if fonte.get("erro"):
-                self.log(f"[ALERTA] O sistema recusou '{nome}' ao agente: {fonte['erro']}")
+                self.log(self._t("lg_ag_recusou_fonte", nome=nome, erro=fonte['erro']))
 
         self.progresso(100)
         partes = []
         if recusados:
-            partes.append("RECUSADO pelo sistema ao agente: " + ", ".join(recusados))
+            partes.append(self._t("lg_ag_recusado_parte", lista=", ".join(recusados)))
         if vazios:
-            partes.append("o provedor respondeu sem registro: " + ", ".join(vazios))
+            partes.append(self._t("lg_ag_vazio_parte", lista=", ".join(vazios)))
         complemento = (" " + "; ".join(partes) + ".") if partes else ""
         detalhes = dict(pendencia, sha256_do_agente=sha_do_apk,
                         registros={n: fontes.get(n, {}).get("registros") for n in FONTES_PRINCIPAIS})
@@ -310,19 +290,21 @@ class AgenteExtractor(AndroidExtractor):
         if not obtidos:
             return ResultadoExtracao(
                 False,
-                "O agente foi executado, mas nenhum registro foi obtido." + complemento
-                + " Recusa não é ausência de dado no aparelho." + nao_removido,
+                self._t("lg_ag_sem_registro") + complemento
+                + self._t("lg_ag_recusa_nao_ausencia") + nao_removido,
                 pasta, detalhes,
             )
         if nao_removido:
             return ResultadoExtracao(
-                False, "Dados obtidos pelo agente: " + ", ".join(obtidos) + "." + complemento
+                False,
+                self._t("lg_ag_obtido_parcial", lista=", ".join(obtidos)) + complemento
                 + nao_removido, pasta, detalhes,
             )
-        self.log("[CONCLUÍDO] Agente: " + ", ".join(obtidos) + ".")
+        self.log(self._t("lg_concluido",
+                         valor=self._t("lg_ag_concluido_log", lista=", ".join(obtidos))))
         return ResultadoExtracao(
             True,
-            "Dados obtidos pelo aplicativo agente: " + ", ".join(obtidos) + "." + complemento
-            + " O agente foi desinstalado e a remoção foi conferida.",
+            self._t("lg_ag_obtido_ok", lista=", ".join(obtidos)) + complemento
+            + self._t("lg_ag_desinstalado_conferido"),
             pasta, detalhes,
         )
