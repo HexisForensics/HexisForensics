@@ -582,6 +582,8 @@
   "xp_pendente": "· Pendente",
   "xp_em_execucao": "⏳ Em execução...",
   "xp_requer_root": "requer root",
+  "xp_requer_admin": "requer administrador",
+  "xp_requer_jailbreak": "requer jailbreak",
   "xp_selecao_expressa": "  [altera o dispositivo — seleção expressa]",
   "xp_nenhum_marcado": "<b>Nenhum módulo marcado.</b>",
   "xp_marcados": "<b>{n} de {total} módulos marcados:</b> {lista}",

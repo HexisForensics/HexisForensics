@@ -118,6 +118,13 @@ with tempfile.TemporaryDirectory() as tmp:
     checar("método PT traz as limitações literais",
            m_pt.modulos[0].limitacoes == list(EST.limitacoes_conhecidas))
 
+print("\n[4b] O rótulo de privilégio sai traduzido")
+fisica = EXTRATORES["android_extracao_fisica"]
+checar("requer root em PT", fisica.rotulo_privilegio_no_idioma("pt") == "requer root")
+checar("requer root em EN", fisica.rotulo_privilegio_no_idioma("en") == "requires root")
+comp = {e.id: e for e in listar_extratores("Computador")}["computador_imagem_fisica"]
+checar("administrador em EN", comp.rotulo_privilegio_no_idioma("en") == "requires administrator")
+
 print("\n[5] O nome selado no desfecho sobrevive no idioma carimbado")
 # A extração passa extrator.nome_no_idioma(idioma_do_caso) ao registrar a
 # execução; aqui provamos que o desfecho sela e relê esse nome tal como veio,

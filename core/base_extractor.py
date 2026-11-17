@@ -192,6 +192,25 @@ class BaseExtractor(ABC):
             for i, bruta in enumerate(cls.limitacoes_conhecidas)
         ]
 
+    # O rótulo de privilégio ("requer root/administrador/jailbreak") é um dos
+    # três literais fixos da plataforma, não texto por módulo: mapeia-se o
+    # literal para a chave do catálogo. Literal fora dos três (um módulo que
+    # invente o seu) sai como está, sem quebrar.
+    _CHAVE_DO_PRIVILEGIO = {
+        "requer root": "xp_requer_root",
+        "requer administrador": "xp_requer_admin",
+        "requer jailbreak": "xp_requer_jailbreak",
+    }
+
+    @classmethod
+    def rotulo_privilegio_no_idioma(cls, idioma=None) -> str:
+        bruto = cls.rotulo_privilegio
+        chave = cls._CHAVE_DO_PRIVILEGIO.get(bruto)
+        if chave is None:
+            return bruto
+        texto = traduzir(chave, idioma)
+        return bruto if texto == chave else texto
+
     @classmethod
     def alteracoes_no_idioma(cls, idioma=None) -> list:
         return [

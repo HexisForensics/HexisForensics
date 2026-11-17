@@ -582,6 +582,8 @@
   "xp_pendente": "· Pending",
   "xp_em_execucao": "⏳ Running...",
   "xp_requer_root": "requires root",
+  "xp_requer_admin": "requires administrator",
+  "xp_requer_jailbreak": "requires jailbreak",
   "xp_selecao_expressa": "  [alters the device — explicit selection]",
   "xp_nenhum_marcado": "<b>No module selected.</b>",
   "xp_marcados": "<b>{n} of {total} modules selected:</b> {lista}",

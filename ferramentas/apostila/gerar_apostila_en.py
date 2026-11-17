@@ -296,16 +296,16 @@ def tabela_simples(cabecalho, linhas, larguras):
 def tabela_de_modulos(plataforma: str):
     linhas = []
     for classe in listar_extratores(plataforma):
-        altera = "yes — " + classe.alteracoes_no_dispositivo[0][0] if classe.alteracoes_no_dispositivo \
-            else "no"
+        alteracoes_en = classe.alteracoes_no_idioma("en")
+        altera = "yes — " + alteracoes_en[0][0] if alteracoes_en else "no"
         exige = []
         if classe.requer_privilegio_root:
-            exige.append(classe.rotulo_privilegio)
+            exige.append(classe.rotulo_privilegio_no_idioma("en"))
         if classe.selecao_expressa:
             exige.append("express selection (starts unchecked)")
         exige.append(f"profile {classe.perfil_minimo.name}")
-        linhas.append([f"<b>{identidade.escapar(classe.nome_exibicao)}</b>",
-                       identidade.escapar(classe.descricao),
+        linhas.append([f"<b>{identidade.escapar(classe.nome_no_idioma('en'))}</b>",
+                       identidade.escapar(classe.descricao_no_idioma("en")),
                        identidade.escapar(altera), identidade.escapar("; ".join(exige))])
     return tabela_simples(["Module", "What it does", "Alters the device?", "Requires"], linhas,
                           [0.22, 0.42, 0.2, 0.16])

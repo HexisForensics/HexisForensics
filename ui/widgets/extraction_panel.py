@@ -74,8 +74,10 @@ class ExtractionPanel(QGroupBox):
         for classe_extrator in extratores:
             rotulo = classe_extrator.nome_no_idioma()
             if getattr(classe_extrator, "requer_privilegio_root", False):
-                privilegio = getattr(classe_extrator, "rotulo_privilegio", None) \
-                    or traduzir("xp_requer_root")
+                privilegio = classe_extrator.rotulo_privilegio_no_idioma() \
+                    if hasattr(classe_extrator, "rotulo_privilegio_no_idioma") \
+                    else (getattr(classe_extrator, "rotulo_privilegio", None)
+                          or traduzir("xp_requer_root"))
                 rotulo += f"  [{privilegio}]"
 
             expressa = getattr(classe_extrator, "selecao_expressa", False)
