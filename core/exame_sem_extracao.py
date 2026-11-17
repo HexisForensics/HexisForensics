@@ -49,12 +49,16 @@ TIPOS_DE_BLOQUEIO = (
 RESPOSTAS = ("Sim", "Não", "Não verificado")
 RECOMENDACAO_PADRAO = "Reexame mediante fornecimento da credencial de desbloqueio."
 
-CONCLUSAO = (
-    "Não foi possível extrair dados do dispositivo examinado. {motivo} Nenhum dado do "
-    "conteúdo do aparelho foi obtido, e isso NÃO permite concluir nada sobre o que ele "
-    "contém: a ausência de extração não é ausência de dados. O lacre da peça consta da "
-    "seção 3."
-)
+# O tipo de bloqueio é DADO canônico (gravado no exame.json e casado por
+# `startswith`): fica em PT. Para a PROSA do motivo, mapeia-se cada valor
+# canônico à sua chave de exibição, resolvida no idioma do caso.
+_BLOQUEIO_CHAVE = {
+    "PIN numérico": "esx_bloq_pin",
+    "Padrão (desenho)": "esx_bloq_padrao",
+    "Senha alfanumérica": "esx_bloq_senha",
+    "Biometria (digital ou rosto)": "esx_bloq_biometria",
+    "Bloqueio de natureza não identificada": "esx_bloq_nao_id",
+}
 
 
 def ler_exame(pasta_aquisicao: Path) -> Optional[dict]:
@@ -66,25 +70,27 @@ def ler_exame(pasta_aquisicao: Path) -> Optional[dict]:
     return dados if isinstance(dados, dict) else None
 
 
-def motivo_da_impossibilidade(exame: dict) -> str:
+def motivo_da_impossibilidade(exame: dict, idioma: str = None) -> str:
     """A frase do motivo, montada só do que foi declarado e registrado."""
+    from core.idioma import traduzir
     if exame.get("liga") == "Não":
-        return "O aparelho não ligou, conforme declarado pelo examinador."
+        return traduzir("esx_motivo_nao_liga", idioma)
     bloqueio = (exame.get("tipo_de_bloqueio") or "").strip()
-    texto = (
-        f"O aparelho estava protegido por bloqueio de tela do tipo {bloqueio}, conforme "
-        "declarado pelo examinador, e a credencial não estava disponível."
-        if bloqueio and not bloqueio.startswith("Não se aplica") else
-        "O examinador declarou que o acesso ao aparelho não foi possível."
-    )
+    if bloqueio and not bloqueio.startswith("Não se aplica"):
+        chave = _BLOQUEIO_CHAVE.get(bloqueio)
+        exibicao = traduzir(chave, idioma) if chave else bloqueio
+        texto = traduzir("esx_motivo_bloqueio", idioma, bloqueio=exibicao)
+    else:
+        texto = traduzir("esx_motivo_sem_acesso", idioma)
     tentativa = exame.get("tentativa") or {}
     if tentativa.get("realizada"):
-        texto += f" A tentativa de conexão registrada pela ferramenta resultou: {tentativa['resultado']}"
+        texto += traduzir("esx_motivo_tentativa", idioma, resultado=tentativa['resultado'])
     return texto
 
 
-def texto_da_conclusao(exame: dict) -> str:
-    return CONCLUSAO.format(motivo=motivo_da_impossibilidade(exame))
+def texto_da_conclusao(exame: dict, idioma: str = None) -> str:
+    from core.idioma import traduzir
+    return traduzir("esx_conclusao", idioma, motivo=motivo_da_impossibilidade(exame, idioma))
 
 
 class ExameSemExtracao(BaseExtractor):
@@ -122,22 +128,22 @@ class ExameSemExtracao(BaseExtractor):
             "--- stdout ---", resultado.stdout, "--- stderr ---", resultado.stderr,
         ]
         if resultado.codigo_saida != 0 and not resultado.stdout:
-            return linhas, f"o ADB não pôde ser executado nesta estação ({resultado.stderr})."
+            return linhas, self._t("esx_adb_nao_exec", stderr=resultado.stderr)
         estados = []
         for linha in resultado.stdout.splitlines()[1:]:
             partes = linha.split()
             if len(partes) >= 2:
                 estados.append((partes[0], partes[1]))
         if not estados:
-            return linhas, "nenhum aparelho respondeu ao ADB."
+            return linhas, self._t("esx_adb_sem_resposta")
         rotulos = {
-            "unauthorized": "respondeu como NÃO AUTORIZADO — a conexão de depuração não foi "
-                            "aceita no aparelho",
-            "offline": "respondeu como OFFLINE",
-            "device": "respondeu como AUTORIZADO; nenhuma extração foi feita neste registro",
+            "unauthorized": self._t("esx_adb_nao_autorizado"),
+            "offline": self._t("esx_adb_offline"),
+            "device": self._t("esx_adb_autorizado"),
         }
         return linhas, "; ".join(
-            f"o aparelho '{serial}' {rotulos.get(estado, f'respondeu no estado {estado}')}"
+            self._t("esx_adb_aparelho", serial=serial,
+                    rotulo=rotulos.get(estado, self._t("esx_adb_estado", estado=estado)))
             for serial, estado in estados
         ) + "."
 
@@ -147,10 +153,11 @@ class ExameSemExtracao(BaseExtractor):
         cliente = self.client or IOSClient()
         linhas, publicos = cliente.sondar()
         if not publicos:
-            recusa = next((l for l in linhas if "RECUSADA" in l or "FALHOU" in l), "")
+            marcadores = ("RECUSADA", "FALHOU", "REFUSED", "FAILED")
+            recusa = next((l for l in linhas if any(m in l for m in marcadores)), "")
             if recusa:
-                return linhas, f"o iPhone não permitiu a comunicação ({recusa.strip()})."
-            return linhas, "nenhum iPhone respondeu pela conexão USB."
+                return linhas, self._t("esx_ios_nao_permitiu", recusa=recusa.strip())
+            return linhas, self._t("esx_ios_sem_resposta")
         # O que o iPhone informa sem pareamento é dado lido do aparelho: vai
         # para a identificação, como em qualquer aquisição.
         gravar_identificacao(pasta_caso, {
@@ -160,41 +167,40 @@ class ExameSemExtracao(BaseExtractor):
             "build_ios": publicos.get("BuildVersion", ""),
             "udid": publicos.get("UniqueDeviceID", ""),
         })
-        confia = any("JÁ confia" in l for l in linhas)
-        return linhas, (
-            f"o iPhone foi detectado ({publicos.get('ProductType', 'modelo não informado')}, "
-            f"iOS {publicos.get('ProductVersion', '?')}) e "
-            + ("confia nesta estação; nenhuma extração foi feita neste registro."
-               if confia else "NÃO confia nesta estação: sem o desbloqueio e a autorização na "
-                              "tela, o iOS não entrega dado algum.")
-        )
+        confia = any("JÁ confia" in l or "ALREADY trusts" in l for l in linhas)
+        detectado = self._t("esx_ios_detectado",
+                            modelo=publicos.get('ProductType') or self._t("esx_ios_modelo_nao_informado"),
+                            versao=publicos.get('ProductVersion', '?'))
+        return linhas, detectado + (self._t("esx_ios_confia") if confia
+                                    else self._t("esx_ios_nao_confia"))
 
     # ------------------------------------------------------------------
     def executar(self, pasta_caso: Path) -> ResultadoExtracao:
+        self.definir_idioma_do_selo(pasta_caso)
         pasta = Path(pasta_caso) / PASTA
         pasta.mkdir(parents=True, exist_ok=True)
         momento = datetime.now().astimezone().isoformat(timespec="seconds")
 
         if self.dados.get("liga") == "Não":
-            linhas = ["Tentativa de conexão NÃO realizada: o examinador declarou que o aparelho "
-                      "não liga."]
+            linhas = [self._t("esx_nao_liga_linha")]
             tentativa = {"realizada": False, "momento": momento,
-                         "resultado": "não realizada — o aparelho não liga."}
+                         "resultado": self._t("esx_nao_liga_resultado")}
         else:
-            self.log("[*] Tentando a conexão com o aparelho, sem alterá-lo...")
+            self.log(self._t("esx_tentando"))
             try:
                 if self.plataforma is Plataforma.IOS:
                     linhas, resultado = self._sondar_ios(pasta_caso)
                 else:
                     linhas, resultado = self._sondar_android()
             except Exception as erro:  # a tentativa nunca derruba o registro
-                linhas = [f"A tentativa falhou na estação: {type(erro).__name__}: {erro}"]
-                resultado = f"a tentativa falhou na estação ({erro})."
+                linhas = [self._t("esx_falhou_linha", tipo=type(erro).__name__, erro=erro)]
+                resultado = self._t("esx_falhou_resultado", erro=erro)
             tentativa = {"realizada": True, "momento": momento, "resultado": resultado}
 
         (pasta / NOME_TENTATIVA).write_text(
-            f"TENTATIVA DE CONEXÃO — {momento}\n"
-            f"Plataforma: {self.plataforma.value}\n\n" + "\n".join(linhas) + "\n",
+            self._t("esx_tentativa_titulo", momento=momento) + "\n"
+            + self._t("esx_tentativa_plataforma", valor=self.plataforma.value)
+            + "\n\n" + "\n".join(linhas) + "\n",
             encoding="utf-8",
         )
         exame = dict(self.dados, plataforma=self.plataforma.value, registrado_em=momento,
@@ -204,13 +210,10 @@ class ExameSemExtracao(BaseExtractor):
         )
         self.registrar_decisao(
             pasta_caso,
-            "Exame registrado SEM extração.",
-            motivo_da_impossibilidade(exame),
+            self._t("esx_decisao"),
+            motivo_da_impossibilidade(exame, self._idi_selo),
         )
         self.progresso(100)
-        mensagem = (
-            "Exame sem extração registrado. Nenhum dado do conteúdo do aparelho foi obtido. "
-            f"Tentativa de conexão: {tentativa['resultado']}"
-        )
-        self.log(f"[REGISTRADO] {mensagem}")
+        mensagem = self._t("esx_msg", resultado=tentativa['resultado'])
+        self.log(self._t("esx_registrado", valor=mensagem))
         return ResultadoExtracao(False, mensagem, pasta, {"exame_sem_extracao": True})

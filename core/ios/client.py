@@ -23,13 +23,9 @@ import tempfile
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
-DOMINIO_DE_BACKUP = "com.apple.mobile.backup"
+from core.idioma import traduzir
 
-FALTA_O_SERVICO_DA_APPLE = (
-    "O Windows não encontrou o serviço de dispositivos móveis da Apple. Instale o "
-    "aplicativo 'Dispositivos Apple' (Microsoft Store) ou o iTunes, conecte o iPhone e "
-    "tente de novo."
-)
+DOMINIO_DE_BACKUP = "com.apple.mobile.backup"
 
 
 class ErroIOS(Exception):
@@ -47,12 +43,10 @@ class ErroIOS(Exception):
 
 # Recusas do serviço de backup do iOS (MBErrorDomain) que já foram vistas em
 # aparelho real. Código desconhecido não é adivinhado: sai a resposta crua.
+# Código de recusa -> chave de idioma da explicação. Código desconhecido não
+# é adivinhado: sai a resposta crua.
 RECUSAS_DE_BACKUP = {
-    212: (
-        "O iPhone recusou o backup porque a configuração inicial do aparelho não foi "
-        "concluída (código 212). No iPhone, abra Ajustes, toque em 'Concluir configuração "
-        "do iPhone' e vá até o fim; depois repita a aquisição."
-    ),
+    212: "ios_cli_recusa_212",
 }
 
 
@@ -78,10 +72,7 @@ def _biblioteca():
         from pymobiledevice3.lockdown import create_using_usbmux
         from pymobiledevice3.services.mobilebackup2 import Mobilebackup2Service
     except ImportError as erro:
-        raise ErroIOS(
-            f"A biblioteca de comunicação com iPhone (pymobiledevice3) não está instalada "
-            f"nesta estação ({erro})."
-        ) from erro
+        raise ErroIOS(traduzir("ios_cli_sem_biblioteca", erro=erro)) from erro
     return usbmux, create_using_usbmux, Mobilebackup2Service
 
 
@@ -114,7 +105,9 @@ class IOSClient:
         try:
             dispositivos = _rodar(usbmux.list_devices())
         except Exception as erro:  # serviço da Apple ausente ou parado
-            raise ErroIOS(f"{FALTA_O_SERVICO_DA_APPLE} ({type(erro).__name__}: {erro})") from erro
+            raise ErroIOS(traduzir("ios_cli_servico_erro",
+                                   falta=traduzir("ios_cli_falta_servico"),
+                                   tipo=type(erro).__name__, erro=erro)) from erro
         return [(d.serial, str(getattr(d, "connection_type", "USB"))) for d in dispositivos]
 
     def verificar_disponibilidade(self) -> Tuple[bool, str]:
@@ -123,16 +116,11 @@ class IOSClient:
         except ErroIOS as erro:
             return False, str(erro)
         if not dispositivos:
-            return False, (
-                "Nenhum iPhone conectado por cabo. Conecte, desbloqueie a tela e, se "
-                "aparecer a pergunta 'Confiar neste computador?', toque em Confiar."
-            )
+            return False, traduzir("ios_cli_sem_cabo")
         if self.udid and self.udid not in {udid for udid, _ in dispositivos}:
-            return False, (
-                f"O iPhone '{self.udid}', vinculado a este caso, não está mais conectado."
-            )
+            return False, traduzir("ios_cli_desconectado", udid=self.udid)
         if not self.udid and len(dispositivos) > 1:
-            return False, "Há mais de um iPhone conectado. Deixe só o do exame."
+            return False, traduzir("ios_cli_multiplos")
         return True, ""
 
     def _udid_alvo(self) -> str:
@@ -140,7 +128,7 @@ class IOSClient:
             return self.udid
         dispositivos = [d for d in self.listar_dispositivos() if "USB" in d[1].upper()]
         if len(dispositivos) != 1:
-            raise ErroIOS("Conecte exatamente um iPhone por cabo.")
+            raise ErroIOS(traduzir("ios_cli_exatamente_um"))
         return dispositivos[0][0]
 
     async def _lockdown(self, udid: str):
@@ -148,10 +136,8 @@ class IOSClient:
         try:
             return await create_using_usbmux(serial=udid, autopair=True)
         except Exception as erro:
-            raise ErroIOS(
-                "O iPhone não autorizou esta estação. Desbloqueie a tela e toque em "
-                f"'Confiar' quando o iPhone perguntar ({type(erro).__name__}: {erro})."
-            ) from erro
+            raise ErroIOS(traduzir("ios_cli_nao_autorizou",
+                                   tipo=type(erro).__name__, erro=erro)) from erro
 
     def sondar(self) -> Tuple[List[str], Dict[str, str]]:
         """
@@ -166,8 +152,8 @@ class IOSClient:
         try:
             dispositivos = self.listar_dispositivos()
         except ErroIOS as erro:
-            return [f"listagem de dispositivos: FALHOU — {erro}"], {}
-        linhas.append(f"listagem de dispositivos: {len(dispositivos)} iPhone(s) visível(is)")
+            return [traduzir("ios_cli_sondar_falhou", erro=erro)], {}
+        linhas.append(traduzir("ios_cli_sondar_visiveis", n=len(dispositivos)))
         for udid, conexao in dispositivos:
             linhas.append(f"  {udid} ({conexao})")
         usb = [udid for udid, conexao in dispositivos if "USB" in conexao.upper()]
@@ -190,14 +176,13 @@ class IOSClient:
         try:
             pareado, valores = _rodar(ler())
         except Exception as erro:
-            linhas.append(f"sessão sem pareamento: RECUSADA — {type(erro).__name__}: {erro}")
+            linhas.append(traduzir("ios_cli_sondar_sessao_recusada",
+                                   detalhe=f"{type(erro).__name__}: {erro}"))
             return linhas, {}
-        linhas.append(
-            "sessão sem pareamento: aberta; o iPhone "
-            + ("JÁ confia nesta estação" if pareado else "NÃO confia nesta estação")
-        )
+        linhas.append(traduzir(
+            "ios_cli_sondar_confia" if pareado else "ios_cli_sondar_nao_confia"))
         if "_erro" in (valores or {}):
-            linhas.append(f"consulta de valores: RECUSADA — {valores['_erro']}")
+            linhas.append(traduzir("ios_cli_sondar_valores_recusada", detalhe=valores['_erro']))
             return linhas, {}
         publicos = {chave: _texto(valor) for chave, valor in (valores or {}).items()
                     if not isinstance(valor, (dict, list))}
@@ -257,7 +242,7 @@ class IOSClient:
         except ErroIOS:
             raise
         except Exception as erro:
-            raise ErroIOS(f"O iPhone não informou se cifra o backup ({erro}).") from erro
+            raise ErroIOS(traduzir("ios_cli_sem_willencrypt", erro=erro)) from erro
 
     def alterar_senha_de_backup(self, antiga: str = "", nova: str = "") -> None:
         """
@@ -284,10 +269,8 @@ class IOSClient:
         except ErroIOS:
             raise
         except Exception as erro:
-            raise ErroIOS(
-                f"O iPhone não aceitou a alteração da senha de backup ({type(erro).__name__}: "
-                f"{erro})."
-            ) from erro
+            raise ErroIOS(traduzir("ios_cli_senha_recusada",
+                                   tipo=type(erro).__name__, erro=erro)) from erro
 
     def fazer_backup(
         self,
@@ -323,8 +306,8 @@ class IOSClient:
             raise
         except Exception as erro:
             original = f"{type(erro).__name__}: {_resposta_crua(erro)}"
-            explicacao = RECUSAS_DE_BACKUP.get(_codigo_da_recusa(erro))
-            if explicacao:
-                raise ErroIOS(explicacao, original) from erro
-            raise ErroIOS(f"O backup do iPhone falhou ({original}).", original) from erro
+            chave = RECUSAS_DE_BACKUP.get(_codigo_da_recusa(erro))
+            if chave:
+                raise ErroIOS(traduzir(chave), original) from erro
+            raise ErroIOS(traduzir("ios_cli_backup_falhou", original=original), original) from erro
         return Path(destino) / udid
