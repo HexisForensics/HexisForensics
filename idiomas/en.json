@@ -1223,6 +1223,10 @@
   "ci_sec_autoriz_alterados_n": "The court order or term that authorized this acquisition is in the case folder with content DIFFERENT from what was sealed here on the collection day. The document examined is no longer the same.",
   "ci_sec_autoriz_ausentes_t": "AUTHORIZATION DOCUMENTS MISSING OR UNREADABLE",
   "ci_sec_autoriz_ausentes_n": "They were listed in the record of this acquisition and could not be found or read in the case folder.",
+  "mod_android_estado_inicial_nome": "Device State as Received",
+  "mod_android_estado_inicial_desc": "Records the device as it was received: screenshot, power and lock state, battery level, foreground app and user profiles. Run FIRST: any other collection may wake the screen or bring an app to the foreground, and the state recorded after that is no longer the state in which the device arrived.",
+  "mod_android_estado_inicial_lim_0": "Records the state at the instant this module runs. Any collection performed before it may have woken the screen or brought an app to the foreground — which is why it heads the list.",
+  "mod_android_estado_inicial_lim_1": "The screenshot shows what was visible. Content protected by the lock screen is not revealed by it.",
   "te_idioma_alerta_titulo": "Language of sealed material",
   "te_idioma_alerta_texto": "The language you choose here is the DEFINITIVE language of the sealed material of every examination created from now on — the chain of custody, the procedure record and the manifest are written in it and cannot be retranslated later, just as a sealed page is not erased.\n\nSwitching the screen language stays free; what becomes definitive is the language each case is sealed in, at the moment it is created.\n\nUse {lingua}?"
 }

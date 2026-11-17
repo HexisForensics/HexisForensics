@@ -24,6 +24,7 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Callable, Optional
 
+from .idioma import traduzir
 from .procedimento import RegistroProcedimento
 
 LogCallback = Callable[[str], None]
@@ -154,6 +155,52 @@ class BaseExtractor(ABC):
 
     # Competência técnica que a operação deste módulo exige.
     perfil_minimo: Perfil = Perfil.DEFR
+
+    # ------------------------------------------------------------------
+    # Metadados no idioma pedido (i18n — Fase 4).
+    #
+    # O nome, a descrição, as limitações e as alterações são declarados em
+    # português nos atributos acima. Eles continuam sendo a FONTE e o
+    # fallback: quando o catálogo ainda não traz a chave do módulo, sai o
+    # texto do código, e nada quebra — a migração é módulo a módulo.
+    #
+    # A chave segue o `id` estável do módulo (`mod_<id>_nome`, `_desc`,
+    # `_lim_<i>`, `_alt_<i>_o`/`_alt_<i>_j`), nunca o nome de exibição: o
+    # texto muda de idioma, o `id` não. Quem sela o método (ver
+    # `core.metodo.descrever`) resolve no idioma CARIMBADO no caso; a tela
+    # resolve no idioma ATIVO.
+    # ------------------------------------------------------------------
+    @classmethod
+    def _texto_do_modulo(cls, sufixo: str, padrao: str, idioma=None) -> str:
+        """Texto da chave `mod_<id>_<sufixo>`, ou o `padrao` (o literal em PT)."""
+        chave = f"mod_{cls.id}_{sufixo}"
+        texto = traduzir(chave, idioma)
+        return padrao if texto == chave else texto
+
+    @classmethod
+    def nome_no_idioma(cls, idioma=None) -> str:
+        return cls._texto_do_modulo("nome", cls.nome_exibicao, idioma)
+
+    @classmethod
+    def descricao_no_idioma(cls, idioma=None) -> str:
+        return cls._texto_do_modulo("desc", cls.descricao, idioma)
+
+    @classmethod
+    def limitacoes_no_idioma(cls, idioma=None) -> list:
+        return [
+            cls._texto_do_modulo(f"lim_{i}", bruta, idioma)
+            for i, bruta in enumerate(cls.limitacoes_conhecidas)
+        ]
+
+    @classmethod
+    def alteracoes_no_idioma(cls, idioma=None) -> list:
+        return [
+            (
+                cls._texto_do_modulo(f"alt_{i}_o", alteracao, idioma),
+                cls._texto_do_modulo(f"alt_{i}_j", justificativa, idioma),
+            )
+            for i, (alteracao, justificativa) in enumerate(cls.alteracoes_no_dispositivo)
+        ]
 
     def __init__(
         self,

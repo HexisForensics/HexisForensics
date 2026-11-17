@@ -1223,6 +1223,10 @@
   "ci_sec_autoriz_alterados_n": "A decisão judicial ou o termo que amparou esta aquisição está na pasta do caso com conteúdo DIFERENTE do que foi selado aqui no dia da coleta. O documento examinado não é mais o mesmo.",
   "ci_sec_autoriz_ausentes_t": "DOCUMENTOS DE AUTORIZAÇÃO AUSENTES OU ILEGÍVEIS",
   "ci_sec_autoriz_ausentes_n": "Constavam do registro desta aquisição e não foi possível encontrá-los ou lê-los na pasta do caso.",
+  "mod_android_estado_inicial_nome": "Estado do Aparelho ao Ser Recebido",
+  "mod_android_estado_inicial_desc": "Registra o aparelho como foi recebido: captura de tela, estado de energia e de bloqueio, nível de bateria, aplicativo em primeiro plano e perfis de usuário. Execute PRIMEIRO: qualquer outra coleta pode acender a tela ou trazer um aplicativo para frente, e o estado registrado depois disso já não é o estado em que o dispositivo chegou.",
+  "mod_android_estado_inicial_lim_0": "Registra o estado no instante em que este módulo roda. Qualquer coleta executada antes dele pode ter acendido a tela ou trazido um aplicativo para primeiro plano — por isso ele encabeça a lista.",
+  "mod_android_estado_inicial_lim_1": "A captura de tela mostra o que estava visível. Conteúdo protegido pelo bloqueio não é revelado por ela.",
   "te_idioma_alerta_titulo": "Idioma do material selado",
   "te_idioma_alerta_texto": "O idioma que você escolher aqui é o idioma DEFINITIVO do material selado de cada perícia criada a partir de agora — a cadeia de custódia, o registro do procedimento e o manifesto saem nele e não podem ser retraduzidos depois, como uma folha lacrada não se rasura.\n\nTrocar o idioma da tela continua livre; o que fica definitivo é o idioma em que cada caso é selado, no momento em que é criado.\n\nUsar {lingua}?"
 }

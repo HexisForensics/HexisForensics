@@ -97,30 +97,40 @@ def resumir_modulos(pasta_aquisicao) -> str:
     return "; ".join(modulo.nome for modulo in metodo.modulos if modulo.nome)
 
 
-def descrever(extratores) -> MetodoDeclarado:
+def descrever(extratores, idioma=None) -> MetodoDeclarado:
     """
-    Lê a declaração de cada extrator escolhido.
+    Lê a declaração de cada extrator escolhido, no idioma pedido.
 
     Aceita classes ou instâncias, e usa `getattr` com padrão: um módulo que
     ainda não declare nada entra na lista com o alcance em branco, em vez de
     derrubar a coleta. A cobrança de que ele declare é da suíte de testes,
     não do meio de uma extração em andamento.
+
+    `idioma` é o do CASO (carimbado): o método é selado dentro da aquisição e
+    deve nascer no idioma definitivo do material selado, como a cadeia e o
+    manifesto. Módulo ainda não traduzido cai para o português declarado no
+    código — a migração é módulo a módulo, e o selo nunca fica pela metade.
     """
     modulos = []
     for extrator in extratores:
         perfil = getattr(extrator, "perfil_minimo", None)
+        nome = (extrator.nome_no_idioma(idioma)
+                if hasattr(extrator, "nome_no_idioma")
+                else getattr(extrator, "nome_exibicao", ""))
+        limitacoes = (extrator.limitacoes_no_idioma(idioma)
+                      if hasattr(extrator, "limitacoes_no_idioma")
+                      else [str(item) for item in getattr(extrator, "limitacoes_conhecidas", ())])
+        alteracoes = (extrator.alteracoes_no_idioma(idioma)
+                      if hasattr(extrator, "alteracoes_no_idioma")
+                      else [(str(a), str(j))
+                            for a, j in getattr(extrator, "alteracoes_no_dispositivo", ())])
         modulos.append(
             ModuloDeclarado(
                 identificador=getattr(extrator, "id", ""),
-                nome=getattr(extrator, "nome_exibicao", ""),
+                nome=nome,
                 perfil=getattr(perfil, "value", "") if perfil is not None else "",
-                limitacoes=[str(item) for item in getattr(extrator, "limitacoes_conhecidas", ())],
-                alteracoes=[
-                    (str(alteracao), str(justificativa))
-                    for alteracao, justificativa in getattr(
-                        extrator, "alteracoes_no_dispositivo", ()
-                    )
-                ],
+                limitacoes=list(limitacoes),
+                alteracoes=[(str(a), str(j)) for a, j in alteracoes],
             )
         )
     return MetodoDeclarado(modulos=modulos)

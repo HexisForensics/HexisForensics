@@ -30,6 +30,7 @@ import core.android as _android
 import core.computador as _computador
 import core.ios as _ios
 from core.base_extractor import BaseExtractor
+from core.case import idioma_do_caso
 from core.desfecho import SUCESSO, descrever_execucao, gravar_desfecho
 from core.hashing import gerar_manifesto
 from core.logger import configurar_logger_arquivo, configurar_logger_erros
@@ -213,7 +214,10 @@ class ExtractionService(QThread):
         # ferramenta já atualizada, exibiria as limitações da versão nova
         # como se fossem as da coleta antiga.
         try:
-            caminho_metodo = gravar_metodo(self.pasta_caso, descrever(self.extratores))
+            caminho_metodo = gravar_metodo(
+                self.pasta_caso,
+                descrever(self.extratores, idioma_do_caso(self.pasta_caso)),
+            )
             registrar(f"[*] Método declarado registrado em: {caminho_metodo.name}")
         except OSError as exc:
             registrar(f"[ERRO] Não foi possível registrar o método declarado: {exc}")

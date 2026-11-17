@@ -72,7 +72,7 @@ class ExtractionPanel(QGroupBox):
         layout_conteudo = QVBoxLayout(conteudo)
 
         for classe_extrator in extratores:
-            rotulo = classe_extrator.nome_exibicao
+            rotulo = classe_extrator.nome_no_idioma()
             if getattr(classe_extrator, "requer_privilegio_root", False):
                 privilegio = getattr(classe_extrator, "rotulo_privilegio", None) \
                     or traduzir("xp_requer_root")
@@ -83,7 +83,7 @@ class ExtractionPanel(QGroupBox):
                 rotulo += traduzir("xp_selecao_expressa")
 
             checkbox = QCheckBox(rotulo)
-            checkbox.setToolTip(classe_extrator.descricao)
+            checkbox.setToolTip(classe_extrator.descricao_no_idioma())
             # Módulos que exigem root/jailbreak começam desmarcados, já que
             # tipicamente falham silenciosamente em aparelhos comuns. Os de
             # seleção expressa também: só rodam por escolha deliberada.
@@ -130,7 +130,7 @@ class ExtractionPanel(QGroupBox):
 
     def _atualizar_resumo(self, *_args) -> None:
         marcados = [
-            classe.nome_exibicao for classe in self._extratores
+            classe.nome_no_idioma() for classe in self._extratores
             if self._checkboxes[classe.id].isChecked()
         ]
         if not marcados:
