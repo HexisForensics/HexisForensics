@@ -570,7 +570,7 @@ class RelatorioService:
         return artefatos
 
     @staticmethod
-    def _imagens_da_aquisicao(pasta_aquisicao: Path, trabalho: Path):
+    def _imagens_da_aquisicao(pasta_aquisicao: Path, trabalho: Path, idioma=None):
         """
         `(caminho no disco, rótulo de origem, caminho sob o selo)` de cada imagem.
 
@@ -597,14 +597,13 @@ class RelatorioService:
                 cifrado = None
             if cifrado is not False:
                 avisos.append(
-                    f"O backup {backup.name} está cifrado (ou com índice ilegível): as fotos "
-                    "dele não foram lidas por esta versão. Nada se afirma sobre elas.")
+                    traduzir("rs_img_cifrado", idioma, nome=backup.name))
                 continue
             with sqlite_forense.abrir(backup / "Manifest.db",
                                       trabalho / f"manifesto_{numero}") as banco:
                 if not banco.legivel:
-                    avisos.append(f"O índice do backup {backup.name} não pôde ser lido: "
-                                  f"{banco.motivo}")
+                    avisos.append(traduzir("rs_img_indice_ilegivel", idioma,
+                                           nome=backup.name, motivo=banco.motivo))
                     continue
                 linhas = banco.conexao.execute(
                     "SELECT fileID, relativePath FROM Files "
@@ -637,7 +636,7 @@ class RelatorioService:
         artefato.resultado = resultado
         with tempfile.TemporaryDirectory(prefix="forense_locais_") as trabalho:
             imagens, avisos = RelatorioService._imagens_da_aquisicao(
-                pasta_aquisicao, Path(trabalho))
+                pasta_aquisicao, Path(trabalho), idi)
         artefato.presente = bool(imagens) or bool(avisos)
 
         vistas, sem_gps, repetidas = set(), 0, 0
@@ -780,7 +779,7 @@ class RelatorioService:
                         if chave == "whatsapp":
                             artefato.nota_da_fonte = nota_do_backup(
                                 pasta_aquisicao, arquivo_de_origem, artefato.sha256,
-                                artefato.resultado, fuso)
+                                artefato.resultado, fuso, idioma)
                         artefatos.append(artefato)
                         continue
                     relativo = caminho.relative_to(pasta_aquisicao).as_posix()
@@ -1345,7 +1344,7 @@ def _momento(epoch: float, fuso) -> datetime:
 
 
 def nota_do_backup(pasta_aquisicao: Path, arquivo_de_origem: Path, sha256: str, resultado,
-                   fuso=None) -> str:
+                   fuso=None, idioma=None) -> str:
     """
     De quando é o conteúdo de um backup do WhatsApp — dito no documento.
 
@@ -1365,27 +1364,24 @@ def nota_do_backup(pasta_aquisicao: Path, arquivo_de_origem: Path, sha256: str, 
             epoch = registro.get("gravado_no_aparelho_epoch")
             if registro.get("sha256", "").lower() == (sha256 or "").lower() and epoch:
                 gravado = _momento(epoch, fuso)
-                fonte = "data informada pelo próprio aparelho na aquisição, registrada sob o lacre"
+                fonte = traduzir("rs_nota_fonte_aparelho", idioma)
                 break
         if gravado:
             break
     if gravado is None and Path(arquivo_de_origem).is_file():
         gravado = _momento(Path(arquivo_de_origem).stat().st_mtime, fuso)
-        fonte = ("data do arquivo preservada pela cópia; esta aquisição não registrou a data "
-                 "no lacre")
+        fonte = traduzir("rs_nota_fonte_arquivo", idioma)
     momentos = [r.momento for r in getattr(resultado, "registros", []) if r.momento]
     partes = []
     if gravado:
-        partes.append(
-            f"O conteúdo reflete o BACKUP gravado no aparelho em "
-            f"{gravado.strftime('%d/%m/%Y %H:%M')} ({fonte}), e não o aparelho no dia do exame.")
+        partes.append(traduzir("rs_nota_backup_com_data", idioma,
+                               data=gravado.strftime('%d/%m/%Y %H:%M'), fonte=fonte))
     else:
-        partes.append("O conteúdo reflete um BACKUP do aparelho, de data não apurada, e não "
-                      "o aparelho no dia do exame.")
+        partes.append(traduzir("rs_nota_backup_sem_data", idioma))
     if momentos:
-        partes.append(f"A mensagem mais recente nele é de {max(momentos).strftime('%d/%m/%Y %H:%M')}.")
-    partes.append("Mensagens posteriores ao backup não estão neste material — a ausência delas "
-                  "aqui não significa que não existam.")
+        partes.append(traduzir("rs_nota_mais_recente", idioma,
+                               data=max(momentos).strftime('%d/%m/%Y %H:%M')))
+    partes.append(traduzir("rs_nota_posteriores", idioma))
     return " ".join(partes)
 
 
