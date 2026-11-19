@@ -43,6 +43,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from .idioma import traduzir
+
 # Marcadores de recusa do provider. Moram aqui, e não no extrator, porque
 # são a mesma regra em dois momentos: quem coleta precisa distinguir "sem
 # dados" de "acesso negado", e quem normaliza precisa da mesma distinção
@@ -69,23 +71,25 @@ _LIMITE_MILISSEGUNDOS = 10**11
 
 # Códigos do Android. Código desconhecido NÃO é adivinhado: vira texto que
 # diz que não foi reconhecido, preservando o número original.
+# Código do Android -> chave de catálogo. O rótulo é interpretação exibida
+# no relatório (não vai para o selo), então é traduzido no idioma do caso.
 TIPOS_SMS = {
-    1: "Recebida",
-    2: "Enviada",
-    3: "Rascunho",
-    4: "Caixa de saída",
-    5: "Falha no envio",
-    6: "Na fila",
+    1: "nm_dir_recebida",
+    2: "nm_dir_enviada",
+    3: "nm_sms_rascunho",
+    4: "nm_sms_caixa_saida",
+    5: "nm_sms_falha_envio",
+    6: "nm_sms_na_fila",
 }
 
 TIPOS_CHAMADA = {
-    1: "Recebida",
-    2: "Efetuada",
-    3: "Perdida",
-    4: "Correio de voz",
-    5: "Rejeitada",
-    6: "Bloqueada",
-    7: "Atendida em outro dispositivo",
+    1: "nm_dir_recebida",
+    2: "nm_call_efetuada",
+    3: "nm_call_perdida",
+    4: "nm_call_correio_voz",
+    5: "nm_call_rejeitada",
+    6: "nm_call_bloqueada",
+    7: "nm_call_atendida_outro",
 }
 
 
@@ -272,20 +276,32 @@ def _para_momento(valor, fuso: Optional[timezone]) -> Optional[datetime]:
     return momento.astimezone(fuso) if fuso is not None else momento
 
 
-def _rotulo_do_codigo(valor, tabela: dict) -> str:
+def _rotulo_do_codigo(valor, tabela: dict, idioma=None) -> str:
     """Rótulo do código, ou a declaração de que ele não foi reconhecido."""
     if valor in (None, ""):
-        return "(não informado)"
+        return traduzir("nm_nao_informado", idioma)
     try:
         codigo = int(valor)
     except (TypeError, ValueError):
-        return f"(código não numérico: {valor})"
-    return tabela.get(codigo, f"(código {codigo} não reconhecido)")
+        return traduzir("nm_cod_nao_numerico", idioma, valor=valor)
+    chave = tabela.get(codigo)
+    if chave is None:
+        return traduzir("nm_cod_nao_reconhecido", idioma, codigo=codigo)
+    return traduzir(chave, idioma)
 
 
-def _nome_do_fuso(fuso: Optional[timezone]) -> str:
+def _sim_nao(valor, idioma=None) -> str:
+    """"0"/"1" do Android -> Sim/Não no idioma do caso; o resto é não informado."""
+    if valor == "1":
+        return traduzir("nm_sim", idioma)
+    if valor == "0":
+        return traduzir("nm_nao", idioma)
+    return traduzir("nm_nao_informado", idioma)
+
+
+def _nome_do_fuso(fuso: Optional[timezone], idioma=None) -> str:
     if fuso is None:
-        return "UTC (nenhum fuso informado)"
+        return traduzir("nm_fuso_sem", idioma)
     agora = datetime.now(tz=fuso)
     return agora.strftime("%Z") or agora.strftime("UTC%z")
 
@@ -300,9 +316,10 @@ def _normalizar(
     fuso: Optional[timezone],
     montar_campos,
     campo_de_data: str,
+    idioma=None,
 ) -> ResultadoNormalizacao:
     resultado = ResultadoNormalizacao(
-        tipo=tipo, arquivo_de_origem=arquivo, fuso_declarado=_nome_do_fuso(fuso)
+        tipo=tipo, arquivo_de_origem=arquivo, fuso_declarado=_nome_do_fuso(fuso, idioma)
     )
 
     if indica_acesso_negado(texto):
@@ -357,7 +374,8 @@ def _normalizar(
     return resultado
 
 
-def normalizar_sms(texto: str, arquivo: str = "", fuso: Optional[timezone] = None):
+def normalizar_sms(texto: str, arquivo: str = "", fuso: Optional[timezone] = None,
+                   idioma=None):
     """
     Mensagens SMS a partir da saída de `content://sms`.
 
@@ -368,33 +386,35 @@ def normalizar_sms(texto: str, arquivo: str = "", fuso: Optional[timezone] = Non
 
     def montar(campos: dict) -> dict:
         return {
-            "numero": campos.get("address") or "(sem número)",
-            "direcao": _rotulo_do_codigo(campos.get("type"), TIPOS_SMS),
+            "numero": campos.get("address") or traduzir("nm_sem_numero", idioma),
+            "direcao": _rotulo_do_codigo(campos.get("type"), TIPOS_SMS, idioma),
             "conteudo": campos.get("body") or "",
-            "lida": {"0": "Não", "1": "Sim"}.get(campos.get("read"), "(não informado)"),
+            "lida": _sim_nao(campos.get("read"), idioma),
             "identificador_no_aparelho": campos.get("_id") or "",
         }
 
-    return _normalizar(texto, "sms", arquivo, fuso, montar, "date")
+    return _normalizar(texto, "sms", arquivo, fuso, montar, "date", idioma)
 
 
-def normalizar_chamadas(texto: str, arquivo: str = "", fuso: Optional[timezone] = None):
+def normalizar_chamadas(texto: str, arquivo: str = "", fuso: Optional[timezone] = None,
+                        idioma=None):
     """Registro de chamadas a partir da saída de `content://call_log/calls`."""
 
     def montar(campos: dict) -> dict:
         duracao = campos.get("duration")
         return {
-            "numero": campos.get("number") or "(sem número)",
-            "contato": campos.get("name") or "(não consta na agenda)",
-            "direcao": _rotulo_do_codigo(campos.get("type"), TIPOS_CHAMADA),
+            "numero": campos.get("number") or traduzir("nm_sem_numero", idioma),
+            "contato": campos.get("name") or traduzir("nm_nao_consta_agenda", idioma),
+            "direcao": _rotulo_do_codigo(campos.get("type"), TIPOS_CHAMADA, idioma),
             "duracao_segundos": duracao if duracao not in (None, "") else "0",
             "identificador_no_aparelho": campos.get("_id") or "",
         }
 
-    return _normalizar(texto, "chamada", arquivo, fuso, montar, "date")
+    return _normalizar(texto, "chamada", arquivo, fuso, montar, "date", idioma)
 
 
-def normalizar_contatos(texto: str, arquivo: str = "", fuso: Optional[timezone] = None):
+def normalizar_contatos(texto: str, arquivo: str = "", fuso: Optional[timezone] = None,
+                        idioma=None):
     """
     Agenda a partir da saída de `content://com.android.contacts/data/phones`.
 
@@ -405,20 +425,21 @@ def normalizar_contatos(texto: str, arquivo: str = "", fuso: Optional[timezone] 
 
     def montar(campos: dict) -> dict:
         return {
-            "contato": campos.get("display_name") or "(sem nome)",
-            "numero": campos.get("data1") or campos.get("number") or "(sem número)",
+            "contato": campos.get("display_name") or traduzir("nm_sem_nome", idioma),
+            "numero": (campos.get("data1") or campos.get("number")
+                       or traduzir("nm_sem_numero", idioma)),
             "identificador_no_aparelho": campos.get("_id") or "",
         }
 
-    return _normalizar(texto, "contato", arquivo, fuso, montar, "__sem_data__")
+    return _normalizar(texto, "contato", arquivo, fuso, montar, "__sem_data__", idioma)
 
 
 # Caixas do MMS (`msg_box`). Os códigos coincidem com os do SMS só até o 4.
 CAIXAS_MMS = {
-    1: "Recebida",
-    2: "Enviada",
-    3: "Rascunho",
-    4: "Caixa de saída",
+    1: "nm_dir_recebida",
+    2: "nm_dir_enviada",
+    3: "nm_sms_rascunho",
+    4: "nm_sms_caixa_saida",
 }
 
 # Tipos de endereço do MMS (PduHeaders): quem enviou e a quem se destinava.
@@ -447,6 +468,7 @@ def normalizar_mms(
     arquivo: str = "",
     fuso: Optional[timezone] = None,
     pasta: Optional[Path] = None,
+    idioma=None,
 ):
     """
     Mensagens MMS a partir da saída de `content://mms`.
@@ -460,7 +482,7 @@ def normalizar_mms(
     letras. Deixar em branco faria uma mensagem com texto parecer uma
     mensagem vazia.
     """
-    partes, situacao_das_partes = _partes_do_mms(pasta)
+    partes, situacao_das_partes = _partes_do_mms(pasta, idioma)
 
     def montar(campos: dict) -> dict:
         identificador = campos.get("_id") or ""
@@ -472,19 +494,19 @@ def normalizar_mms(
             conteudo = " / ".join(textos)
             anexos = "; ".join(lista_anexos)
         return {
-            "numero": _numero_do_mms(pasta, identificador, caixa),
-            "direcao": _rotulo_do_codigo(caixa, CAIXAS_MMS),
+            "numero": _numero_do_mms(pasta, identificador, caixa, idioma),
+            "direcao": _rotulo_do_codigo(caixa, CAIXAS_MMS, idioma),
             "conteudo": conteudo,
             "assunto": campos.get("sub") or "",
             "anexo": anexos,
-            "lida": {"0": "Não", "1": "Sim"}.get(campos.get("read"), "(não informado)"),
+            "lida": _sim_nao(campos.get("read"), idioma),
             "identificador_no_aparelho": identificador,
         }
 
-    return _normalizar(texto, "mms", arquivo, fuso, montar, "date")
+    return _normalizar(texto, "mms", arquivo, fuso, montar, "date", idioma)
 
 
-def _partes_do_mms(pasta: Optional[Path]):
+def _partes_do_mms(pasta: Optional[Path], idioma=None):
     """
     Devolve `({id_da_mensagem: (textos, anexos)}, situacao)`.
 
@@ -492,13 +514,13 @@ def _partes_do_mms(pasta: Optional[Path]):
     que explica por que não há conteúdo, e vai para o campo no lugar dele.
     """
     if pasta is None:
-        return {}, "(partes do MMS não informadas ao normalizador)"
+        return {}, traduzir("nm_mms_partes_nao_informadas", idioma)
     caminho = Path(pasta) / NOME_PARTES_MMS
     if not caminho.is_file():
-        return {}, "(partes do MMS não coletadas)"
+        return {}, traduzir("nm_mms_partes_nao_coletadas", idioma)
     texto = caminho.read_text(encoding="utf-8", errors="replace")
     if indica_acesso_negado(texto):
-        return {}, "(conteúdo não obtido: o sistema recusou a consulta às partes)"
+        return {}, traduzir("nm_mms_partes_recusadas", idioma)
 
     partes: dict = {}
     for campos in registros_brutos(texto):
@@ -508,21 +530,24 @@ def _partes_do_mms(pasta: Optional[Path]):
             if campos.get("text"):
                 textos.append(campos["text"])
         elif tipo != TIPO_LEIAUTE_MMS:
-            nome = campos.get("name") or campos.get("cl") or campos.get("fn") or "sem nome"
-            anexos.append(f"{nome} [{tipo or 'tipo não declarado'}, parte {campos.get('_id')}]")
+            nome = (campos.get("name") or campos.get("cl") or campos.get("fn")
+                    or traduzir("nm_mms_sem_nome", idioma))
+            tipo_rotulo = tipo or traduzir("nm_mms_tipo_nao_declarado", idioma)
+            anexos.append(traduzir("nm_mms_anexo_desc", idioma,
+                                   nome=nome, tipo=tipo_rotulo, parte=campos.get('_id')))
     return partes, ""
 
 
-def _numero_do_mms(pasta: Optional[Path], identificador: str, caixa) -> str:
+def _numero_do_mms(pasta: Optional[Path], identificador: str, caixa, idioma=None) -> str:
     """O interlocutor: remetente da recebida, destinatário(s) das demais."""
     if pasta is None or not identificador:
-        return "(endereços não coletados)"
+        return traduzir("nm_mms_enderecos_nao_coletados", idioma)
     caminho = Path(pasta) / PASTA_ENDERECOS_MMS / nome_do_arquivo_de_enderecos(identificador)
     if not caminho.is_file():
-        return "(endereços não coletados)"
+        return traduzir("nm_mms_enderecos_nao_coletados", idioma)
     texto = caminho.read_text(encoding="utf-8", errors="replace")
     if indica_acesso_negado(texto):
-        return "(endereços não obtidos: consulta recusada)"
+        return traduzir("nm_mms_enderecos_recusados", idioma)
 
     procurados = (ENDERECO_MMS_DE,) if str(caixa) == "1" else ENDERECOS_MMS_PARA
     numeros = [
@@ -532,7 +557,7 @@ def _numero_do_mms(pasta: Optional[Path], identificador: str, caixa) -> str:
         and campos.get("address")
         and campos.get("address") != _MARCADOR_PROPRIO_NUMERO
     ]
-    return ", ".join(numeros) if numeros else "(sem número)"
+    return ", ".join(numeros) if numeros else traduzir("nm_sem_numero", idioma)
 
 
 # ---------------------------------------------------------------------------

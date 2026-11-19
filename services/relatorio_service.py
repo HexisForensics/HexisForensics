@@ -41,7 +41,7 @@ from core.agente_android import ler_chamadas as ler_chamadas_do_agente
 from core.agente_android import ler_contatos as ler_contatos_do_agente
 from core.agente_android import ler_mms as ler_mms_do_agente
 from core.agente_android import ler_sms as ler_sms_do_agente
-from core.case import pasta_dos_decifrados
+from core.case import idioma_do_caso, pasta_dos_decifrados
 from core.hashing import calcular_sha256, ler_manifesto, localizar_manifesto
 from core.mensagens_email import COLUNAS as COLUNAS_EMAIL
 from core.mensagens_email import ler as ler_email
@@ -422,6 +422,10 @@ class RelatorioService:
     def _levantar(pasta_aquisicao: Path, fuso) -> list:
         """Localiza, normaliza e confere cada artefato contra o selo."""
         hashes_selados = RelatorioService._hashes_do_manifesto(pasta_aquisicao)
+        # Os rótulos de interpretação (direção, lida, "não consta na agenda"...)
+        # saem no idioma do caso. Não são selo: são leitura feita na hora do
+        # relatório sobre o bruto selado, que continua intacto.
+        idioma = idioma_do_caso(pasta_aquisicao)
         if e_aquisicao_ios(pasta_aquisicao):
             return RelatorioService._levantar_ios(pasta_aquisicao, hashes_selados, fuso) + [
                 RelatorioService._levantar_locais(pasta_aquisicao, hashes_selados)]
@@ -440,9 +444,10 @@ class RelatorioService:
                 if normalizar is normalizar_mms:
                     # O MMS é o único artefato de texto espalhado em mais de
                     # um arquivo: texto e números moram nos brutos irmãos.
-                    artefato.resultado = normalizar(texto, relativo, fuso, caminho.parent)
+                    artefato.resultado = normalizar(texto, relativo, fuso, caminho.parent,
+                                                    idioma=idioma)
                 else:
-                    artefato.resultado = normalizar(texto, relativo, fuso)
+                    artefato.resultado = normalizar(texto, relativo, fuso, idioma=idioma)
             artefatos.append(artefato)
 
         for chave, titulo, relativo, ler_backup, colunas in FONTES_BACKUP + FONTES_AGENTE:
