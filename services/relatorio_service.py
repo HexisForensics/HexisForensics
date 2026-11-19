@@ -464,7 +464,7 @@ class RelatorioService:
             artefatos.append(artefato)
 
         artefatos.extend(
-            RelatorioService._levantar_bancos(pasta_aquisicao, hashes_selados, fuso)
+            RelatorioService._levantar_bancos(pasta_aquisicao, hashes_selados, fuso, idioma)
         )
         artefatos.append(RelatorioService._levantar_locais(pasta_aquisicao, hashes_selados))
 
@@ -715,7 +715,7 @@ class RelatorioService:
         return artefato
 
     @staticmethod
-    def _levantar_bancos(pasta_aquisicao: Path, hashes_selados: dict, fuso) -> list:
+    def _levantar_bancos(pasta_aquisicao: Path, hashes_selados: dict, fuso, idioma=None) -> list:
         """
         Localiza e le os artefatos que moram em banco SQLite.
 
@@ -787,7 +787,7 @@ class RelatorioService:
                             calcular_sha256(arquivo_de_origem) if arquivo_de_origem.is_file() else ""
                         )
                         artefato.sha256_no_manifesto = hashes_selados.get(origem, "")
-                        artefato.resultado = ler_banco(caminho, Path(trabalho), fuso)
+                        artefato.resultado = ler_banco(caminho, Path(trabalho), fuso, idioma)
                         if chave == "whatsapp":
                             artefato.nota_da_fonte = nota_do_backup(
                                 pasta_aquisicao, arquivo_de_origem, artefato.sha256,
@@ -811,7 +811,7 @@ class RelatorioService:
                     artefato.presente = True
                     artefato.sha256 = calcular_sha256(caminho)
                     artefato.sha256_no_manifesto = hashes_selados.get(relativo, "")
-                    artefato.resultado = ler_banco(caminho, Path(trabalho), fuso)
+                    artefato.resultado = ler_banco(caminho, Path(trabalho), fuso, idioma)
                     artefatos.append(artefato)
         return artefatos
 

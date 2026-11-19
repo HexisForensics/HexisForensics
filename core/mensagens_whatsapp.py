@@ -36,6 +36,7 @@ import binascii
 from pathlib import Path
 from typing import Optional
 
+from .idioma import traduzir
 from .normalizacao import Descarte, Registro, ResultadoNormalizacao, momento_de_epoch, nome_do_fuso
 from .sqlite_forense import abrir
 
@@ -49,23 +50,26 @@ SUFIXO_GRUPO = "@g.us"
 # coincidem no que interessa. O que não estiver aqui entra com o número,
 # em vez de virar "desconhecido" — o número é verificável, o rótulo
 # inventado não.
+# Código -> chave de catálogo. O rótulo é exibido no caderno (interpretação,
+# não selo), então traduz no idioma do caso; o código do WhatsApp é o dado.
 TIPOS_DE_MENSAGEM = {
-    0: "texto",
-    1: "imagem",
-    2: "áudio",
-    3: "vídeo",
-    4: "contato",
-    5: "localização",
-    7: "mensagem de sistema",
-    9: "documento",
-    13: "GIF",
-    15: "mensagem apagada",
-    16: "localização em tempo real",
-    20: "figurinha",
-    42: "imagem de visualização única",
-    43: "vídeo de visualização única",
+    0: "wa_tipo_texto",
+    1: "wa_tipo_imagem",
+    2: "wa_tipo_audio",
+    3: "wa_tipo_video",
+    4: "wa_tipo_contato",
+    5: "wa_tipo_localizacao",
+    7: "wa_tipo_sistema",
+    9: "wa_tipo_documento",
+    13: "wa_tipo_gif",
+    15: "wa_tipo_apagada",
+    16: "wa_tipo_loc_tempo_real",
+    20: "wa_tipo_figurinha",
+    42: "wa_tipo_img_unica",
+    43: "wa_tipo_video_unico",
 }
 
+TIPO_TEXTO = 0
 TIPO_SISTEMA = 7
 
 COLUNAS = ("momento", "direcao", "numero", "contato", "conversa", "tipo", "conteudo", "anexo")
@@ -122,7 +126,7 @@ CONSULTA_LEGADA = """
 """
 
 
-def _rotulo_do_tipo(valor) -> str:
+def _rotulo_do_tipo(valor, idioma=None) -> str:
     """
     Nome do tipo de mensagem, ou o próprio código quando desconhecido.
 
@@ -133,8 +137,9 @@ def _rotulo_do_tipo(valor) -> str:
     try:
         codigo = int(valor)
     except (TypeError, ValueError):
-        return "tipo não informado"
-    return TIPOS_DE_MENSAGEM.get(codigo, f"tipo {codigo}")
+        return traduzir("wa_tipo_nao_informado", idioma)
+    chave = TIPOS_DE_MENSAGEM.get(codigo)
+    return traduzir(chave, idioma) if chave else traduzir("wa_tipo_codigo", idioma, codigo=codigo)
 
 
 def _numero_de(jid: Optional[str]) -> str:
@@ -194,7 +199,7 @@ def _mapa_de_lids(banco) -> dict:
     return {linha["lid"]: linha["tel"] for linha in linhas if linha["lid"] and linha["tel"]}
 
 
-def _nomes_da_agenda(caminho_banco: Path, pasta_trabalho: Path):
+def _nomes_da_agenda(caminho_banco: Path, pasta_trabalho: Path, idioma=None):
     """
     Nomes dos contatos, do `wa.db` que mora ao lado do `msgstore.db`.
 
@@ -205,18 +210,18 @@ def _nomes_da_agenda(caminho_banco: Path, pasta_trabalho: Path):
     """
     caminho = Path(caminho_banco).with_name(NOME_BANCO_DE_CONTATOS)
     if not caminho.is_file():
-        return {}, "(agenda do WhatsApp não coletada)"
+        return {}, traduzir("wa_agenda_nao_coletada", idioma)
     with abrir(caminho, pasta_trabalho) as agenda:
         if not agenda.legivel or not agenda.tem_tabelas("wa_contacts"):
-            return {}, "(agenda do WhatsApp não pôde ser lida)"
+            return {}, traduzir("wa_agenda_ilegivel", idioma)
         presentes = _colunas(agenda, "wa_contacts")
         campos = [c for c in ("display_name", "wa_name") if c in presentes]
         if "jid" not in presentes or not campos:
-            return {}, "(agenda do WhatsApp em formato não reconhecido)"
+            return {}, traduzir("wa_agenda_formato", idioma)
         try:
             linhas = agenda.consultar(f"SELECT jid, {', '.join(campos)} FROM wa_contacts")
         except Exception:
-            return {}, "(agenda do WhatsApp não pôde ser lida)"
+            return {}, traduzir("wa_agenda_ilegivel", idioma)
         nomes = {}
         for linha in linhas:
             nome = next((linha[c] for c in campos if linha[c]), None)
@@ -225,7 +230,7 @@ def _nomes_da_agenda(caminho_banco: Path, pasta_trabalho: Path):
         return nomes, ""
 
 
-def _resolver(jid: Optional[str], lids: dict):
+def _resolver(jid: Optional[str], lids: dict, idioma=None):
     """
     Devolve `(jid_com_telefone, numero_para_exibir)`.
 
@@ -239,7 +244,7 @@ def _resolver(jid: Optional[str], lids: dict):
     if jid.endswith(SUFIXO_LID):
         telefone = lids.get(jid)
         if not telefone:
-            return "", "(telefone não consta no banco — identificador interno do WhatsApp)"
+            return "", traduzir("wa_tel_nao_consta", idioma)
         return telefone, _numero_de(telefone)
     return jid, _numero_de(jid)
 
@@ -273,23 +278,23 @@ def _valor_opcional(linha, coluna: str):
         return None
 
 
-def _conteudo_de(texto, tipo_legivel: str) -> str:
+def _conteudo_de(texto, tipo_legivel: str, e_texto: bool) -> str:
     """
     O que a mensagem carrega.
 
     Mídia tem texto nulo porque o conteúdo está num arquivo. Devolver
     string vazia ali apagaria a mensagem da linha do tempo; devolver o
     tipo entre parênteses preserva o fato de que a mensagem existiu e diz
-    o que ela era.
+    o que ela era. `e_texto` vem do CÓDIGO (não do rótulo, que é traduzido).
     """
     if texto:
         return str(texto)
-    if tipo_legivel == "texto":
+    if e_texto:
         return ""
     return f"({tipo_legivel})"
 
 
-def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None) -> ResultadoNormalizacao:
+def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None, idioma=None) -> ResultadoNormalizacao:
     """
     Lê o `msgstore.db` e devolve o mesmo `ResultadoNormalizacao` dos demais
     artefatos — daí para a frente, caderno, planilha e procedência já
@@ -299,7 +304,8 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None) -> ResultadoNormal
     resultado = ResultadoNormalizacao(
         tipo=TIPO,
         arquivo_de_origem=caminho_banco.name,
-        fuso_declarado=nome_do_fuso(fuso),
+        fuso_declarado=nome_do_fuso(fuso, idioma),
+        idioma=idioma,
     )
 
     with abrir(caminho_banco, pasta_trabalho) as banco:
@@ -320,26 +326,21 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None) -> ResultadoNormal
             # descobrir com que versão está lidando, em vez de concluir
             # que não havia mensagens.
             resultado.acesso_negado = True
-            resultado.trecho_da_recusa = (
-                "O banco abriu, mas não tem nenhum dos esquemas de mensagem "
-                "conhecidos. Nada se pode afirmar sobre as mensagens deste "
-                "aparelho a partir deste arquivo. Tabelas encontradas: "
-                + (", ".join(banco.tabelas) or "nenhuma")
-            )
+            resultado.trecho_da_recusa = traduzir(
+                "wa_sem_esquema", idioma,
+                tabelas=(", ".join(banco.tabelas) or traduzir("wa_nenhuma", idioma)))
             return resultado
 
         try:
             linhas = banco.consultar(consulta)
         except Exception as erro:  # sqlite3.Error e derivados
             resultado.acesso_negado = True
-            resultado.trecho_da_recusa = (
-                f"O esquema '{esquema}' foi reconhecido, mas a consulta falhou: {erro}. "
-                "As mensagens NÃO foram lidas."
-            )
+            resultado.trecho_da_recusa = traduzir(
+                "wa_consulta_falhou", idioma, esquema=esquema, erro=erro)
             return resultado
 
         lids = _mapa_de_lids(banco)
-        nomes, situacao_da_agenda = _nomes_da_agenda(caminho_banco, pasta_trabalho)
+        nomes, situacao_da_agenda = _nomes_da_agenda(caminho_banco, pasta_trabalho, idioma)
 
         for linha in linhas:
             identificador = linha["id"]
@@ -357,21 +358,22 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None) -> ResultadoNormal
                 resultado.descartes.append(
                     Descarte(
                         linha_de_origem=identificador or 0,
-                        texto=f"registro {identificador} da tabela de mensagens",
-                        motivo="marcador interno do WhatsApp: sem conversa, data, tipo e texto",
+                        texto=traduzir("wa_desc_registro", idioma, id=identificador),
+                        motivo=traduzir("wa_desc_marcador", idioma),
                     )
                 )
                 continue
 
             momento = momento_de_epoch(linha["momento"], fuso)
-            tipo_legivel = _rotulo_do_tipo(linha["tipo"])
+            tipo_legivel = _rotulo_do_tipo(linha["tipo"], idioma)
             legenda = _valor_opcional(linha, "midia_media_caption")
-            conteudo = _conteudo_de(linha["texto"] or legenda, tipo_legivel)
+            conteudo = _conteudo_de(linha["texto"] or legenda, tipo_legivel,
+                                    str(linha["tipo"]) == str(TIPO_TEXTO))
             acao = _valor_opcional(linha, "acao_de_sistema")
             if str(linha["tipo"]) == str(TIPO_SISTEMA) and acao is not None:
                 # O código da ação é verificável; o significado dele muda
                 # entre versões e não é adivinhado aqui.
-                conteudo = f"(mensagem de sistema, ação {acao})"
+                conteudo = traduzir("wa_sistema_acao", idioma, acao=acao)
 
             caminho_midia = _valor_opcional(linha, "midia_file_path")
             tipo_mime = _valor_opcional(linha, "midia_mime_type")
@@ -382,7 +384,7 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None) -> ResultadoNormal
                 for parte in (
                     str(tipo_mime) if tipo_mime else "",
                     f"{tamanho} bytes" if tamanho else "",
-                    f"SHA-256 registrado pelo WhatsApp: {hash_midia}" if hash_midia else "",
+                    traduzir("wa_anexo_sha", idioma, hash=hash_midia) if hash_midia else "",
                 )
                 if parte
             ]
@@ -391,7 +393,7 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None) -> ResultadoNormal
             if caminho_midia:
                 anexo = str(caminho_midia) + sufixo
             elif detalhes_do_anexo:
-                anexo = "(arquivo não baixado no aparelho)" + sufixo
+                anexo = traduzir("wa_anexo_nao_baixado", idioma) + sufixo
 
             jid_conversa = linha["jid_conversa"] or ""
             em_grupo = str(jid_conversa).endswith(SUFIXO_GRUPO)
@@ -401,7 +403,7 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None) -> ResultadoNormal
             # Confundir os dois atribuiria toda mensagem de grupo ao
             # próprio grupo, e ninguém saberia quem falou.
             jid_interlocutor = (linha["jid_remetente"] or jid_conversa) if em_grupo else jid_conversa
-            jid_telefone, numero = _resolver(jid_interlocutor, lids)
+            jid_telefone, numero = _resolver(jid_interlocutor, lids, idioma)
             if de_mim and em_grupo:
                 jid_telefone, numero = "", ""
             if situacao_da_agenda:
@@ -413,8 +415,8 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None) -> ResultadoNormal
                 resultado.descartes.append(
                     Descarte(
                         linha_de_origem=identificador or 0,
-                        texto=f"registro {identificador} da tabela de mensagens",
-                        motivo="sem data e sem conteúdo — nada a apresentar",
+                        texto=traduzir("wa_desc_registro", idioma, id=identificador),
+                        motivo=traduzir("wa_desc_sem_dados", idioma),
                     )
                 )
                 continue
@@ -423,7 +425,7 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None) -> ResultadoNormal
                 Registro(
                     tipo=TIPO,
                     campos={
-                        "direcao": "Enviada" if de_mim else "Recebida",
+                        "direcao": traduzir("nm_dir_enviada" if de_mim else "nm_dir_recebida", idioma),
                         "numero": numero,
                         "contato": contato,
                         "conversa": (linha["assunto"] or jid_conversa or ""),

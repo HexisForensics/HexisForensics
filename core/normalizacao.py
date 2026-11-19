@@ -584,6 +584,6 @@ def momento_de_epoch(valor, fuso: Optional[timezone] = None) -> Optional[datetim
     return _para_momento(valor, fuso)
 
 
-def nome_do_fuso(fuso: Optional[timezone] = None) -> str:
+def nome_do_fuso(fuso: Optional[timezone] = None, idioma=None) -> str:
     """Nome do fuso, para o relatório declarar em que referência as datas estão."""
-    return _nome_do_fuso(fuso)
+    return _nome_do_fuso(fuso, idioma)

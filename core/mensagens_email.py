@@ -128,7 +128,7 @@ def _valor(linha, coluna: Optional[str]) -> str:
     return "" if valor is None else str(valor)
 
 
-def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None) -> ResultadoNormalizacao:
+def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None, idioma=None) -> ResultadoNormalizacao:
     """
     Lê o acervo local de correio e devolve o mesmo `ResultadoNormalizacao`
     dos demais artefatos.
