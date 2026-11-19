@@ -24,6 +24,7 @@ from typing import List
 from reportlab.platypus import KeepTogether, Paragraph, Spacer, Table, TableStyle
 
 from core.aparelho import IDENTIFICADORES_GENERICOS
+from core.categorias import nome_no_idioma as nome_categoria_no_idioma
 from core.idioma import traduzir
 from core.operador import NAO_DECLARADO
 from core.protocolos import desdobrar, exige_especificacao, verificar_automaticos
@@ -478,7 +479,8 @@ def bloco_arquivos_por_categoria(dossie: Dossie, largura: float) -> list:
         return [Paragraph(traduzir("bl_cat_nenhum"), e["corpo"])]
 
     linhas = [
-        [escapar(categoria.nome), str(categoria.quantidade), tamanho_legivel(categoria.volume)]
+        [escapar(nome_categoria_no_idioma(categoria.nome, dossie.idioma)),
+         str(categoria.quantidade), tamanho_legivel(categoria.volume)]
         for categoria in categorias
     ]
     linhas.append([traduzir("bl_total"), f"<b>{total}</b>", f"<b>{tamanho_legivel(volume)}</b>"])
@@ -494,8 +496,9 @@ def bloco_arquivos_por_categoria(dossie: Dossie, largura: float) -> list:
         if not categoria.quantidade:
             continue
         elementos.append(Paragraph(
-            traduzir("bl_cat_subsecao", nome=escapar(categoria.nome), n=categoria.quantidade,
-                     volume=tamanho_legivel(categoria.volume)),
+            traduzir("bl_cat_subsecao",
+                     nome=escapar(nome_categoria_no_idioma(categoria.nome, dossie.idioma)),
+                     n=categoria.quantidade, volume=tamanho_legivel(categoria.volume)),
             e["subsecao"],
         ))
         arquivos = categoria.arquivos

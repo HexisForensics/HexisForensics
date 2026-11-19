@@ -20,6 +20,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Iterable, List, Tuple
 
+from .idioma import traduzir
+
 OUTROS = "Outros"
 
 # Na ordem em que os documentos as mostram.
@@ -39,6 +41,30 @@ CATEGORIAS = tuple(nome for nome, _ in EXTENSOES) + (OUTROS,)
 _POR_EXTENSAO = {
     extensao: categoria for categoria, lista in EXTENSOES for extensao in lista.split()
 }
+
+# O nome canônico (PT) é a identidade da categoria — chave de agrupamento e
+# do catálogo. A tradução vale só na EXIBIÇÃO dos documentos; o agrupamento
+# e a classificação continuam pelo nome canônico.
+_CHAVE_DA_CATEGORIA = {
+    "Imagens": "cat_imagens",
+    "Vídeos": "cat_videos",
+    "Áudios": "cat_audios",
+    "PDF": "cat_pdf",
+    "Documentos de escritório": "cat_doc_escritorio",
+    "Texto e registros": "cat_texto_registros",
+    "Bancos de dados e backups de aplicativo": "cat_bancos_backups",
+    "Aplicativos": "cat_aplicativos",
+    "Compactados": "cat_compactados",
+    "Imagens de disco": "cat_imagens_disco",
+    OUTROS: "cat_outros",
+}
+
+
+def nome_no_idioma(nome: str, idioma=None) -> str:
+    """O nome da categoria no idioma pedido, para os documentos. Nome fora
+    do catálogo (não deveria existir) sai como está."""
+    chave = _CHAVE_DA_CATEGORIA.get(nome)
+    return traduzir(chave, idioma) if chave else nome
 _COMPANHEIROS_DE_BANCO = ("db-wal", "db-shm", "db-journal")
 
 

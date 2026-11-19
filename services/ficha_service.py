@@ -38,7 +38,7 @@ def _valor_html(campo) -> str:
         corpo = f'<font color="#9a6700"><b>{identidade.escapar(campo.valor)}</b></font>'
     if campo.fonte:
         corpo += (
-            f'<br/><font size="6.5" color="#5b6675">fonte: '
+            f'<br/><font size="6.5" color="#5b6675">{traduzir("fha_rotulo_fonte")}'
             f"{identidade.escapar(campo.fonte)}</font>"
         )
     return corpo
