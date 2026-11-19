@@ -1967,6 +1967,8 @@
   "geo_coord_malformada": "coordenada de GPS malformada ({erro})",
   "geo_coord_fora_globo": "coordenada fora do globo ({lat}, {lon})",
   "geo_coord_zero": "coordenada 0,0 — típica de câmera que gravou o campo sem ter sinal de GPS",
+  "cad_rastreio_com": "Extraído de <b>{nome}</b> — SHA-256 do manifesto: <span class='mono'>{hash}</span>",
+  "cad_rastreio_sem": "Extraído de <b>{nome}</b> — esta aquisição <b>não possui manifesto de integridade</b>, e nada se pode afirmar aqui sobre a preservação do material.",
   "fd_autorizacao_vazia": "nenhum documento de autorização anexado ao caso",
   "sess_conta_dev": "conta de testes da versão de desenvolvimento",
   "ci_resumo_erro": "Conferência não realizada: {erro}",

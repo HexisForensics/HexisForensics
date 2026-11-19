@@ -63,7 +63,6 @@ def modalidade_sugerida(pasta_aquisicao) -> str:
     return resumir_modulos(pasta_aquisicao)
 
 
-SEM_INFORMACAO = "Não informado"
 TRACO = "—"
 
 
@@ -125,16 +124,12 @@ def _rastreio(pasta_aquisicao: Path, hash_manifesto: str) -> str:
     a ser afirmação sem lastro — exatamente o que o documento gerado pela
     ferramenta evitava.
     """
+    idi = idioma_para_selar(pasta_aquisicao)
+    nome = html.escape(pasta_aquisicao.name)
     if hash_manifesto:
-        return (
-            f"Extraído de <b>{html.escape(pasta_aquisicao.name)}</b> — "
-            f"SHA-256 do manifesto: <span class='mono'>{html.escape(hash_manifesto)}</span>"
-        )
-    return (
-        f"Extraído de <b>{html.escape(pasta_aquisicao.name)}</b> — "
-        "esta aquisição <b>não possui manifesto de integridade</b>, e nada se pode "
-        "afirmar aqui sobre a preservação do material."
-    )
+        return traduzir("cad_rastreio_com", idi,
+                        nome=nome, hash=html.escape(hash_manifesto))
+    return traduzir("cad_rastreio_sem", idi, nome=nome)
 
 
 # ---------------------------------------------------------------------------
