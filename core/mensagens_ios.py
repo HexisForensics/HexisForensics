@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from core.idioma import traduzir
 from core.normalizacao import (
     Descarte,
     Registro,
@@ -43,17 +44,20 @@ SUFIXO_GRUPO_WHATSAPP = "@g.us"
 # Tipos de mensagem do WhatsApp para iOS que se conhecem com segurança.
 # Código fora desta lista é apresentado como código — não se adivinha.
 TIPOS_WHATSAPP_IOS = {
-    0: "texto",
-    1: "imagem",
-    2: "vídeo",
-    3: "áudio",
-    4: "contato",
-    5: "localização",
-    7: "link",
-    8: "documento",
-    11: "GIF",
-    15: "figurinha",
+    0: "wa_tipo_texto",
+    1: "wa_tipo_imagem",
+    2: "wa_tipo_video",
+    3: "wa_tipo_audio",
+    4: "wa_tipo_contato",
+    5: "wa_tipo_localizacao",
+    7: "ios_wa_link",
+    8: "wa_tipo_documento",
+    11: "wa_tipo_gif",
+    15: "wa_tipo_figurinha",
 }
+# Código do tipo cujo tratamento no código depende de constante, não do rótulo.
+TIPO_WA_TEXTO = 0
+TIPO_WA_LOCALIZACAO = 5
 
 # Propriedades da tabela `ABMultiValue` da agenda do iOS.
 PROPRIEDADE_TELEFONE = 3
@@ -118,6 +122,11 @@ def _texto(valor) -> str:
     return str(valor)
 
 
+def _lida_ios(valor, idioma=None) -> str:
+    chave = {"1": "nm_sim", "0": "nm_nao"}.get(_texto(valor), "nm_nao_informado")
+    return traduzir(chave, idioma)
+
+
 def _colunas(banco, tabela: str) -> set:
     try:
         return {linha[1] for linha in banco.consultar(f"PRAGMA table_info({tabela})")}
@@ -130,20 +139,18 @@ def _opcional(colunas: set, prefixo: str, coluna: str, apelido: str) -> str:
     return f"{prefixo}.{coluna} AS {apelido}" if coluna in colunas else f"NULL AS {apelido}"
 
 
-def resultado_vazio(tipo: str, arquivo: str, fuso) -> ResultadoNormalizacao:
+def resultado_vazio(tipo: str, arquivo: str, fuso, idioma=None) -> ResultadoNormalizacao:
     """Resultado sem leitura — quem chama diz, em `significado_do_vazio`, por quê."""
-    return _resultado(tipo, Path(arquivo), arquivo, fuso)
+    return _resultado(tipo, Path(arquivo), arquivo, fuso, idioma)
 
 
-def _resultado(tipo: str, caminho: Path, arquivo: str, fuso) -> ResultadoNormalizacao:
+def _resultado(tipo: str, caminho: Path, arquivo: str, fuso, idioma=None) -> ResultadoNormalizacao:
     return ResultadoNormalizacao(
         tipo=tipo,
         arquivo_de_origem=arquivo or Path(caminho).name,
-        fuso_declarado=nome_do_fuso(fuso),
-        significado_do_vazio=(
-            "O banco do iPhone foi lido e não tem nenhum registro desta natureza. O backup "
-            "não traz o que foi apagado, e isso não prova que nunca tenha existido."
-        ),
+        fuso_declarado=nome_do_fuso(fuso, idioma),
+        significado_do_vazio=traduzir("ios_vazio", idioma),
+        idioma=idioma,
     )
 
 
@@ -153,24 +160,25 @@ def _recusar(resultado: ResultadoNormalizacao, motivo: str) -> ResultadoNormaliz
     return resultado
 
 
-def _esquema_desconhecido(banco, esperadas) -> str:
-    return (
-        f"O banco abriu, mas não tem as tabelas esperadas ({', '.join(esperadas)}). Nada se "
-        "pode afirmar a partir deste arquivo. Tabelas encontradas: "
-        + (", ".join(banco.tabelas) or "nenhuma")
+def _esquema_desconhecido(banco, esperadas, idioma=None) -> str:
+    return traduzir(
+        "ios_esquema", idioma,
+        esperadas=", ".join(esperadas),
+        tabelas=(", ".join(banco.tabelas) or traduzir("wa_nenhuma", idioma)),
     )
 
 
 # ---------------------------------------------------------------------------
 # Mensagens: sms.db (iMessage e SMS)
 # ---------------------------------------------------------------------------
-def ler_sms(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "") -> ResultadoNormalizacao:
-    resultado = _resultado("sms", caminho, arquivo, fuso)
+def ler_sms(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "",
+            idioma=None) -> ResultadoNormalizacao:
+    resultado = _resultado("sms", caminho, arquivo, fuso, idioma)
     with abrir(caminho, pasta_trabalho) as banco:
         if not banco.legivel:
             return _recusar(resultado, banco.motivo)
         if not banco.tem_tabelas("message", "handle"):
-            return _recusar(resultado, _esquema_desconhecido(banco, ("message", "handle")))
+            return _recusar(resultado, _esquema_desconhecido(banco, ("message", "handle"), idioma))
 
         colunas = _colunas(banco, "message")
         com_conversa = banco.tem_tabelas("chat", "chat_message_join")
@@ -192,7 +200,7 @@ def ler_sms(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "") -
         try:
             linhas = banco.consultar(consulta)
         except Exception as erro:
-            return _recusar(resultado, f"A consulta às mensagens falhou: {erro}. Nada foi lido.")
+            return _recusar(resultado, traduzir("ios_consulta_mensagens", idioma, erro=erro))
 
         anexos: dict = {}
         if banco.tem_tabelas("attachment", "message_attachment_join"):
@@ -202,7 +210,8 @@ def ler_sms(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "") -
                     "a.transfer_name AS nome FROM message_attachment_join j "
                     "JOIN attachment a ON a.ROWID = j.attachment_id"
                 ):
-                    descricao = _texto(linha["nome"]) or _texto(linha["arquivo"]) or "(sem nome)"
+                    descricao = (_texto(linha["nome"]) or _texto(linha["arquivo"])
+                                 or traduzir("nm_sem_nome", idioma))
                     if linha["tipo"]:
                         descricao += f" [{_texto(linha['tipo'])}]"
                     anexos.setdefault(linha["id"], []).append(descricao)
@@ -220,8 +229,9 @@ def ler_sms(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "") -
             momento = momento_apple(linha["momento"], fuso)
             if momento is None and not conteudo and not anexo:
                 resultado.descartes.append(Descarte(
-                    identificador or 0, f"registro {identificador} da tabela message",
-                    "sem data, sem texto e sem anexo — nada a apresentar",
+                    identificador or 0,
+                    traduzir("ios_desc_registro_msg", idioma, id=identificador),
+                    traduzir("ios_desc_sms", idioma),
                 ))
                 continue
             de_mim = str(linha["de_mim"]) == "1"
@@ -229,15 +239,15 @@ def ler_sms(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "") -
             resultado.registros.append(Registro(
                 tipo="sms",
                 campos={
-                    "direcao": "Enviada" if de_mim else "Recebida",
+                    "direcao": traduzir("nm_dir_enviada" if de_mim else "nm_dir_recebida", idioma),
                     "numero": _texto(linha["interlocutor"]) or _texto(linha["conversa"])
-                    or "(sem número)",
-                    "conversa": conversa or _texto(linha["interlocutor"]) or "(sem identificação)",
+                    or traduzir("nm_sem_numero", idioma),
+                    "conversa": (conversa or _texto(linha["interlocutor"])
+                                 or traduzir("ios_sem_identificacao", idioma)),
                     "servico": _texto(linha["servico"]),
                     "conteudo": conteudo,
                     "anexo": anexo,
-                    "lida": "" if de_mim else {"1": "Sim", "0": "Não"}.get(
-                        _texto(linha["lida"]), "(não informado)"),
+                    "lida": "" if de_mim else _lida_ios(linha["lida"], idioma),
                 },
                 momento=momento,
                 arquivo_de_origem=resultado.arquivo_de_origem,
@@ -249,26 +259,27 @@ def ler_sms(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "") -
 # ---------------------------------------------------------------------------
 # Chamadas: CallHistory.storedata
 # ---------------------------------------------------------------------------
-def _servico_da_chamada(provedor: str, tipo) -> str:
+def _servico_da_chamada(provedor: str, tipo, idioma=None) -> str:
     provedor = provedor or ""
     if "whatsapp" in provedor.lower():
         return "WhatsApp"
     if str(tipo) == "8":
-        return "FaceTime vídeo"
+        return traduzir("ios_svc_facetime_video", idioma)
     if str(tipo) == "16":
-        return "FaceTime áudio"
+        return traduzir("ios_svc_facetime_audio", idioma)
     if "telephony" in provedor.lower() or str(tipo) == "1":
-        return "Telefone"
-    return provedor or "(não informado)"
+        return traduzir("ios_svc_telefone", idioma)
+    return provedor or traduzir("nm_nao_informado", idioma)
 
 
-def ler_chamadas(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "") -> ResultadoNormalizacao:
-    resultado = _resultado("chamada", caminho, arquivo, fuso)
+def ler_chamadas(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "",
+                 idioma=None) -> ResultadoNormalizacao:
+    resultado = _resultado("chamada", caminho, arquivo, fuso, idioma)
     with abrir(caminho, pasta_trabalho) as banco:
         if not banco.legivel:
             return _recusar(resultado, banco.motivo)
         if not banco.tem_tabelas("ZCALLRECORD"):
-            return _recusar(resultado, _esquema_desconhecido(banco, ("ZCALLRECORD",)))
+            return _recusar(resultado, _esquema_desconhecido(banco, ("ZCALLRECORD",), idioma))
         colunas = _colunas(banco, "ZCALLRECORD")
         consulta = f"""
             SELECT c.Z_PK AS id, c.ZADDRESS AS numero, c.ZDATE AS momento,
@@ -283,14 +294,14 @@ def ler_chamadas(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = 
         try:
             linhas = banco.consultar(consulta)
         except Exception as erro:
-            return _recusar(resultado, f"A consulta às chamadas falhou: {erro}. Nada foi lido.")
+            return _recusar(resultado, traduzir("ios_consulta_chamadas", idioma, erro=erro))
         for linha in linhas:
             if str(linha["efetuada"]) == "1":
-                direcao = "Efetuada"
+                direcao = traduzir("nm_call_efetuada", idioma)
             elif str(linha["atendida"]) == "1":
-                direcao = "Recebida"
+                direcao = traduzir("nm_dir_recebida", idioma)
             else:
-                direcao = "Recebida, não atendida"
+                direcao = traduzir("ios_call_nao_atendida", idioma)
             try:
                 duracao = str(int(round(float(linha["duracao"] or 0))))
             except (TypeError, ValueError):
@@ -299,10 +310,10 @@ def ler_chamadas(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = 
                 tipo="chamada",
                 campos={
                     "direcao": direcao,
-                    "numero": _texto(linha["numero"]) or "(número não informado)",
+                    "numero": _texto(linha["numero"]) or traduzir("ios_num_nao_informado", idioma),
                     "contato": _texto(linha["nome"]),
                     "duracao_segundos": duracao,
-                    "servico": _servico_da_chamada(_texto(linha["provedor"]), linha["tipo"]),
+                    "servico": _servico_da_chamada(_texto(linha["provedor"]), linha["tipo"], idioma),
                 },
                 momento=momento_apple(linha["momento"], fuso),
                 arquivo_de_origem=resultado.arquivo_de_origem,
@@ -314,13 +325,15 @@ def ler_chamadas(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = 
 # ---------------------------------------------------------------------------
 # Agenda: AddressBook.sqlitedb
 # ---------------------------------------------------------------------------
-def ler_contatos(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "") -> ResultadoNormalizacao:
-    resultado = _resultado("contato", caminho, arquivo, fuso)
+def ler_contatos(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "",
+                 idioma=None) -> ResultadoNormalizacao:
+    resultado = _resultado("contato", caminho, arquivo, fuso, idioma)
     with abrir(caminho, pasta_trabalho) as banco:
         if not banco.legivel:
             return _recusar(resultado, banco.motivo)
         if not banco.tem_tabelas("ABPerson", "ABMultiValue"):
-            return _recusar(resultado, _esquema_desconhecido(banco, ("ABPerson", "ABMultiValue")))
+            return _recusar(resultado,
+                            _esquema_desconhecido(banco, ("ABPerson", "ABMultiValue"), idioma))
         try:
             pessoas = banco.consultar(
                 "SELECT ROWID AS id, First AS nome, Last AS sobrenome, Organization AS empresa "
@@ -332,7 +345,7 @@ def ler_contatos(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = 
                 (PROPRIEDADE_TELEFONE, PROPRIEDADE_EMAIL),
             )
         except Exception as erro:
-            return _recusar(resultado, f"A consulta à agenda falhou: {erro}. Nada foi lido.")
+            return _recusar(resultado, traduzir("ios_consulta_agenda", idioma, erro=erro))
 
         telefones, emails = {}, {}
         for linha in valores:
@@ -342,9 +355,9 @@ def ler_contatos(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = 
 
         for pessoa in pessoas:
             nome = " ".join(p for p in (_texto(pessoa["nome"]), _texto(pessoa["sobrenome"])) if p)
-            nome = nome or _texto(pessoa["empresa"]) or "(sem nome)"
+            nome = nome or _texto(pessoa["empresa"]) or traduzir("nm_sem_nome", idioma)
             email = "; ".join(emails.get(pessoa["id"], []))
-            for numero in telefones.get(pessoa["id"], []) or ["(sem número)"]:
+            for numero in telefones.get(pessoa["id"], []) or [traduzir("nm_sem_numero", idioma)]:
                 resultado.registros.append(Registro(
                     tipo="contato",
                     campos={"contato": nome, "numero": numero, "email": email},
@@ -378,13 +391,15 @@ def _coordenadas(latitude, longitude):
     return latitude, longitude
 
 
-def ler_whatsapp(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "") -> ResultadoNormalizacao:
-    resultado = _resultado("whatsapp", caminho, arquivo, fuso)
+def ler_whatsapp(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = "",
+                 idioma=None) -> ResultadoNormalizacao:
+    resultado = _resultado("whatsapp", caminho, arquivo, fuso, idioma)
     with abrir(caminho, pasta_trabalho) as banco:
         if not banco.legivel:
             return _recusar(resultado, banco.motivo)
         if not banco.tem_tabelas("ZWAMESSAGE", "ZWACHATSESSION"):
-            return _recusar(resultado, _esquema_desconhecido(banco, ("ZWAMESSAGE", "ZWACHATSESSION")))
+            return _recusar(resultado,
+                            _esquema_desconhecido(banco, ("ZWAMESSAGE", "ZWACHATSESSION"), idioma))
         colunas = _colunas(banco, "ZWAMESSAGE")
         com_membro = banco.tem_tabelas("ZWAGROUPMEMBER") and "ZGROUPMEMBER" in colunas
         com_midia = banco.tem_tabelas("ZWAMEDIAITEM") and "ZMEDIAITEM" in colunas
@@ -411,18 +426,26 @@ def ler_whatsapp(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = 
         try:
             linhas = banco.consultar(consulta)
         except Exception as erro:
-            return _recusar(resultado, f"A consulta às mensagens falhou: {erro}. Nada foi lido.")
+            return _recusar(resultado, traduzir("ios_consulta_mensagens", idioma, erro=erro))
 
         for linha in linhas:
             identificador = linha["id"]
             jid_conversa = _texto(linha["jid_conversa"])
             em_grupo = jid_conversa.endswith(SUFIXO_GRUPO_WHATSAPP)
             de_mim = str(linha["de_mim"]) == "1"
+            # O código é a identidade do tipo (usado na lógica); o rótulo é a
+            # tradução exibida. Nunca se decide pelo rótulo — ele muda de idioma.
             try:
                 codigo = int(linha["tipo"])
-                tipo = TIPOS_WHATSAPP_IOS.get(codigo, f"(tipo {codigo} não reconhecido)")
             except (TypeError, ValueError):
-                tipo = "(tipo não informado)"
+                codigo = None
+            tipo_desconhecido = codigo is None or codigo not in TIPOS_WHATSAPP_IOS
+            if codigo is None:
+                tipo = traduzir("ios_wa_tipo_nao_informado", idioma)
+            elif tipo_desconhecido:
+                tipo = traduzir("ios_wa_tipo_codigo", idioma, codigo=codigo)
+            else:
+                tipo = traduzir(TIPOS_WHATSAPP_IOS[codigo], idioma)
             conteudo = _texto(linha["texto"]) or _texto(linha["legenda"])
             mapa = ""
             try:
@@ -433,24 +456,25 @@ def ler_whatsapp(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = 
                 # Registro que o próprio WhatsApp gera (aviso, criação de grupo):
                 # o texto, quando há, é dado técnico (JSON), e o "apelido" não é
                 # nome de ninguém. Visto no iPhone 11 real em 31/10/2026.
-                tipo = "evento do WhatsApp"
-                conteudo = (f"(registro gerado pelo próprio WhatsApp, código de evento "
-                            f"{evento}; não é mensagem digitada)")
-            elif tipo == "localização":
+                tipo = traduzir("ios_wa_evento", idioma)
+                conteudo = traduzir("ios_wa_evento_corpo", idioma, evento=evento)
+            elif codigo == TIPO_WA_LOCALIZACAO:
                 lugar = _coordenadas(linha["latitude"], linha["longitude"])
                 if lugar:
                     mapa = f"https://www.google.com/maps?q={lugar[0]:.6f},{lugar[1]:.6f}"
                     conteudo = " — ".join(p for p in (
-                        f"(localização) {lugar[0]:.6f}, {lugar[1]:.6f}", conteudo) if p)
-            if not conteudo and tipo.startswith("(tipo") and not _texto(linha["midia"]):
-                conteudo = f"{tipo[:-1]}; sem texto nem mídia)"
-            if not conteudo and tipo != "texto":
+                        traduzir("ios_wa_loc_coord", idioma,
+                                 lat=f"{lugar[0]:.6f}", lon=f"{lugar[1]:.6f}"), conteudo) if p)
+            if not conteudo and tipo_desconhecido and not _texto(linha["midia"]):
+                conteudo = tipo[:-1] + traduzir("ios_wa_suf_sem_midia", idioma)
+            if not conteudo and codigo != TIPO_WA_TEXTO:
                 conteudo = f"({tipo})"
             momento = momento_apple(linha["momento"], fuso)
             if momento is None and not conteudo:
                 resultado.descartes.append(Descarte(
-                    identificador or 0, f"registro {identificador} da tabela ZWAMESSAGE",
-                    "sem data e sem conteúdo — nada a apresentar",
+                    identificador or 0,
+                    traduzir("ios_desc_registro_wa", idioma, id=identificador),
+                    traduzir("wa_desc_sem_dados", idioma),
                 ))
                 continue
 
@@ -471,10 +495,12 @@ def ler_whatsapp(caminho: Path, pasta_trabalho: Path, fuso=None, arquivo: str = 
             resultado.registros.append(Registro(
                 tipo="whatsapp",
                 campos={
-                    "direcao": "Sistema" if evento else ("Enviada" if de_mim else "Recebida"),
+                    "direcao": (traduzir("ios_wa_sistema", idioma) if evento
+                                else traduzir("nm_dir_enviada" if de_mim else "nm_dir_recebida",
+                                              idioma)),
                     "numero": _numero_do_jid(jid_interlocutor),
                     "contato": contato,
-                    "conversa": conversa or "(sem identificação)",
+                    "conversa": conversa or traduzir("ios_sem_identificacao", idioma),
                     "tipo": tipo,
                     "conteudo": conteudo,
                     "anexo": _texto(linha["midia"]),

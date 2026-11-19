@@ -427,7 +427,7 @@ class RelatorioService:
         # relatório sobre o bruto selado, que continua intacto.
         idioma = idioma_do_caso(pasta_aquisicao)
         if e_aquisicao_ios(pasta_aquisicao):
-            return RelatorioService._levantar_ios(pasta_aquisicao, hashes_selados, fuso) + [
+            return RelatorioService._levantar_ios(pasta_aquisicao, hashes_selados, fuso, idioma) + [
                 RelatorioService._levantar_locais(pasta_aquisicao, hashes_selados)]
 
         artefatos = []
@@ -480,7 +480,7 @@ class RelatorioService:
         return artefatos
 
     @staticmethod
-    def _levantar_ios(pasta_aquisicao: Path, hashes_selados: dict, fuso) -> list:
+    def _levantar_ios(pasta_aquisicao: Path, hashes_selados: dict, fuso, idioma=None) -> list:
         """
         Os artefatos de uma aquisição de iPhone, lidos do backup local.
 
@@ -538,15 +538,12 @@ class RelatorioService:
                             if estado:
                                 artefato.titulo = artefato.titulo.replace(
                                     "backup do iPhone", f"backup {estado} do iPhone")
-                        vazio = mensagens_ios.resultado_vazio(chave, relativo, fuso)
+                        vazio = mensagens_ios.resultado_vazio(chave, relativo, fuso, idioma)
                         if existe:
                             artefato.sha256 = calcular_sha256(original)
                             artefato.sha256_no_manifesto = hashes_selados.get(relativo, "")
                         if cifrado is None:
-                            vazio.significado_do_vazio = (
-                                "O índice do backup (Manifest.plist) não pôde ser lido. Nada se "
-                                "afirma sobre o conteúdo deste arquivo."
-                            )
+                            vazio.significado_do_vazio = traduzir("ios_lev_manifest", idioma)
                             artefato.resultado = vazio
                         elif cifrado and decifrado.is_file():
                             for forma in ("backup cifrado do iPhone", "backup do iPhone"):
@@ -557,27 +554,19 @@ class RelatorioService:
                             else:
                                 artefato.titulo += " (backup decifrado)"
                             artefato.resultado = leitor(
-                                decifrado, trabalho / "leitura", fuso, relativo)
+                                decifrado, trabalho / "leitura", fuso, relativo, idioma)
                         elif cifrado:
-                            vazio.significado_do_vazio = (
-                                "O backup do iPhone está CIFRADO com a senha de backup definida "
-                                "no aparelho, e não foi decifrado. Nada se afirma sobre o "
-                                "conteúdo: use 'Decifrar backup' com a senha."
-                            )
+                            vazio.significado_do_vazio = traduzir("ios_lev_cifrado", idioma)
                             artefato.resultado = vazio
                         elif not existe:
-                            vazio.significado_do_vazio = (
-                                f"O backup do iPhone foi feito e NÃO contém {arquivo.rotulo}. É o "
-                                "iOS que decide o que entra no backup (o registro de chamadas, "
-                                "por exemplo, só vem em backup cifrado; o WhatsApp só existe se "
-                                "estiver instalado). Não é prova de ausência do dado."
-                            )
+                            vazio.significado_do_vazio = traduzir(
+                                "ios_lev_sem_arquivo", idioma, rotulo=arquivo.rotulo)
                             artefato.resultado = vazio
                         else:
                             copia = backup_ios.materializar(
                                 backup, arquivo, trabalho / f"b{numero}" / fonte)
                             artefato.resultado = leitor(
-                                copia, trabalho / "leitura", fuso, relativo)
+                                copia, trabalho / "leitura", fuso, relativo, idioma)
         return artefatos
 
     @staticmethod
