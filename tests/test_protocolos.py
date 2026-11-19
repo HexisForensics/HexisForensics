@@ -147,7 +147,10 @@ perguntas = perguntas_do_examinador()
 checar("ha perguntas para o examinador", len(perguntas) >= 5)
 checar("todas trazem a clausula da norma", all(c and p for c, p in perguntas))
 
-texto = " ".join(p for _, p in perguntas)
+# As perguntas agora são CHAVES de catálogo; o conteúdo se confere no texto PT.
+from core.idioma import traduzir  # noqa: E402
+
+texto = " ".join(traduzir(p) for _, p in perguntas)
 checar("pergunta pelo isolamento de redes", "isolado de redes" in texto)
 checar("nao pergunta se 'nada foi modificado'", "não foi modificado" not in texto)
 checar("pergunta pelo lacre", "lacre" in texto)
@@ -158,16 +161,16 @@ checar("e pela competencia de quem operou", "competência" in texto)
 # agora cada item tem observacao propria, e a pergunta e marcada como
 # exigente de especificacao. Sem isso, "Sim" para isolamento seria uma
 # afirmacao sem o meio que a sustenta, que e o que este teste protege.
-isolamento = [p for _, p in perguntas if "isolado de redes" in p]
+isolamento = [p for _, p in perguntas if "isolado de redes" in traduzir(p)]
 checar("o isolamento e um item so", len(isolamento) == 1)
 checar("e cobra especificacao do meio empregado", exige_especificacao(isolamento[0]))
 
-manuseio = [p for _, p in perguntas if "manuseio" in p]
+manuseio = [p for _, p in perguntas if "manuseio" in traduzir(p)]
 checar("o manuseio tambem cobra especificacao", manuseio and exige_especificacao(manuseio[0]))
 
 # Pergunta sem "Especificar" nao pode cobrar o campo: cobrar de todas
 # transformaria a marca em ruido e o examinador aprenderia a ignora-la.
-lacre = [p for _, p in perguntas if "lacre" in p]
+lacre = [p for _, p in perguntas if "lacre" in traduzir(p)]
 checar("pergunta objetiva nao cobra especificacao", not exige_especificacao(lacre[0]))
 
 # A redacao pergunta FATO, nao autocertificacao de cumprimento. "O

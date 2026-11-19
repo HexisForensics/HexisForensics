@@ -42,7 +42,14 @@ from core.hashing import (
     localizar_manifesto,
 )
 from core.metodo import ler_metodo, resumir_modulos
-from core.protocolos import desdobrar, exige_especificacao, verificar_automaticos
+from core.protocolos import (
+    SIM,
+    desdobrar,
+    exige_especificacao,
+    pergunta_no_idioma,
+    resposta_no_idioma,
+    verificar_automaticos,
+)
 from core.case import (
     NOME_CADEIA_CUSTODIA,
     idioma_para_selar,
@@ -289,10 +296,11 @@ def _corpo_protocolos_examinador(dados_form: dict, idi: str) -> str:
     linhas = []
     for item in protocolos:
         clausula, pergunta, resposta, observacao = desdobrar(item)
-        if resposta == "Sim" and not observacao and exige_especificacao(pergunta):
-            resposta = "Sim — não especificado"
+        if resposta == SIM and not observacao and exige_especificacao(pergunta):
+            resposta = f"{SIM} — não especificado"
         linhas.append([
-            escapar(clausula), escapar(pergunta), f"<b>{escapar(resposta)}</b>", escapar(observacao)
+            escapar(clausula), escapar(pergunta_no_idioma(pergunta, idi)),
+            f"<b>{escapar(resposta_no_idioma(resposta, idi))}</b>", escapar(observacao)
         ])
 
     partes = [

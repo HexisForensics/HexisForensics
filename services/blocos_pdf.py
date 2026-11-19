@@ -27,7 +27,14 @@ from core.aparelho import IDENTIFICADORES_GENERICOS
 from core.categorias import nome_no_idioma as nome_categoria_no_idioma
 from core.idioma import traduzir
 from core.operador import NAO_DECLARADO
-from core.protocolos import desdobrar, exige_especificacao, verificar_automaticos
+from core.protocolos import (
+    SIM,
+    desdobrar,
+    exige_especificacao,
+    pergunta_no_idioma,
+    resposta_no_idioma,
+    verificar_automaticos,
+)
 from core.relogio import alerta as alerta_do_relogio, descrever_desvio
 from services.dossie_service import Dossie, carimbo_legivel, tamanho_legivel
 from services.identidade_pdf import (
@@ -571,11 +578,12 @@ def bloco_protocolos_do_examinador(protocolos, observacoes: str, largura: float)
     linhas = []
     for item in protocolos:
         clausula, pergunta, resposta, observacao = desdobrar(item)
-        # A resposta vem do caderno/laudo em PT canônico (dado): não se traduz.
-        if resposta == "Sim" and not observacao and exige_especificacao(pergunta):
-            resposta = "Sim — não especificado"
-        linhas.append([escapar(clausula), escapar(pergunta), f"<b>{escapar(resposta)}</b>",
-                       escapar(observacao)])
+        # Pergunta e resposta são exibidas no idioma do caso; o valor canônico
+        # ("Sim") é o que a lógica compara, mas nunca o que aparece.
+        if resposta == SIM and not observacao and exige_especificacao(pergunta):
+            resposta = f"{SIM} — não especificado"
+        linhas.append([escapar(clausula), escapar(pergunta_no_idioma(pergunta)),
+                       f"<b>{escapar(resposta_no_idioma(resposta))}</b>", escapar(observacao)])
     elementos = [
         Paragraph(traduzir("bl_prot_e_intro"), e["corpo"]),
         Spacer(1, 4),

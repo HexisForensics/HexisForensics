@@ -56,45 +56,56 @@ TITULO_DECISAO = "DECISÃO METODOLÓGICA"
 # Os itens marcados "Especificar" so ficam completos com a observacao ao
 # lado; sem ela o laudo imprime "Sim -- nao especificado", para o silencio
 # aparecer em vez de passar por resposta.
+# (cláusula, CHAVE da pergunta). O texto da pergunta é tool-side e sai no
+# idioma do caso; a chave é a identidade estável (duas perguntas têm a mesma
+# cláusula 6.2.1, então a cláusula não serve de identificador).
 PERGUNTAS_DO_EXAMINADOR = (
-    (
-        "6.8",
-        "Há autorização do interessado ou decisão judicial autorizando a coleta?",
-    ),
-    (
-        "6.2.1",
-        "O dispositivo estava ligado no momento da coleta?",
-    ),
-    (
-        "6.2.1",
-        "O dispositivo foi isolado de redes durante a coleta? Especificar.",
-    ),
-    (
-        "6.1",
-        "A integridade física do lacre foi conferida no recebimento?",
-    ),
-    (
-        "6.4",
-        "O operador atuou dentro dos limites de sua competência técnica?",
-    ),
-    (
-        "5.4.1",
-        "Houve manuseio do dispositivo? Especificar.",
-    ),
+    ("6.8", "prot_ex_autorizacao"),
+    ("6.2.1", "prot_ex_ligado"),
+    ("6.2.1", "prot_ex_isolado"),
+    ("6.1", "prot_ex_lacre"),
+    ("6.4", "prot_ex_competencia"),
+    ("5.4.1", "prot_ex_manuseio"),
 )
 
-# Itens cuja resposta afirmativa fica incompleta sem a observacao ao lado.
-# Identificados pelo texto da propria pergunta, para nao existir uma
-# segunda lista que possa divergir desta.
-MARCA_ESPECIFICAR = "Especificar."
+# Itens cuja resposta afirmativa fica incompleta sem a observação ao lado —
+# por CHAVE, não mais pelo texto (que agora muda de idioma).
+PERGUNTAS_QUE_ESPECIFICAM = {"prot_ex_isolado", "prot_ex_manuseio"}
+
+_CHAVES_DE_PERGUNTA = {chave for _, chave in PERGUNTAS_DO_EXAMINADOR}
+
+# Resposta canônica (como o formulário a guarda) -> chave de catálogo, para
+# a EXIBIÇÃO e o SELO saírem no idioma do caso sem perder o valor canônico
+# que a lógica compara.
+_CHAVE_DA_RESPOSTA = {
+    SIM: "prot_resp_sim",
+    NAO: "prot_resp_nao",
+    NAO_SE_APLICA: "prot_resp_na",
+    NAO_RESPONDIDO: "prot_resp_nr",
+}
 
 # Separador de linha do texto do complemento.
 QUEBRA = chr(10)
 
 
 def exige_especificacao(pergunta: str) -> bool:
-    """`True` se a pergunta pede detalhamento na observação do item."""
-    return pergunta.strip().endswith(MARCA_ESPECIFICAR)
+    """`True` se a pergunta (chave) pede detalhamento na observação do item."""
+    return pergunta in PERGUNTAS_QUE_ESPECIFICAM
+
+
+def pergunta_no_idioma(chave: str, idioma=None) -> str:
+    """Texto da pergunta no idioma pedido. Item antigo, gravado com o texto
+    em vez da chave, sai como está."""
+    return traduzir(chave, idioma) if chave in _CHAVES_DE_PERGUNTA else chave
+
+
+def resposta_no_idioma(resposta: str, idioma=None) -> str:
+    """Resposta do examinador no idioma pedido, mantendo o canônico por baixo.
+    "Sim — não especificado" é montado aqui a partir das duas partes."""
+    if resposta == f"{SIM} — não especificado":
+        return traduzir("prot_resp_sim_nao_esp", idioma)
+    chave = _CHAVE_DA_RESPOSTA.get(resposta)
+    return traduzir(chave, idioma) if chave else resposta
 
 
 def perguntas_do_examinador() -> list:
@@ -251,12 +262,12 @@ def gravar_respostas(pasta_aquisicao: Path, protocolos, observacoes: str = "") -
     """
     pasta_aquisicao = Path(pasta_aquisicao)
 
+    idi = idioma_do_caso(pasta_aquisicao)
     linhas = [
-        f"Aquisição a que se referem: {pasta_aquisicao.name}",
+        traduzir("prot_grav_aquisicao", idi, aquisicao=pasta_aquisicao.name),
         "",
-        "Respostas do examinador aos protocolos periciais (ABNT NBR ISO/IEC 27037).",
-        "São declarações de fato sobre circunstâncias do exame, não aferição de",
-        "conformidade: 'Não' não indica irregularidade.",
+        traduzir("prot_grav_cabecalho", idi),
+        traduzir("prot_grav_nota", idi),
         "",
     ]
 
@@ -264,18 +275,19 @@ def gravar_respostas(pasta_aquisicao: Path, protocolos, observacoes: str = "") -
         clausula, pergunta, resposta, observacao = desdobrar(item)
         if resposta == SIM and not observacao and exige_especificacao(pergunta):
             resposta = f"{SIM} — não especificado"
-        linhas.append(f"[{clausula}] {pergunta}")
-        linhas.append(f"    Resposta: {resposta}")
-        linhas.append(f"    Observação: {observacao or '—'}")
+        linhas.append(f"[{clausula}] {pergunta_no_idioma(pergunta, idi)}")
+        linhas.append(f"    {traduzir('prot_grav_lbl_resposta', idi)} "
+                      f"{resposta_no_idioma(resposta, idi)}")
+        linhas.append(f"    {traduzir('prot_grav_lbl_obs', idi)} {observacao or '—'}")
         linhas.append("")
 
     texto_geral = (observacoes or "").strip()
-    linhas.append("Observações gerais do examinador:")
+    linhas.append(traduzir("prot_grav_gerais", idi))
     linhas.append(texto_geral or "—")
 
     return juntar_complemento(
         pasta_do_caso(pasta_aquisicao),
-        f"Protocolos periciais - {pasta_aquisicao.name}",
+        traduzir("prot_grav_titulo", idi, aquisicao=pasta_aquisicao.name),
         QUEBRA.join(linhas),
     )
 

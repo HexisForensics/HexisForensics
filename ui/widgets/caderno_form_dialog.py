@@ -153,7 +153,7 @@ class CadernoFormDialog(QDialog):
         layout_check.addWidget(aviso)
 
         for clausula, p in self.perguntas_com_clausula:
-            lbl = QLabel(traduzir("cf_item", clausula=clausula, pergunta=p))
+            lbl = QLabel(traduzir("cf_item", clausula=clausula, pergunta=traduzir(p)))
             lbl.setWordWrap(True)
             layout_check.addWidget(lbl)
 
