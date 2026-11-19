@@ -25,8 +25,9 @@ from typing import List, Optional, Tuple
 
 from reportlab.platypus import Paragraph, Spacer
 
-from core.case import juntar_complemento, pasta_do_caso, sanitizar_nome
+from core.case import idioma_do_caso, juntar_complemento, pasta_do_caso, sanitizar_nome
 from core.hashing import calcular_sha256, gerar_manifesto, ler_manifesto, localizar_manifesto
+from core.idioma import traduzir
 from services import identidade_pdf as identidade
 from services.dossie_service import montar_dossie
 
@@ -41,13 +42,13 @@ class ItemEntregue:
     origem: str          # "material" (da aquisição) ou "documento"
     no_lacre: str = ""   # para material: o hash selado
 
-    @property
-    def situacao(self) -> str:
+    def situacao_no_idioma(self, idioma=None) -> str:
         if self.origem == "documento":
-            return "documento gerado pela suíte"
+            return traduzir("ent_sit_documento", idioma)
         if not self.no_lacre:
-            return "não consta do lacre"
-        return "confere com o lacre" if self.no_lacre == self.sha256 else "DIVERGE do lacre"
+            return traduzir("ent_sit_sem_lacre", idioma)
+        chave = "ent_sit_confere" if self.no_lacre == self.sha256 else "ent_sit_diverge"
+        return traduzir(chave, idioma)
 
 
 @dataclass
@@ -87,14 +88,15 @@ def exportar(
     cópia e emite o recibo.
     """
     pasta_aquisicao = Path(pasta_aquisicao).resolve()
+    idi = idioma_do_caso(pasta_aquisicao)
     resultado = ResultadoEntrega()
     arquivos = _expandir(pasta_aquisicao, list(material))
     if not arquivos and not documentos:
-        resultado.erro = "Nada foi escolhido para exportar."
+        resultado.erro = traduzir("ent_err_nada", idi)
         return resultado
     destino = Path(destino).resolve()
     if destino == pasta_aquisicao or pasta_aquisicao in destino.parents:
-        resultado.erro = "O destino não pode ficar dentro da aquisição lacrada."
+        resultado.erro = traduzir("ent_err_destino", idi)
         return resultado
 
     caso = pasta_do_caso(pasta_aquisicao)
@@ -121,98 +123,104 @@ def exportar(
             shutil.copy2(origem, alvo)
             original, copia = calcular_sha256(origem), calcular_sha256(alvo)
         except OSError as erro:
-            resultado.falhas.append(f"{nome}: não copiado ({erro})")
+            resultado.falhas.append(traduzir("ent_falha_nao_copiado", idi, nome=nome, erro=erro))
             continue
         if original != copia:
-            resultado.falhas.append(f"{nome}: a cópia NÃO é idêntica ao original")
+            resultado.falhas.append(traduzir("ent_falha_nao_identica", idi, nome=nome))
             continue
         relativo = nome.split("/", 1)[1] if tipo == "material" else ""
         resultado.itens.append(ItemEntregue(nome, alvo.stat().st_size, copia, tipo,
                                             lacre.get(relativo, "") if relativo else ""))
     resultado.pasta = pasta
     if not resultado.itens:
-        resultado.erro = "Nenhum arquivo foi entregue.\n" + "\n".join(resultado.falhas)
+        resultado.erro = traduzir("ent_err_nenhum", idi) + "\n" + "\n".join(resultado.falhas)
         return resultado
 
     texto = _recibo_em_texto(caso.name, pasta_aquisicao.name, momento, pasta, examinador,
-                             finalidade, resultado, teste)
+                             finalidade, resultado, teste, idi)
     (pasta / f"{NOME_RECIBO}.txt").write_text(texto, encoding="utf-8")
     try:
         resultado.recibo_pdf = _recibo_em_pdf(pasta_aquisicao, momento, pasta, examinador,
-                                              finalidade, resultado, teste)
+                                              finalidade, resultado, teste, idi)
     except Exception as erro:  # o recibo em texto já existe
-        resultado.falhas.append(f"recibo em PDF não gerado ({erro}); o recibo em texto existe")
+        resultado.falhas.append(traduzir("ent_falha_pdf", idi, erro=erro))
 
     if caso != pasta_aquisicao:
         try:
-            juntar_complemento(caso, f"Entrega de material - {pasta_aquisicao.name}", texto)
+            juntar_complemento(caso, traduzir("ent_complemento", idi, aquisicao=pasta_aquisicao.name),
+                               texto)
             gerar_manifesto(caso)
         except OSError as erro:
-            resultado.falhas.append(f"a entrega NÃO pôde ser registrada no caso ({erro})")
+            resultado.falhas.append(traduzir("ent_falha_registro", idi, erro=erro))
     return resultado
 
 
 def _recibo_em_texto(caso, aquisicao, momento, pasta, examinador, finalidade, resultado,
-                     teste) -> str:
+                     teste, idioma=None) -> str:
+    nao_informado = traduzir("ent_nao_informado", idioma)
     linhas = [
-        "RECIBO DE ENTREGA DE MATERIAL" + ("  —  TESTE, SEM VALOR PERICIAL" if teste else ""),
+        traduzir("ent_titulo", idioma) + (traduzir("ent_titulo_teste", idioma) if teste else ""),
         "",
-        f"Caso:        {caso}",
-        f"Aquisição:   {aquisicao}",
-        f"Entregue em: {momento.isoformat(timespec='seconds')}",
-        f"Por:         {examinador or 'não informado'}",
-        f"Destino:     {pasta}",
-        f"Finalidade / destinatário: {finalidade or 'não informado'}",
+        f"{traduzir('ent_t_caso', idioma)}: {caso}",
+        f"{traduzir('ent_t_aquisicao', idioma)}: {aquisicao}",
+        f"{traduzir('ent_t_entregue_em', idioma)}: {momento.isoformat(timespec='seconds')}",
+        f"{traduzir('ent_t_por', idioma)}: {examinador or nao_informado}",
+        f"{traduzir('ent_t_destino', idioma)}: {pasta}",
+        f"{traduzir('ent_t_finalidade', idioma)}: {finalidade or nao_informado}",
         "",
-        "Cada cópia foi conferida pelo SHA-256 depois de gravada e é idêntica ao original.",
+        traduzir("ent_conferido", idioma),
         "",
-        f"{len(resultado.itens)} arquivo(s) entregue(s):",
+        traduzir("ent_n_entregues", idioma, n=len(resultado.itens)),
     ]
     for item in resultado.itens:
-        linhas.append(f"  {item.sha256}  {item.tamanho:>12} bytes  {item.nome}  [{item.situacao}]")
+        linhas.append(f"  {item.sha256}  {item.tamanho:>12} bytes  {item.nome}  "
+                      f"[{item.situacao_no_idioma(idioma)}]")
     if resultado.falhas:
-        linhas += ["", "NÃO entregues:"] + [f"  {f}" for f in resultado.falhas]
+        linhas += ["", traduzir("ent_nao_entregues", idioma)] + [f"  {f}" for f in resultado.falhas]
     return "\n".join(linhas) + "\n"
 
 
 def _recibo_em_pdf(pasta_aquisicao, momento, pasta, examinador, finalidade, resultado,
-                   teste) -> Path:
+                   teste, idioma=None) -> Path:
     dossie = montar_dossie(pasta_aquisicao)
+    nao_informado = traduzir("ent_nao_informado", idioma)
     e = identidade.estilos()
     largura = identidade.largura_util(paisagem=True)
     historia = [
-        Paragraph("RECIBO DE ENTREGA DE MATERIAL", e["titulo"]),
-        Paragraph(f"Caso {identidade.escapar(dossie.caso)} — aquisição "
-                  f"{identidade.escapar(pasta_aquisicao.name)}", e["subtitulo"]),
+        Paragraph(traduzir("ent_titulo", idioma), e["titulo"]),
+        Paragraph(traduzir("ent_subtitulo", idioma, caso=identidade.escapar(dossie.caso),
+                           aquisicao=identidade.escapar(pasta_aquisicao.name)), e["subtitulo"]),
         identidade.tabela_de_pares([
-            ("Entregue em", momento.strftime("%d/%m/%Y %H:%M:%S %z")),
-            ("Por", identidade.escapar(examinador or "não informado")),
-            ("Finalidade / destinatário", identidade.escapar(finalidade or "não informado")),
-            ("Destino", identidade.escapar(str(pasta))),
-            ("Arquivos entregues", str(len(resultado.itens))),
+            (traduzir("ent_t_entregue_em", idioma), momento.strftime("%d/%m/%Y %H:%M:%S %z")),
+            (traduzir("ent_t_por", idioma), identidade.escapar(examinador or nao_informado)),
+            (traduzir("ent_t_finalidade", idioma),
+             identidade.escapar(finalidade or nao_informado)),
+            (traduzir("ent_t_destino", idioma), identidade.escapar(str(pasta))),
+            (traduzir("ent_arquivos_entregues", idioma), str(len(resultado.itens))),
         ], largura, proporcao=0.22),
         Spacer(1, 6),
-        Paragraph("Cada cópia foi conferida pelo SHA-256 depois de gravada e é idêntica ao "
-                  "original. Para o material adquirido, a última coluna diz se o hash confere "
-                  "com o lacre da aquisição.", e["nota"]),
+        Paragraph(traduzir("ent_nota_pdf", idioma), e["nota"]),
         Spacer(1, 6),
     ]
     linhas = [[identidade.escapar(i.nome), f"{i.tamanho:,}".replace(",", "."),
-               Paragraph(i.sha256, e["mono_pequeno"]), identidade.escapar(i.situacao)]
+               Paragraph(i.sha256, e["mono_pequeno"]),
+               identidade.escapar(i.situacao_no_idioma(idioma))]
               for i in resultado.itens]
     historia.append(identidade.tabela(
-        ["Arquivo", "Bytes", "SHA-256", "Situação"], linhas,
+        [traduzir("ent_h_arquivo", idioma), "Bytes", "SHA-256",
+         traduzir("ent_h_situacao", idioma)], linhas,
         [largura * 0.38, largura * 0.09, largura * 0.35, largura * 0.18]))
     if resultado.falhas:
-        historia += [Spacer(1, 6), Paragraph("NÃO entregues", e["subsecao"])]
+        historia += [Spacer(1, 6), Paragraph(traduzir("ent_nao_entregues_pdf", idioma), e["subsecao"])]
         historia += [Paragraph(identidade.escapar(f), e["alerta"]) for f in resultado.falhas]
     historia += [Spacer(1, 40),
                  Paragraph("_______________________________ &nbsp;&nbsp;&nbsp;&nbsp; "
                            "_______________________________", e["assinatura"]),
-                 Paragraph("Entregue por &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+                 Paragraph(traduzir("ent_assina_entregue", idioma)
+                           + " &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                           "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                           "Recebido por", e["assinatura"])]
+                           "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "
+                           + traduzir("ent_assina_recebido", idioma), e["assinatura"])]
     caminho = pasta / f"{NOME_RECIBO}.pdf"
     identidade.montar_documento(
         caminho, "Recibo de Entrega", historia, rastreio=dossie.rastreio,

@@ -26,13 +26,23 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-from core.case import juntar_complemento, pasta_do_caso, pasta_dos_decifrados
+from core.case import idioma_do_caso, juntar_complemento, pasta_do_caso, pasta_dos_decifrados
 from core.hashing import calcular_sha256, gerar_manifesto, ler_manifesto, localizar_manifesto
+from core.idioma import traduzir
 from core.versao import identificacao_ferramenta
 from core.whatsapp_crypt15 import ErroDeDecifragem, decifrar, normalizar_chave
 from services.relatorio_service import SUFIXO_PROCEDENCIA
 
 PACOTE_PADRAO = "com.whatsapp"
+
+
+def _confere(procedencia: dict, idioma=None) -> str:
+    """Se o hash do cifrado confere com o manifesto, no idioma do caso."""
+    if procedencia["sha256_da_origem"] == procedencia["sha256_da_origem_no_manifesto"]:
+        return traduzir("dec_confere", idioma)
+    if procedencia["sha256_da_origem_no_manifesto"]:
+        return traduzir("dec_nao_confere", idioma)
+    return traduzir("dec_sem_hash", idioma)
 
 
 @dataclass
@@ -42,21 +52,19 @@ class ResultadoDecifragem:
     falhas: List[str] = field(default_factory=list)
     pasta: Path = None
     banco_principal: bool = False
+    idioma: str = None
 
     @property
     def resumo(self) -> str:
         if self.erro:
             return self.erro
-        linhas = [f"{len(self.decifrados)} backup(s) decifrado(s) e autenticado(s)."]
+        linhas = [traduzir("dec_resumo_ok", self.idioma, n=len(self.decifrados))]
         linhas += [f"  ✔ {nome}" for nome in self.decifrados]
         if self.falhas:
-            linhas.append(f"{len(self.falhas)} backup(s) NÃO decifrado(s):")
+            linhas.append(traduzir("dec_resumo_falhas", self.idioma, n=len(self.falhas)))
             linhas += [f"  ✖ {texto}" for texto in self.falhas]
         if self.decifrados and not self.banco_principal:
-            linhas.append(
-                "ATENÇÃO: o backup principal (msgstore.db.crypt15) não está entre os "
-                "decifrados. Os documentos e o índice leem o banco principal."
-            )
+            linhas.append(traduzir("dec_resumo_sem_principal", self.idioma))
         return "\n".join(linhas)
 
 
@@ -97,7 +105,8 @@ def decifrar_whatsapp(pasta_aquisicao: Path, chave_digitada: str) -> ResultadoDe
     ativada, é o caso esperado.
     """
     pasta_aquisicao = Path(pasta_aquisicao)
-    resultado = ResultadoDecifragem()
+    idi = idioma_do_caso(pasta_aquisicao)
+    resultado = ResultadoDecifragem(idioma=idi)
 
     try:
         chave = normalizar_chave(chave_digitada)
@@ -107,12 +116,7 @@ def decifrar_whatsapp(pasta_aquisicao: Path, chave_digitada: str) -> ResultadoDe
 
     backups = backups_crypt15(pasta_aquisicao)
     if not backups:
-        resultado.erro = (
-            "Esta aquisição não tem nenhum backup .crypt15. O backup com chave de 64 "
-            "dígitos precisa ser ATIVADO no WhatsApp do aparelho e FEITO antes da "
-            "aquisição pelo módulo de mídia e backups do WhatsApp. Backups .crypt14 não "
-            "abrem com essa chave."
-        )
+        resultado.erro = traduzir("dec_wa_sem_backup", idi)
         return resultado
 
     manifesto = localizar_manifesto(pasta_aquisicao)
@@ -146,13 +150,13 @@ def decifrar_whatsapp(pasta_aquisicao: Path, chave_digitada: str) -> ResultadoDe
                 "bytes_do_decifrado": len(banco),
                 "decifrado_em": datetime.now().astimezone().isoformat(timespec="seconds"),
                 "ferramenta": identificacao_ferramenta(),
-                "metodo": "AES-256-GCM, chave derivada por HKDF-SHA256 da chave de 64 dígitos",
+                "metodo": traduzir("dec_wa_metodo", idi),
             }
             Path(str(saida) + SUFIXO_PROCEDENCIA).write_text(
                 json.dumps(procedencia, ensure_ascii=False, indent=2), encoding="utf-8"
             )
         except OSError as erro:
-            resultado.falhas.append(f"{relativo}: decifrado, mas não pôde ser gravado ({erro})")
+            resultado.falhas.append(traduzir("dec_wa_nao_gravado", idi, relativo=relativo, erro=erro))
             continue
 
         resultado.decifrados.append(relativo)
@@ -160,55 +164,43 @@ def decifrar_whatsapp(pasta_aquisicao: Path, chave_digitada: str) -> ResultadoDe
         registros.append((relativo, procedencia))
 
     if not resultado.decifrados:
-        resultado.erro = (
-            "Nenhum backup abriu com esta chave.\n" + "\n".join(resultado.falhas)
-        )
+        resultado.erro = traduzir("dec_wa_nenhum", idi) + "\n" + "\n".join(resultado.falhas)
         return resultado
 
     linhas = [
-        f"Aquisição: {pasta_aquisicao.name}",
-        f"Chave de 64 dígitos empregada: {chave.hex()}",
-        "Método: AES-256-GCM; chave de cifragem derivada da chave acima por HKDF-SHA256.",
-        "A etiqueta de autenticação de cada arquivo conferiu: o conteúdo decifrado é o",
-        "que foi cifrado com esta chave, sem alteração.",
+        traduzir("dec_aquisicao", idi, aquisicao=pasta_aquisicao.name),
+        traduzir("dec_wa_chave", idi, valor=chave.hex()),
+        traduzir("dec_wa_metodo_linha", idi),
+        traduzir("dec_wa_authtag", idi),
         "",
-        "A chave consta deste registro para que a decifragem possa ser repetida por",
-        "outro examinador, sobre o mesmo arquivo selado, com o mesmo resultado.",
+        traduzir("dec_wa_repetir", idi),
         "",
-        "ALTERAÇÃO NO DISPOSITIVO: para existir um backup com chave conhecida, o backup",
-        "criptografado de ponta a ponta com chave de 64 dígitos foi ativado no WhatsApp",
-        "do aparelho examinado, e um backup local foi comandado, antes da aquisição.",
+        traduzir("dec_wa_alteracao", idi),
         "",
-        "Arquivos decifrados (o cifrado permanece na aquisição, sob o selo):",
+        traduzir("dec_wa_arquivos", idi),
     ]
     for relativo, procedencia in registros:
-        confere = (
-            "confere com o manifesto"
-            if procedencia["sha256_da_origem"] == procedencia["sha256_da_origem_no_manifesto"]
-            else "NÃO CONFERE com o manifesto" if procedencia["sha256_da_origem_no_manifesto"]
-            else "sem hash no manifesto a comparar"
-        )
+        confere = _confere(procedencia, idi)
         linhas += [
             f"  {relativo}",
-            f"    SHA-256 do cifrado:   {procedencia['sha256_da_origem']} ({confere})",
-            f"    SHA-256 do decifrado: {procedencia['sha256_do_decifrado']} "
+            f"    {traduzir('dec_sha_cifrado', idi)}   {procedencia['sha256_da_origem']} ({confere})",
+            f"    {traduzir('dec_sha_decifrado', idi)} {procedencia['sha256_do_decifrado']} "
             f"({procedencia['bytes_do_decifrado']} bytes)",
         ]
     if resultado.falhas:
-        linhas += ["", "Arquivos que NÃO abriram com esta chave:"]
+        linhas += ["", traduzir("dec_wa_nao_abriram", idi)]
         linhas += [f"  {texto}" for texto in resultado.falhas]
 
     try:
         caso = pasta_do_caso(pasta_aquisicao)
         if caso != pasta_aquisicao.resolve():
             juntar_complemento(
-                caso, f"Decifragem do backup do WhatsApp - {pasta_aquisicao.name}", "\n".join(linhas)
+                caso, traduzir("dec_wa_complemento", idi, aquisicao=pasta_aquisicao.name),
+                "\n".join(linhas)
             )
             gerar_manifesto(caso)
     except OSError as erro:
-        resultado.falhas.append(
-            f"A decifragem foi feita, mas NÃO pôde ser registrada como complemento ({erro})."
-        )
+        resultado.falhas.append(traduzir("dec_nao_registrado", idi, erro=erro))
     return resultado
 
 
@@ -258,9 +250,10 @@ def decifrar_backup_ios(pasta_aquisicao: Path, senha: str) -> ResultadoDecifrage
     from core import backup_ios
 
     pasta_aquisicao = Path(pasta_aquisicao)
-    resultado = ResultadoDecifragem()
+    idi = idioma_do_caso(pasta_aquisicao)
+    resultado = ResultadoDecifragem(idioma=idi)
     if not senha:
-        resultado.erro = "Informe a senha de backup do iPhone."
+        resultado.erro = traduzir("dec_ios_sem_senha", idi)
         return resultado
 
     cifrados = []
@@ -271,10 +264,7 @@ def decifrar_backup_ios(pasta_aquisicao: Path, senha: str) -> ResultadoDecifrage
         except backup_ios.ErroBackupIOS as erro:
             resultado.falhas.append(f"{backup.name}: {erro}")
     if not cifrados:
-        resultado.erro = (
-            "Esta aquisição não tem backup de iPhone cifrado. Backup sem criptografia não "
-            "precisa de senha: o Relatório de Conteúdo o lê diretamente."
-        )
+        resultado.erro = traduzir("dec_ios_sem_backup", idi)
         return resultado
 
     manifesto = localizar_manifesto(pasta_aquisicao)
@@ -307,56 +297,48 @@ def decifrar_backup_ios(pasta_aquisicao: Path, senha: str) -> ResultadoDecifrage
                 "bytes_do_decifrado": saida.stat().st_size,
                 "decifrado_em": datetime.now().astimezone().isoformat(timespec="seconds"),
                 "ferramenta": identificacao_ferramenta(),
-                "metodo": "backup cifrado do iOS: chaves por classe de proteção, liberadas "
-                          "pela senha de backup (PBKDF2), arquivo a arquivo em AES-256",
+                "metodo": traduzir("dec_ios_metodo", idi),
             }
             Path(str(saida) + SUFIXO_PROCEDENCIA).write_text(
                 json.dumps(procedencia, ensure_ascii=False, indent=2), encoding="utf-8"
             )
             resultado.decifrados.append(arquivo.rotulo)
             registros.append((origem, procedencia))
-        resultado.falhas += [f"{rotulo}: o backup não contém este arquivo" for rotulo in ausentes]
+        resultado.falhas += [traduzir("dec_ios_sem_arquivo", idi, rotulo=rotulo)
+                             for rotulo in ausentes]
 
     resultado.banco_principal = bool(resultado.decifrados)
     if not resultado.decifrados:
-        resultado.erro = "Nada foi decifrado.\n" + "\n".join(resultado.falhas)
+        resultado.erro = traduzir("dec_ios_nada", idi) + "\n" + "\n".join(resultado.falhas)
         return resultado
 
     linhas = [
-        f"Aquisição: {pasta_aquisicao.name}",
-        f"Senha de backup empregada: {senha}",
-        "Método: backup cifrado do iOS; a senha libera as chaves de cada classe de",
-        "proteção, e cada arquivo é decifrado com a chave própria (AES-256).",
+        traduzir("dec_aquisicao", idi, aquisicao=pasta_aquisicao.name),
+        traduzir("dec_ios_senha", idi, senha=senha),
+        traduzir("dec_ios_metodo_linha", idi),
         "",
-        "A senha consta deste registro para que a decifragem possa ser repetida por",
-        "outro examinador, sobre o mesmo backup selado, com o mesmo resultado.",
+        traduzir("dec_ios_repetir", idi),
         "",
-        "Arquivos decifrados (o backup cifrado permanece na aquisição, sob o selo):",
+        traduzir("dec_ios_arquivos", idi),
     ]
     for origem, procedencia in registros:
-        confere = (
-            "confere com o manifesto"
-            if procedencia["sha256_da_origem"] == procedencia["sha256_da_origem_no_manifesto"]
-            else "NÃO CONFERE com o manifesto" if procedencia["sha256_da_origem_no_manifesto"]
-            else "sem hash no manifesto a comparar"
-        )
+        confere = _confere(procedencia, idi)
         linhas += [
             f"  {procedencia['arquivo_no_aparelho']}  ({origem})",
-            f"    SHA-256 do cifrado:   {procedencia['sha256_da_origem']} ({confere})",
-            f"    SHA-256 do decifrado: {procedencia['sha256_do_decifrado']} "
+            f"    {traduzir('dec_sha_cifrado', idi)}   {procedencia['sha256_da_origem']} ({confere})",
+            f"    {traduzir('dec_sha_decifrado', idi)} {procedencia['sha256_do_decifrado']} "
             f"({procedencia['bytes_do_decifrado']} bytes)",
         ]
     if resultado.falhas:
-        linhas += ["", "Não decifrados:"] + [f"  {texto}" for texto in resultado.falhas]
+        linhas += ["", traduzir("dec_ios_nao_decifrados", idi)] + [f"  {t}" for t in resultado.falhas]
     try:
         caso = pasta_do_caso(pasta_aquisicao)
         if caso != pasta_aquisicao.resolve():
             juntar_complemento(
-                caso, f"Decifragem do backup do iPhone - {pasta_aquisicao.name}", "\n".join(linhas)
+                caso, traduzir("dec_ios_complemento", idi, aquisicao=pasta_aquisicao.name),
+                "\n".join(linhas)
             )
             gerar_manifesto(caso)
     except OSError as erro:
-        resultado.falhas.append(
-            f"A decifragem foi feita, mas NÃO pôde ser registrada como complemento ({erro})."
-        )
+        resultado.falhas.append(traduzir("dec_nao_registrado", idi, erro=erro))
     return resultado

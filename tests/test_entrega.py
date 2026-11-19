@@ -72,7 +72,8 @@ with tempfile.TemporaryDirectory() as temporario:
            and next(i for i in r.itens if i.nome.endswith("foto1.jpg")).sha256
            == calcular_sha256(aq / "media" / "Camera" / "foto1.jpg"))
     checar("o material diz que confere com o lacre",
-           all(i.situacao == "confere com o lacre" for i in r.itens if i.origem == "material"))
+           all(i.situacao_no_idioma() == "confere com o lacre"
+               for i in r.itens if i.origem == "material"))
     recibo = (r.pasta / "Recibo_de_Entrega.txt").read_text(encoding="utf-8")
     checar("recibo em texto com finalidade, examinador e hashes",
            "Juízo da 1ª Vara" in recibo and "Fulana" in recibo and r.itens[0].sha256 in recibo)
