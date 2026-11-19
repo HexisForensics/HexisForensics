@@ -60,7 +60,7 @@ def _graus(valor):
 
 
 def tiff(latitude=None, longitude=None, data=b"2026:10:12 16:12:28\x00", camera=b"motorola\x00",
-         hora_gps=(19, 12, 26), dia_gps=b"2026:10:12\x00"):
+         hora_gps=(19, 12, 26), dia_gps=b"2026:10:12\x00", tipo_camera=2):
     gps = []
     if latitude is not None:
         gps = [
@@ -76,7 +76,7 @@ def tiff(latitude=None, longitude=None, data=b"2026:10:12 16:12:28\x00", camera=
     exif = [(0x9003, 2, len(data), data)]
 
     def montar(ponteiro_gps, ponteiro_exif):
-        entradas = [(0x010F, 2, len(camera), camera),
+        entradas = [(0x010F, tipo_camera, len(camera), camera),
                     (0x8769, 4, 1, struct.pack("<I", ponteiro_exif))]
         if gps:
             entradas.append((0x8825, 4, 1, struct.pack("<I", ponteiro_gps)))
@@ -128,6 +128,14 @@ with tempfile.TemporaryDirectory() as temporario:
     (pasta / "e.jpg").write_bytes(b"\xff\xd8\xff\xe1\x00\x10Exif\x00\x00II*\x00\xff\xff\xff\x7f\xff\xd9")
     quebrado = ler_dados_da_foto(pasta / "e.jpg")
     checar("EXIF malformado não derruba a leitura", quebrado.latitude is None)
+
+    # Câmera gravada como BYTE/UNDEFINED (tipos 1 e 7) — o emulador faz isso.
+    # Antes, `valor()` devolvia bytes e o `" ".join(...strip())` levantava
+    # TypeError, que derrubava o relatório de conteúdo e o PDF de conversas.
+    (pasta / "f.jpg").write_bytes(jpeg(tiff(camera=b"unknown Android SDK\x00", tipo_camera=7)))
+    bytes_na_camera = ler_dados_da_foto(pasta / "f.jpg")
+    checar("câmera em bytes (tipo 7) vira texto e não derruba a leitura",
+           bytes_na_camera.camera == "unknown Android SDK" and not bytes_na_camera.problema)
 
 print("\n[2] No Relatório de Conteúdo")
 with tempfile.TemporaryDirectory() as temporario:

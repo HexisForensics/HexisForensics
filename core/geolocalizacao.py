@@ -168,6 +168,22 @@ def _graus(valores, referencia: str) -> float:
     return -graus if referencia.upper() in ("S", "W") else graus
 
 
+def _texto_exif(valor) -> str:
+    """Campo de texto do EXIF normalizado para str.
+
+    O fabricante e o modelo da câmera costumam vir como ASCII (tipo 2, já
+    decodificado), mas algumas câmeras os gravam como BYTE/UNDEFINED (tipos
+    1 e 7), e aí `valor()` devolve bytes. Sem esta normalização o `.strip()`
+    devolvia bytes e o `" ".join` levantava TypeError — exatamente o que
+    derrubava o relatório de conteúdo e o PDF de conversas de um caso real.
+    """
+    if isinstance(valor, bytes):
+        return valor.split(b"\x00", 1)[0].decode("ascii", "replace")
+    if isinstance(valor, str):
+        return valor
+    return ""
+
+
 def ler_dados_da_foto(caminho: Path) -> DadosDaFoto:
     """Lê o EXIF de uma imagem. Nunca levanta: o problema vem escrito."""
     dados_da_foto = DadosDaFoto()
@@ -186,8 +202,8 @@ def ler_dados_da_foto(caminho: Path) -> DadosDaFoto:
     try:
         leitor = _Tiff(tiff)
         ifd0 = leitor.ifd(leitor._u("I", 4))
-        fabricante = leitor.valor(ifd0[0x010F]) if 0x010F in ifd0 else ""
-        modelo = leitor.valor(ifd0[0x0110]) if 0x0110 in ifd0 else ""
+        fabricante = _texto_exif(leitor.valor(ifd0[0x010F])) if 0x010F in ifd0 else ""
+        modelo = _texto_exif(leitor.valor(ifd0[0x0110])) if 0x0110 in ifd0 else ""
         dados_da_foto.camera = " ".join(p for p in (fabricante.strip(), modelo.strip()) if p)
         if 0x8769 in ifd0:
             exif = leitor.ifd(leitor.valor(ifd0[0x8769])[0])
@@ -198,7 +214,7 @@ def ler_dados_da_foto(caminho: Path) -> DadosDaFoto:
         if 0x8825 not in ifd0:
             return dados_da_foto
         gps = leitor.ifd(leitor.valor(ifd0[0x8825])[0])
-    except (KeyError, IndexError, ValueError, struct.error) as erro:
+    except (KeyError, IndexError, ValueError, TypeError, struct.error) as erro:
         dados_da_foto.problema = f"EXIF malformado ({erro})"
         return dados_da_foto
 
