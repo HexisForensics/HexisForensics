@@ -206,7 +206,7 @@ def _corpo_identificacao_peca(pasta_aquisicao: Path, dados_form: dict, dados_dis
     else:
         partes.append(tabela(
             [traduzir("cad_h_parametro", idi), traduzir("cad_ip_h_valor_lido", idi)],
-            [[escapar(rotulo), escapar(valor)] for rotulo, valor in apuradas.em_pares()],
+            [[escapar(rotulo), escapar(valor)] for rotulo, valor in apuradas.em_pares(idi)],
             ["35%", "65%"],
         ))
         partes.append(traduzir("cad_ip_nota_apurado", idi))

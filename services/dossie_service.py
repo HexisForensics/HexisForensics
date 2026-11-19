@@ -208,8 +208,9 @@ class Dossie:
     def inventario(self) -> List[Tuple[str, int, int]]:
         """(pasta de primeiro nível, arquivos, bytes) do material selado."""
         grupos: dict = {}
+        raiz = traduzir("dossie_raiz", self.idioma)
         for relativo in self.hashes:
-            topo = relativo.split("/", 1)[0] if "/" in relativo else "(raiz da aquisição)"
+            topo = relativo.split("/", 1)[0] if "/" in relativo else raiz
             arquivos, tamanho = grupos.get(topo, (0, 0))
             grupos[topo] = (arquivos + 1, tamanho + self.tamanhos.get(relativo, 0))
         return sorted((nome, n, b) for nome, (n, b) in grupos.items())
@@ -309,7 +310,7 @@ def montar_dossie(pasta_aquisicao: Path) -> Dossie:
     _ler_cadeia(dossie)
     _ler_selo(dossie)
 
-    dossie.apuradas = ler_caracteristicas(pasta).em_pares()
+    dossie.apuradas = ler_caracteristicas(pasta).em_pares(dossie.idioma)
     dossie.desvio_do_relogio = ler_desvio_registrado(dossie.registro_bruto)
     dossie.metodo = ler_metodo(pasta)
     dossie.desfecho = ler_desfecho(pasta)

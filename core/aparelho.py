@@ -27,6 +27,8 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .idioma import traduzir
+
 NOME_DADOS_TECNICOS = "caracteristicas_tecnicas.json"
 
 # Nomes que a ferramenta dá à aquisição quando NENHUM aparelho respondeu.
@@ -42,37 +44,39 @@ PASTA_IDENTIFICACAO = "identificacao"
 
 # Rótulo de cada campo no laudo, e a ordem em que aparecem. Campo ausente
 # não vira linha em branco: simplesmente não entra, e a ausência é dita.
+# (chave do dado, chave do catálogo p/ o rótulo). O rótulo é exibido no laudo
+# e traduz no idioma do caso; a chave e o valor apurado são o dado.
 CAMPOS = (
-    ("fabricante", "Fabricante"),
-    ("modelo", "Modelo"),
-    ("marca", "Marca / nome comercial"),
-    ("numero_serie", "Número de série"),
-    ("imei", "IMEI"),
-    ("versao_android", "Versão do Android"),
-    ("versao_ios", "Versão do iOS"),
-    ("build_ios", "Build do iOS"),
-    ("numero_do_modelo", "Número do modelo"),
-    ("nome_do_aparelho", "Nome dado ao aparelho"),
-    ("udid", "UDID"),
-    ("imei_2", "IMEI (segundo)"),
-    ("numero_telefone", "Número de telefone"),
-    ("iccid", "ICCID do chip"),
-    ("endereco_wifi", "Endereço Wi-Fi (MAC)"),
-    ("backup_cifrado", "Backup local cifrado pelo aparelho"),
-    ("versao_sdk", "Versão da API (SDK)"),
-    ("patch_seguranca", "Patch de segurança"),
-    ("arquitetura_cpu", "Arquitetura do processador"),
-    ("impressao_digital_build", "Impressão digital do build"),
-    ("tipo_build", "Tipo do build"),
-    ("estado_criptografia", "Estado da criptografia"),
-    ("tipo_criptografia", "Tipo de criptografia"),
-    ("boot_verificado", "Estado do boot verificado"),
-    ("bootloader_travado", "Bootloader travado (1 = sim)"),
-    ("versao_bootloader", "Versão do bootloader"),
-    ("banda_base", "Banda base (rádio)"),
-    ("operadora_sim", "Operadora do SIM"),
-    ("fuso_horario", "Fuso horário configurado"),
-    ("id_conexao", "Identificador de conexão"),
+    ("fabricante", "ap_fabricante"),
+    ("modelo", "ap_modelo"),
+    ("marca", "ap_marca"),
+    ("numero_serie", "ap_numero_serie"),
+    ("imei", "ap_imei"),
+    ("versao_android", "ap_versao_android"),
+    ("versao_ios", "ap_versao_ios"),
+    ("build_ios", "ap_build_ios"),
+    ("numero_do_modelo", "ap_numero_modelo"),
+    ("nome_do_aparelho", "ap_nome_aparelho"),
+    ("udid", "ap_udid"),
+    ("imei_2", "ap_imei_2"),
+    ("numero_telefone", "ap_numero_telefone"),
+    ("iccid", "ap_iccid"),
+    ("endereco_wifi", "ap_endereco_wifi"),
+    ("backup_cifrado", "ap_backup_cifrado"),
+    ("versao_sdk", "ap_versao_sdk"),
+    ("patch_seguranca", "ap_patch_seguranca"),
+    ("arquitetura_cpu", "ap_arquitetura_cpu"),
+    ("impressao_digital_build", "ap_impressao_build"),
+    ("tipo_build", "ap_tipo_build"),
+    ("estado_criptografia", "ap_estado_cripto"),
+    ("tipo_criptografia", "ap_tipo_cripto"),
+    ("boot_verificado", "ap_boot_verificado"),
+    ("bootloader_travado", "ap_bootloader_travado"),
+    ("versao_bootloader", "ap_versao_bootloader"),
+    ("banda_base", "ap_banda_base"),
+    ("operadora_sim", "ap_operadora_sim"),
+    ("fuso_horario", "ap_fuso_horario"),
+    ("id_conexao", "ap_id_conexao"),
 )
 
 
@@ -86,13 +90,14 @@ class CaracteristicasApuradas:
     def vazio(self) -> bool:
         return not any(str(v).strip() for v in self.valores.values())
 
-    def em_pares(self) -> list:
-        """(rótulo, valor) na ordem do laudo, só o que foi apurado."""
+    def em_pares(self, idioma=None) -> list:
+        """(rótulo, valor) na ordem do laudo, só o que foi apurado. O rótulo
+        sai no idioma pedido; o valor apurado nunca é traduzido."""
         pares = []
-        for chave, rotulo in CAMPOS:
+        for chave, rotulo_chave in CAMPOS:
             valor = str(self.valores.get(chave, "") or "").strip()
             if valor:
-                pares.append((rotulo, valor))
+                pares.append((traduzir(rotulo_chave, idioma), valor))
         return pares
 
 
