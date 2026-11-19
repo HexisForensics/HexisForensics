@@ -637,12 +637,14 @@ class RelatorioService:
         foto no backup lógico e no dump) contam uma vez. Imagem com GPS
         inaproveitável vira descarte, com o motivo — nunca some.
         """
+        idi = idioma_do_caso(pasta_aquisicao)
+        fonte_imagens = traduzir("rs_loc_fonte", idi)
         artefato = Artefato(chave="locais_fotos",
                             titulo=traduzir("rs_art_locais"),
-                            caminho_relativo="(imagens da aquisição)",
+                            caminho_relativo=fonte_imagens,
                             colunas=COLUNAS_LOCAIS)
         resultado = ResultadoNormalizacao(tipo="locais_fotos",
-                                          arquivo_de_origem="(imagens da aquisição)")
+                                          arquivo_de_origem=fonte_imagens, idioma=idi)
         artefato.resultado = resultado
         with tempfile.TemporaryDirectory(prefix="forense_locais_") as trabalho:
             imagens, avisos = RelatorioService._imagens_da_aquisicao(
@@ -661,7 +663,7 @@ class RelatorioService:
             resumo = calcular_sha256(caminho)
             if hashes_selados.get(selado, "").lower() != resumo.lower():
                 resultado.descartes.append(Descarte(
-                    0, origem, "imagem fora do lacre ou alterada depois dele: não interpretada"))
+                    0, origem, traduzir("rs_loc_descarte_fora_lacre", idi)))
                 continue
             if resumo in vistas:
                 repetidas += 1
@@ -687,15 +689,12 @@ class RelatorioService:
         partes = []
         if imagens:
             partes.append(
-                f"{len(imagens)} imagem(ns) examinada(s): {len(resultado.registros)} com "
-                f"coordenadas, {sem_gps} sem GPS gravado"
-                + (f", {repetidas} cópia(s) idêntica(s) contada(s) uma vez" if repetidas else "")
-                + (f", {len(resultado.descartes)} com GPS inaproveitável (ver descartes)"
+                traduzir("rs_loc_nota_base", idi, n=len(imagens),
+                         com=len(resultado.registros), sem=sem_gps)
+                + (traduzir("rs_loc_nota_copias", idi, n=repetidas) if repetidas else "")
+                + (traduzir("rs_loc_nota_descartes", idi, n=len(resultado.descartes))
                    if resultado.descartes else "") + ".")
-            partes.append(
-                "A coordenada é onde a FOTO foi tirada, segundo o EXIF — que é editável e pode "
-                "vir de outro aparelho (foto recebida). A data é a do relógio do aparelho que "
-                "fotografou; a hora do GPS, quando gravada, vem dos satélites, em UTC.")
+            partes.append(traduzir("rs_loc_nota_exif", idi))
         partes += avisos
         desvio = alerta_do_relogio(desvio_da_aquisicao(pasta_aquisicao))
         if desvio:
@@ -704,25 +703,15 @@ class RelatorioService:
 
         if not imagens and not avisos and backup_ios.backups_da_aquisicao(
                 pasta_aquisicao):
-            resultado.significado_do_vazio = (
-                "O índice do backup do iPhone foi lido e o rolo da câmera não contém imagens "
-                "(JPEG, HEIC, DNG). Fotos guardadas só no iCloud não vêm no backup local: não "
-                "é prova de que o aparelho não tenha fotos.")
+            resultado.significado_do_vazio = traduzir("rs_loc_vazio_ios", idi)
         elif not imagens and not avisos:
-            resultado.significado_do_vazio = (
-                "A aquisição não contém imagens (JPEG, HEIC, DNG). O módulo que copia as "
-                "mídias pode não ter sido executado: não é prova de que o aparelho não tenha "
-                "fotos.")
+            resultado.significado_do_vazio = traduzir("rs_loc_vazio_sem_imagens", idi)
         elif not imagens:
             # Nenhuma imagem foi LIDA (backup cifrado, índice ilegível): dizer
             # "nenhuma traz GPS" seria afirmar sobre o que não se viu.
             resultado.significado_do_vazio = " ".join(avisos)
         elif not resultado.registros:
-            resultado.significado_do_vazio = (
-                "Nenhuma das imagens lidas traz coordenadas de GPS. A câmera pode estar com a "
-                "localização desligada, e o EXIF pode ter sido removido (aplicativos de "
-                "mensagem costumam removê-lo): não é prova de que o aparelho não registre "
-                "localização.")
+            resultado.significado_do_vazio = traduzir("rs_loc_vazio_sem_gps", idi)
         return artefato
 
     @staticmethod

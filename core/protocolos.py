@@ -25,6 +25,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .case import idioma_do_caso, juntar_complemento, pasta_do_caso
+from .idioma import traduzir
 from .procedimento import titulo_evento
 
 SIM = "Sim"
@@ -135,59 +136,55 @@ def verificar_automaticos(pasta_aquisicao: Path) -> list:
     titulo_alteracao = titulo_evento("alteracao", idioma)
     titulo_relogio = titulo_evento("relogio", idioma)
 
+    # Respostas são interpretação exibida no documento (não selo): saem no
+    # idioma do caso. Os nomes de arquivo e os números de cláusula não.
+    sim = traduzir("prot_sim", idioma)
+    nao_loc = traduzir("prot_nao_localizado", idioma)
+    traco = "—"
+
     itens = []
 
     # 5.3.2 Auditabilidade — avaliação independente exige documentação de tudo.
-    if texto:
-        itens.append((
-            "5.3.2",
-            "As ações realizadas foram documentadas de modo a permitir avaliação "
-            "independente do procedimento?",
-            SIM,
-            f"{diario.name} e extracao.log",
-        ))
-    else:
-        itens.append((
-            "5.3.2",
-            "As ações realizadas foram documentadas de modo a permitir avaliação "
-            "independente do procedimento?",
-            NAO_LOCALIZADO,
-            "—",
-        ))
+    itens.append((
+        "5.3.2",
+        traduzir("prot_q_auditabilidade", idioma),
+        sim if texto else nao_loc,
+        traduzir("prot_src_auditavel", idioma, diario=diario.name) if texto else traco,
+    ))
 
     # 5.3.3 e 5.3.4 Repetibilidade e reprodutibilidade — dependem de as
     # condições do exame estarem registradas.
     itens.append((
         "5.3.3 / 5.3.4",
-        "As condições do exame — estação, ferramenta e versões — foram registradas, "
-        "permitindo repetição e reprodução?",
-        SIM if titulo_ambiente in texto else NAO_LOCALIZADO,
-        f"{diario.name}, entrada de ambiente" if titulo_ambiente in texto else "—",
+        traduzir("prot_q_condicoes", idioma),
+        sim if titulo_ambiente in texto else nao_loc,
+        traduzir("prot_src_ambiente", idioma, diario=diario.name)
+        if titulo_ambiente in texto else traco,
     ))
 
     # 5.3.5 Justificabilidade — as decisões metodológicas precisam constar.
     decisoes = texto.count(titulo_decisao)
     itens.append((
         "5.3.5",
-        "As decisões metodológicas do exame foram registradas com sua justificativa?",
-        f"{SIM} ({decisoes} registrada(s))" if decisoes else NAO_LOCALIZADO,
-        f"{diario.name}, decisões metodológicas" if decisoes else "—",
+        traduzir("prot_q_decisoes", idioma),
+        traduzir("prot_ans_decisoes", idioma, n=decisoes) if decisoes else nao_loc,
+        traduzir("prot_src_decisoes", idioma, diario=diario.name) if decisoes else traco,
     ))
 
     # 5.4.1 e 6.1 — alteração inevitável não é proibida; é obrigatório
     # registrá-la e justificá-la. A norma NÃO exige ausência de alteração.
     alteracoes = texto.count(titulo_alteracao)
     if not texto:
-        resposta_alteracao, origem_alteracao = NAO_LOCALIZADO, "—"
+        resposta_alteracao, origem_alteracao = nao_loc, traco
     elif alteracoes:
-        resposta_alteracao = f"{SIM} ({alteracoes} registrada(s) e justificada(s))"
-        origem_alteracao = f"{diario.name}, alterações no dispositivo"
+        resposta_alteracao = traduzir("prot_ans_alteracoes", idioma, n=alteracoes)
+        origem_alteracao = traduzir("prot_src_alteracoes", idioma, diario=diario.name)
     else:
-        resposta_alteracao = "Nenhuma alteração foi registrada nesta aquisição"
+        resposta_alteracao = traduzir("prot_ans_sem_alteracao", idioma)
         origem_alteracao = diario.name
     itens.append((
         "5.4.1 / 6.1",
-        "As alterações provocadas no dispositivo foram registradas e justificadas?",
+        traduzir("prot_q_alteracoes", idioma),
         resposta_alteracao,
         origem_alteracao,
     ))
@@ -195,28 +192,28 @@ def verificar_automaticos(pasta_aquisicao: Path) -> list:
     # 6.6 Documentação — o relógio do aparelho confrontado com fonte confiável.
     itens.append((
         "6.6",
-        "O relógio do dispositivo foi confrontado com o da estação e o desvio "
-        "registrado?",
-        SIM if titulo_relogio in texto else NAO_LOCALIZADO,
-        f"{diario.name}, aferição de relógio" if titulo_relogio in texto else "—",
+        traduzir("prot_q_relogio", idioma),
+        sim if titulo_relogio in texto else nao_loc,
+        traduzir("prot_src_relogio", idioma, diario=diario.name)
+        if titulo_relogio in texto else traco,
     ))
 
     # 6.6 Documentação — identificadores únicos do dispositivo.
     tem_identificacao = (pasta / "identificacao").is_dir() or (pasta / "device_specs").is_dir()
     itens.append((
         "6.6",
-        "Os identificadores do dispositivo foram documentados?",
-        SIM if tem_identificacao else NAO_LOCALIZADO,
-        "identificacao/ e device_specs/" if tem_identificacao else "—",
+        traduzir("prot_q_identificadores", idioma),
+        sim if tem_identificacao else nao_loc,
+        traduzir("prot_src_identificacao", idioma) if tem_identificacao else traco,
     ))
 
     # 6.1 Cadeia de custódia.
     custodia = pasta / "cadeia_custodia.txt"
     itens.append((
         "6.1",
-        "Há registro de cadeia de custódia para esta aquisição?",
-        SIM if custodia.is_file() else NAO_LOCALIZADO,
-        custodia.name if custodia.is_file() else "—",
+        traduzir("prot_q_custodia", idioma),
+        sim if custodia.is_file() else nao_loc,
+        custodia.name if custodia.is_file() else traco,
     ))
 
     # 5.4.5 Preservação — demonstrar que a evidência não foi modificada
@@ -224,10 +221,9 @@ def verificar_automaticos(pasta_aquisicao: Path) -> list:
     manifestos = sorted(pasta.glob("manifesto_hashes*.txt"))
     itens.append((
         "5.4.5",
-        "A integridade do material adquirido está selada, permitindo demonstrar que "
-        "não foi modificado após a coleta?",
-        SIM if manifestos else NAO_LOCALIZADO,
-        manifestos[-1].name if manifestos else "—",
+        traduzir("prot_q_integridade", idioma),
+        sim if manifestos else nao_loc,
+        manifestos[-1].name if manifestos else traco,
     ))
 
     return itens

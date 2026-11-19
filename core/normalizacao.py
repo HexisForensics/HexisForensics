@@ -153,6 +153,9 @@ class ResultadoNormalizacao:
     # explicado como "o provider respondeu e não retornou nenhum registro"
     # — inclusive o de um backup, que não é consulta e não prova ausência.
     significado_do_vazio: str = ""
+    # Idioma do caso, para as explicações geradas na hora do relatório
+    # (interpretação, não selo) saírem no idioma certo.
+    idioma: Optional[str] = None
 
     @property
     def total(self) -> int:
@@ -170,19 +173,12 @@ class ResultadoNormalizacao:
         if self.registros:
             return ""
         if self.acesso_negado:
-            return (
-                "O sistema do aparelho RECUSOU a consulta. Não se obteve dado algum — "
-                "o que é diferente de não existir dado no aparelho."
-            )
+            return traduzir("nm_vazio_recusado", self.idioma)
         if self.descartes:
-            return (
-                f"Nenhum registro foi compreendido, e {len(self.descartes)} trecho(s) do "
-                "arquivo não puderam ser interpretados. O arquivo bruto precisa ser "
-                "examinado à mão."
-            )
+            return traduzir("nm_vazio_descartes", self.idioma, n=len(self.descartes))
         if self.significado_do_vazio:
             return self.significado_do_vazio
-        return "O provider respondeu à consulta e não retornou nenhum registro."
+        return traduzir("nm_vazio_provider", self.idioma)
 
 
 # ---------------------------------------------------------------------------
@@ -319,7 +315,8 @@ def _normalizar(
     idioma=None,
 ) -> ResultadoNormalizacao:
     resultado = ResultadoNormalizacao(
-        tipo=tipo, arquivo_de_origem=arquivo, fuso_declarado=_nome_do_fuso(fuso, idioma)
+        tipo=tipo, arquivo_de_origem=arquivo, fuso_declarado=_nome_do_fuso(fuso, idioma),
+        idioma=idioma,
     )
 
     if indica_acesso_negado(texto):
