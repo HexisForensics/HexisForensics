@@ -35,6 +35,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+from .idioma import traduzir
 from .normalizacao import (
     Descarte,
     Registro,
@@ -65,8 +66,6 @@ NOMES_MOMENTO = (
     "timestamp",
 )
 NOMES_ANEXO = ("joinedAttachmentInfos", "joinedattachmentinfos", "attachments")
-
-AVISO_CORPO_COMPRIMIDO = "(corpo armazenado comprimido — não interpretado)"
 
 
 def _primeira_presente(colunas, candidatos) -> Optional[str]:
@@ -137,7 +136,8 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None, idioma=None) -> Re
     resultado = ResultadoNormalizacao(
         tipo=TIPO,
         arquivo_de_origem=caminho_banco.name,
-        fuso_declarado=nome_do_fuso(fuso),
+        fuso_declarado=nome_do_fuso(fuso, idioma),
+        idioma=idioma,
     )
 
     with abrir(caminho_banco, pasta_trabalho) as banco:
@@ -153,12 +153,9 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None, idioma=None) -> Re
             # sobre um aparelho com Gmail configurado seria conclusão
             # negativa falsa.
             resultado.acesso_negado = True
-            resultado.trecho_da_recusa = (
-                "O banco abriu, mas nenhuma tabela tem a assinatura de correio "
-                "(endereço de remetente com assunto ou corpo). Nada se pode afirmar "
-                "sobre as mensagens deste acervo. Tabelas encontradas: "
-                + (", ".join(banco.tabelas) or "nenhuma")
-            )
+            resultado.trecho_da_recusa = traduzir(
+                "em_sem_tabela", idioma,
+                tabelas=(", ".join(banco.tabelas) or traduzir("wa_nenhuma", idioma)))
             return resultado
 
         selecionadas = [nome for nome in mapa.values() if nome]
@@ -167,10 +164,8 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None, idioma=None) -> Re
             linhas = banco.consultar(f'SELECT rowid AS _linha, {colunas_sql} FROM "{tabela}"')
         except Exception as erro:
             resultado.acesso_negado = True
-            resultado.trecho_da_recusa = (
-                f"A tabela de correio '{tabela}' foi reconhecida, mas a consulta "
-                f"falhou: {erro}. As mensagens NÃO foram lidas."
-            )
+            resultado.trecho_da_recusa = traduzir(
+                "em_consulta_falhou", idioma, tabela=tabela, erro=erro)
             return resultado
 
         for linha in linhas:
@@ -181,15 +176,16 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None, idioma=None) -> Re
             if not corpo and _valor(linha, mapa["corpo_comprimido"]):
                 # O corpo existe e está comprimido. Devolver vazio faria a
                 # mensagem parecer sem conteúdo, que é fato diferente.
-                corpo = AVISO_CORPO_COMPRIMIDO
+                corpo = traduzir("em_corpo_comprimido", idioma)
             tem_anexo = bool(_valor(linha, mapa["anexo"]).strip())
 
             if momento is None and not assunto and not corpo:
                 resultado.descartes.append(
                     Descarte(
                         linha_de_origem=identificador or 0,
-                        texto=f"registro {identificador} da tabela '{tabela}'",
-                        motivo="sem data, sem assunto e sem corpo — nada a apresentar",
+                        texto=traduzir("em_desc_registro", idioma,
+                                       id=identificador, tabela=tabela),
+                        motivo=traduzir("em_desc_sem_dados", idioma),
                     )
                 )
                 continue
@@ -205,7 +201,7 @@ def ler(caminho_banco: Path, pasta_trabalho: Path, fuso=None, idioma=None) -> Re
                         # do arquivo mora numa estrutura serializada
                         # própria, e aproximá-lo produziria nomes
                         # plausíveis e possivelmente errados.
-                        "anexo": "Sim" if tem_anexo else "Não",
+                        "anexo": traduzir("nm_sim" if tem_anexo else "nm_nao", idioma),
                         "conteudo": corpo,
                     },
                     momento=momento,

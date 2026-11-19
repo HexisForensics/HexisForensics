@@ -28,13 +28,15 @@ from pathlib import Path
 RAIZ_PROJETO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ_PROJETO))
 
+from core.idioma import traduzir
 from core.mensagens_email import (
-    AVISO_CORPO_COMPRIMIDO,
     COLUNAS,
     ler,
     localizar_tabela_de_mensagens,
 )
 from core.sqlite_forense import abrir
+
+AVISO_CORPO_COMPRIMIDO = traduzir("em_corpo_comprimido")
 
 falhas = []
 
