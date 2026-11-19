@@ -84,30 +84,32 @@ class Operador:
         identidade = self.nome.strip() + (f" <{self.email.strip()}>" if self.email.strip() else "")
         return identidade + (f" ({', '.join(complementos)})" if complementos else "")
 
-    def em_linhas(self) -> list:
-        """Linhas para o registro do procedimento."""
+    def em_linhas(self, idioma=None) -> list:
+        """Linhas para o registro do procedimento, no idioma do selo. Os
+        valores (nome, registro, instituição, e-mail) são dado e não traduzem."""
+        from .idioma import traduzir  # tardio: core.idioma importa core.operador
         if not self.declarado:
-            return [
-                f"Operador: {NAO_DECLARADO} — o perfil do examinador não estava "
-                "preenchido na suíte no momento da aquisição."
-            ]
+            return [traduzir("op_nao_declarado", idioma)]
         # Com sessão aberta por senha, o registro diz EXATAMENTE isso — e não
         # "autenticado" nem "verificado": senha emprestada também entra.
         primeira = (
-            [f"Operador: {self.nome.strip()}", f"Acesso: {self.autenticacao.strip()}"]
+            [traduzir("op_operador", idioma, nome=self.nome.strip()),
+             traduzir("op_acesso", idioma, valor=self.autenticacao.strip())]
             if self.autenticacao.strip() else
-            [f"Operador (declarado): {self.nome.strip()}"]
+            [traduzir("op_declarado", idioma, nome=self.nome.strip())]
         )
         linhas = primeira + [
-            f"Registro profissional: {self.registro_funcional.strip() or 'não informado'}",
-            f"Instituição / laboratório: {self.unidade.strip() or 'não informada'}",
+            traduzir("op_registro", idioma,
+                     valor=self.registro_funcional.strip() or traduzir("op_nao_informado", idioma)),
+            traduzir("op_instituicao", idioma,
+                     valor=self.unidade.strip() or traduzir("op_nao_informada", idioma)),
         ]
         # A qualificação saiu do cadastro; só aparece no registro de quem a
         # trouxe de um cadastro antigo.
         if self.funcao.strip():
-            linhas.insert(1, f"Qualificação: {self.funcao.strip()}")
+            linhas.insert(1, traduzir("op_qualificacao", idioma, valor=self.funcao.strip()))
         if self.email.strip():
-            linhas.append(f"Contato: {self.email.strip()}")
+            linhas.append(traduzir("op_contato", idioma, valor=self.email.strip()))
         return linhas
 
 

@@ -233,7 +233,8 @@ class CaseService:
         operador = de_dicionario(perfil)
         conta = conta_da_estacao()
         if self._registro is not None:
-            self._registro.registrar_operador(operador.em_linhas(), conta)
+            idi = idioma_do_caso(pasta_aquisicao)
+            self._registro.registrar_operador(operador.em_linhas(idi), conta)
         try:
             gravar_operador_na_aquisicao(pasta_aquisicao, operador, conta)
         except OSError:
