@@ -40,7 +40,6 @@ CINZA_TEXTO = colors.HexColor("#5b6675")
 CINZA_LINHA = colors.HexColor("#c9d1db")
 CINZA_FUNDO = colors.HexColor("#f3f6fa")
 VERMELHO = colors.HexColor("#b3261e")
-TARJA_DE_TESTE = "DOCUMENTO DE TESTE — SEM VALOR PERICIAL (conta Forensic Admin)"
 AMBAR = colors.HexColor("#9a6700")
 
 MARGEM = 2 * cm
@@ -323,21 +322,22 @@ def montar_documento(
             traduzir("pdf_pagina_de", n=tela.getPageNumber(), total=total_de_paginas),
         )
         if teste:
+            tarja = traduzir("pdf_tarja_teste")
             tela.saveState()
             tela.setFillColor(VERMELHO)
             tela.rect(MARGEM, topo - 1.62 * cm, largura - 2 * MARGEM, 0.42 * cm, stroke=0, fill=1)
             tela.setFillColor(colors.white)
             tela.setFont(f["negrito"], 8)
-            tela.drawCentredString(largura / 2, topo - 1.5 * cm, TARJA_DE_TESTE)
+            tela.drawCentredString(largura / 2, topo - 1.5 * cm, tarja)
             tela.setFillColor(VERMELHO, alpha=0.08)
             tela.setFont(f["negrito"], 60)
             tela.translate(largura / 2, altura / 2)
             tela.rotate(35)
-            tela.drawCentredString(0, 0, "TESTE")
+            tela.drawCentredString(0, 0, traduzir("pdf_marca_teste"))
             tela.restoreState()
             tela.setFillColor(VERMELHO)
             tela.setFont(f["negrito"], 7)
-            tela.drawCentredString(largura / 2, base - 0.42 * cm, TARJA_DE_TESTE)
+            tela.drawCentredString(largura / 2, base - 0.42 * cm, tarja)
         tela.setFillColor(CINZA_TEXTO)
         tela.setFont(f["mono"], 6.3)
         if selo is not None:
