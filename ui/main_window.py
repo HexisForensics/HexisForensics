@@ -29,7 +29,7 @@ from services.branding_service import PASTA_EXTRACOES, BrandConfig
 from services.case_service import CaseService
 from services.device_service import ANDROID, COMPUTADOR, IOS, DeviceService
 from services import sessao_service
-from services.idioma import traduzir
+from services.idioma import idioma_para_selar, traduzir
 from services.exame_service import criar_registro
 from services.extraction_service import identificacao_da_ferramenta as sessao_da_ferramenta
 from services.extraction_service import (
@@ -306,18 +306,16 @@ class MainWindow(QMainWindow):
             self.console_log.adicionar_linha(
                 traduzir("mw_log_atencao", valor=alerta_relogio), com_timestamp=True)
 
+        idi = idioma_para_selar(pasta_caso)
         self.case_service.registrar_alteracao(
-            "Depuração USB ativada no aparelho e chave RSA desta estação autorizada.",
-            "Imposição do protocolo ADB: sem essa autorização não existe via de aquisição "
-            "lógica em aparelho sem root. A alteração se restringe a configuração do "
-            "sistema, sem escrita em área de dados do usuário.",
+            traduzir("mw_alt_usb", idi),
+            traduzir("mw_alt_usb_just", idi),
         )
 
         if serial_android:
             self.case_service.registrar_decisao(
-                f"Todos os comandos ADB vinculados ao serial '{serial_android}'.",
-                "Garante que nenhum comando atinja outro dispositivo eventualmente conectado "
-                "à estação durante o procedimento.",
+                traduzir("mw_dec_serial_and", idi, serial=serial_android),
+                traduzir("mw_dec_serial_and_motivo", idi),
             )
 
     def _iniciar_extracao(self, sem_extracao: bool = False) -> None:
@@ -469,6 +467,10 @@ class MainWindow(QMainWindow):
         pasta_caso = self.case_service.abrir_caso(
             aba.nome_plataforma, identificador_caso, id_dispositivo
         )
+        # Idioma em que o selado deste caso deve ser escrito, fixado agora
+        # para o finalizador (conferência do aparelho) usar o mesmo carimbo,
+        # já que ele roda sem a pasta do caso à mão.
+        self._idioma_do_selo = idioma_para_selar(pasta_caso)
 
         # Caso novo: o registro do caso nasce aqui, uma vez. Caso existente:
         # nada é perguntado de novo — a aquisição herda o que já está gravado.
@@ -493,9 +495,8 @@ class MainWindow(QMainWindow):
         )
         if aba.nome_plataforma == IOS and not sem_extracao:
             self.case_service.registrar_decisao(
-                f"Todas as operações vinculadas ao UDID '{self._serial_do_caso}'.",
-                "Garante que nenhuma operação atinja outro iPhone eventualmente conectado "
-                "à estação durante o procedimento.",
+                traduzir("mw_dec_udid_ios", self._idioma_do_selo, udid=self._serial_do_caso),
+                traduzir("mw_dec_udid_ios_motivo", self._idioma_do_selo),
             )
         self.console_log.adicionar_linha(
             traduzir("mw_log_pasta_destino", valor=pasta_caso), com_timestamp=True
@@ -625,12 +626,13 @@ class MainWindow(QMainWindow):
         if not serial:
             return None
 
+        idi = getattr(self, "_idioma_do_selo", None)
         if getattr(self, "_plataforma_do_caso", None) == IOS:
-            _confirmado, mensagem = self.device_service.conferir_iphone_do_caso(serial)
+            _confirmado, mensagem = self.device_service.conferir_iphone_do_caso(serial, idi)
         else:
-            _confirmado, mensagem = self.device_service.conferir_aparelho_do_caso(serial)
+            _confirmado, mensagem = self.device_service.conferir_aparelho_do_caso(serial, idi)
         self.case_service.registrar_decisao(
-            "Conferência do aparelho no encerramento da aquisição.", mensagem
+            traduzir("mw_dec_conferencia", idi), mensagem
         )
         self._serial_do_caso = None
         return mensagem

@@ -23,6 +23,7 @@ from typing import List, Optional, Tuple
 
 from core.android.adb_client import ADBClient
 from core.android.device import AndroidDevice
+from core.idioma import traduzir
 from core.computador.device import ComputadorDevice
 from core.computador.disk_client import UnidadeDisco, descrever_bloqueio
 from core.computador.extractors.base import raiz_instalacao_suite
@@ -113,25 +114,19 @@ class DeviceService:
         status = self._ios.verificar_conexao()
         return status.identificador if status.autorizado else None
 
-    def conferir_iphone_do_caso(self, udid_esperado: str) -> tuple:
+    def conferir_iphone_do_caso(self, udid_esperado: str, idioma: Optional[str] = None) -> tuple:
         """Mesma conferência de `conferir_aparelho_do_caso`, para o iPhone."""
         try:
             conectados = {udid for udid, _ in self._ios.client.listar_dispositivos()}
         except Exception as erro:  # serviço da Apple parado, biblioteca ausente
-            return False, (
-                f"NÃO foi possível confirmar o iPhone '{udid_esperado}' ao final da "
-                f"aquisição: {erro}"
-            )
+            return False, traduzir("dev_conf_ios_erro", idioma, udid=udid_esperado, erro=erro)
         if udid_esperado in conectados:
-            return True, f"iPhone '{udid_esperado}' confirmado ao final da aquisição."
+            return True, traduzir("dev_conf_ios_ok", idioma, udid=udid_esperado)
         if not conectados:
-            return False, (
-                f"NÃO foi possível confirmar o iPhone '{udid_esperado}' ao final da "
-                "aquisição: nenhum iPhone conectado neste momento."
-            )
-        return False, (
-            f"O iPhone conectado ao final ({', '.join(sorted(conectados))}) NÃO é o do caso "
-            f"('{udid_esperado}')."
+            return False, traduzir("dev_conf_ios_ausente", idioma, udid=udid_esperado)
+        return False, traduzir(
+            "dev_conf_ios_diverg", idioma,
+            conectados=", ".join(sorted(conectados)), udid=udid_esperado,
         )
 
     def obter_serial_android(self) -> Optional[str]:
@@ -145,7 +140,7 @@ class DeviceService:
         status = self._android.verificar_conexao()
         return status.serial if status.autorizado else None
 
-    def conferir_aparelho_do_caso(self, serial_esperado: str) -> tuple:
+    def conferir_aparelho_do_caso(self, serial_esperado: str, idioma: Optional[str] = None) -> tuple:
         """
         Confere se o aparelho vinculado ao caso ainda e o que responde ao ADB.
 
@@ -158,15 +153,12 @@ class DeviceService:
         seriais = status.seriais_detectados
 
         if serial_esperado in seriais and status.autorizado:
-            return True, f"Aparelho '{serial_esperado}' confirmado ao final da aquisição."
+            return True, traduzir("dev_conf_and_ok", idioma, serial=serial_esperado)
         if not seriais:
-            return False, (
-                f"NÃO foi possível confirmar o aparelho '{serial_esperado}' ao final da "
-                "aquisição: nenhum dispositivo respondeu ao ADB neste momento."
-            )
-        return False, (
-            f"DIVERGÊNCIA ao final da aquisição: o aparelho do caso é '{serial_esperado}', "
-            f"e o que responde ao ADB agora é '{', '.join(seriais)}'."
+            return False, traduzir("dev_conf_and_ausente", idioma, serial=serial_esperado)
+        return False, traduzir(
+            "dev_conf_and_diverg", idioma,
+            serial=serial_esperado, conectados=", ".join(seriais),
         )
 
     def obter_versao_adb(self) -> str:

@@ -274,7 +274,7 @@ class BaseExtractor(ABC):
         fundamentada, que o examinador pode sustentar em contraditório.
         """
         RegistroProcedimento(pasta_caso).registrar_decisao(
-            f"[{self.nome_exibicao}] {decisao}", motivo
+            f"[{self.nome_no_idioma(self._idi_selo)}] {decisao}", motivo
         )
 
     def registrar_alteracao(self, pasta_caso: Path, alteracao: str, justificativa: str) -> None:
@@ -285,7 +285,7 @@ class BaseExtractor(ABC):
         descoberta depois pela defesa, é vulnerabilidade.
         """
         RegistroProcedimento(pasta_caso).registrar_alteracao(
-            f"[{self.nome_exibicao}] {alteracao}", justificativa
+            f"[{self.nome_no_idioma(self._idi_selo)}] {alteracao}", justificativa
         )
 
     def cancelar(self) -> None:

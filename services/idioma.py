@@ -11,6 +11,7 @@ ela nasce em ``core.idioma``.
 
 from __future__ import annotations
 
+from core.case import idioma_para_selar  # noqa: F401  (reexport proposital)
 from core.idioma import (  # noqa: F401  (reexport proposital)
     IDIOMA_PADRAO,
     IDIOMAS_PREVISTOS,
