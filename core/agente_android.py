@@ -21,6 +21,7 @@ import json
 from pathlib import Path
 from typing import Iterator, Optional
 
+from core.idioma import traduzir
 from core.normalizacao import (
     CAIXAS_MMS,
     ENDERECO_MMS_DE,
@@ -46,7 +47,6 @@ ARQUIVOS = (
     "mms.jsonl", "mms_partes.jsonl", "mms_enderecos.jsonl",
 )
 
-VAZIO = "O provedor do sistema respondeu ao agente e não retornou nenhum registro."
 MARCADOR_DO_PROPRIO_NUMERO = "insert-address-token"
 
 
@@ -65,13 +65,13 @@ def situacao_das_fontes(estado: Optional[dict]) -> dict:
     return {str(f.get("nome")): f for f in fontes if isinstance(f, dict)}
 
 
-def _linhas(caminho: Path, resultado: ResultadoNormalizacao) -> Iterator[tuple]:
+def _linhas(caminho: Path, resultado: ResultadoNormalizacao, idioma=None) -> Iterator[tuple]:
     """Rende `(numero_da_linha, objeto)`; linha ilegível vira descarte."""
     try:
         texto = Path(caminho).read_text(encoding="utf-8")
     except OSError as erro:
         resultado.acesso_negado = True
-        resultado.trecho_da_recusa = f"o arquivo do agente não pôde ser lido: {erro}"
+        resultado.trecho_da_recusa = traduzir("ag_arquivo_ilegivel", idioma, erro=erro)
         return
     for numero, linha in enumerate(texto.splitlines(), 1):
         if not linha.strip():
@@ -79,32 +79,32 @@ def _linhas(caminho: Path, resultado: ResultadoNormalizacao) -> Iterator[tuple]:
         try:
             objeto = json.loads(linha)
         except ValueError:
-            resultado.descartes.append(Descarte(numero, linha[:200], "linha que não é JSON válido"))
+            resultado.descartes.append(
+                Descarte(numero, linha[:200], traduzir("ag_desc_nao_json", idioma)))
             continue
         if isinstance(objeto, dict):
             yield numero, objeto
         else:
-            resultado.descartes.append(Descarte(numero, linha[:200], "linha que não é um registro"))
+            resultado.descartes.append(
+                Descarte(numero, linha[:200], traduzir("ag_desc_nao_registro", idioma)))
 
 
-def _resultado(tipo: str, caminho: Path, arquivo: str, fuso, fonte: str) -> ResultadoNormalizacao:
+def _resultado(tipo: str, caminho: Path, arquivo: str, fuso, fonte: str,
+               idioma=None) -> ResultadoNormalizacao:
     resultado = ResultadoNormalizacao(
-        tipo=tipo, arquivo_de_origem=arquivo, fuso_declarado=nome_do_fuso(fuso),
-        significado_do_vazio=VAZIO,
+        tipo=tipo, arquivo_de_origem=arquivo, fuso_declarado=nome_do_fuso(fuso, idioma),
+        significado_do_vazio=traduzir("ag_vazio", idioma), idioma=idioma,
     )
     situacao = situacao_das_fontes(ler_estado(Path(caminho).parent)).get(fonte)
     if situacao is None:
         resultado.acesso_negado = True
-        resultado.trecho_da_recusa = (
-            "o estado da coleta do agente não registra esta fonte — a coleta pode não "
-            "ter terminado"
-        )
+        resultado.trecho_da_recusa = traduzir("ag_fonte_ausente", idioma)
     elif situacao.get("erro"):
         resultado.acesso_negado = True
         resultado.trecho_da_recusa = str(situacao["erro"])
     elif situacao.get("provedor_respondeu") is False:
         resultado.acesso_negado = True
-        resultado.trecho_da_recusa = "o provedor não respondeu à consulta do agente"
+        resultado.trecho_da_recusa = traduzir("ag_provedor_mudo", idioma)
     return resultado
 
 
@@ -112,22 +112,23 @@ def _texto(valor) -> str:
     return "" if valor is None else str(valor)
 
 
-def _lida(valor) -> str:
-    return {"0": "Não", "1": "Sim"}.get(_texto(valor), "(não informado)")
+def _lida(valor, idioma=None) -> str:
+    chave = {"0": "nm_nao", "1": "nm_sim"}.get(_texto(valor), "nm_nao_informado")
+    return traduzir(chave, idioma)
 
 
-def ler_sms(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizacao:
-    resultado = _resultado("sms", caminho, arquivo, fuso, "sms")
+def ler_sms(caminho: Path, arquivo: str = "", fuso=None, idioma=None) -> ResultadoNormalizacao:
+    resultado = _resultado("sms", caminho, arquivo, fuso, "sms", idioma)
     if resultado.acesso_negado:
         return resultado
-    for numero, item in _linhas(caminho, resultado):
+    for numero, item in _linhas(caminho, resultado, idioma):
         resultado.registros.append(Registro(
             tipo="sms",
             campos={
-                "numero": _texto(item.get("address")) or "(sem número)",
-                "direcao": _rotulo_do_codigo(_texto(item.get("type")), TIPOS_SMS),
+                "numero": _texto(item.get("address")) or traduzir("nm_sem_numero", idioma),
+                "direcao": _rotulo_do_codigo(_texto(item.get("type")), TIPOS_SMS, idioma),
                 "conteudo": _texto(item.get("body")),
-                "lida": _lida(item.get("read")),
+                "lida": _lida(item.get("read"), idioma),
                 "identificador_no_aparelho": _texto(item.get("_id")),
             },
             momento=momento_de_epoch(item.get("date"), fuso),
@@ -138,18 +139,18 @@ def ler_sms(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizaca
     return resultado
 
 
-def ler_chamadas(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizacao:
-    resultado = _resultado("chamada", caminho, arquivo, fuso, "chamadas")
+def ler_chamadas(caminho: Path, arquivo: str = "", fuso=None, idioma=None) -> ResultadoNormalizacao:
+    resultado = _resultado("chamada", caminho, arquivo, fuso, "chamadas", idioma)
     if resultado.acesso_negado:
         return resultado
-    for numero, item in _linhas(caminho, resultado):
+    for numero, item in _linhas(caminho, resultado, idioma):
         duracao = item.get("duration")
         resultado.registros.append(Registro(
             tipo="chamada",
             campos={
-                "numero": _texto(item.get("number")) or "(sem número)",
-                "contato": _texto(item.get("name")) or "(não consta no registro da chamada)",
-                "direcao": _rotulo_do_codigo(_texto(item.get("type")), TIPOS_CHAMADA),
+                "numero": _texto(item.get("number")) or traduzir("nm_sem_numero", idioma),
+                "contato": _texto(item.get("name")) or traduzir("ag_sem_contato_chamada", idioma),
+                "direcao": _rotulo_do_codigo(_texto(item.get("type")), TIPOS_CHAMADA, idioma),
                 "duracao_segundos": _texto(duracao) if duracao not in (None, "") else "0",
                 "identificador_no_aparelho": _texto(item.get("_id")),
             },
@@ -161,16 +162,17 @@ def ler_chamadas(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormal
     return resultado
 
 
-def ler_contatos(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizacao:
-    resultado = _resultado("contato", caminho, arquivo, fuso, "contatos")
+def ler_contatos(caminho: Path, arquivo: str = "", fuso=None, idioma=None) -> ResultadoNormalizacao:
+    resultado = _resultado("contato", caminho, arquivo, fuso, "contatos", idioma)
     if resultado.acesso_negado:
         return resultado
-    for numero, item in _linhas(caminho, resultado):
+    for numero, item in _linhas(caminho, resultado, idioma):
         resultado.registros.append(Registro(
             tipo="contato",
             campos={
-                "contato": _texto(item.get("display_name")) or "(sem nome)",
-                "numero": _texto(item.get("data1")) or _texto(item.get("number")) or "(sem número)",
+                "contato": _texto(item.get("display_name")) or traduzir("nm_sem_nome", idioma),
+                "numero": (_texto(item.get("data1")) or _texto(item.get("number"))
+                           or traduzir("nm_sem_numero", idioma)),
                 "identificador_no_aparelho": _texto(item.get("_id")),
             },
             momento=None,  # contato não tem data própria neste provedor
@@ -181,27 +183,27 @@ def ler_contatos(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormal
     return resultado
 
 
-def ler_mms(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizacao:
+def ler_mms(caminho: Path, arquivo: str = "", fuso=None, idioma=None) -> ResultadoNormalizacao:
     """
     MMS: o cabeçalho vem de `mms.jsonl`; o texto e os anexos, de
     `mms_partes.jsonl`; os números, de `mms_enderecos.jsonl`.
     """
-    resultado = _resultado("mms", caminho, arquivo, fuso, "mms")
+    resultado = _resultado("mms", caminho, arquivo, fuso, "mms", idioma)
     if resultado.acesso_negado:
         return resultado
     pasta = Path(caminho).parent
     auxiliar = ResultadoNormalizacao(tipo="mms")
 
     partes: dict = {}
-    for _, parte in _linhas(pasta / "mms_partes.jsonl", auxiliar):
+    for _, parte in _linhas(pasta / "mms_partes.jsonl", auxiliar, idioma):
         partes.setdefault(_texto(parte.get("mid")), []).append(parte)
     enderecos: dict = {}
-    for _, endereco in _linhas(pasta / "mms_enderecos.jsonl", auxiliar):
+    for _, endereco in _linhas(pasta / "mms_enderecos.jsonl", auxiliar, idioma):
         chave = _texto(endereco.get("_mms_id")) or _texto(endereco.get("msg_id"))
         enderecos.setdefault(chave, []).append(endereco)
     resultado.descartes.extend(auxiliar.descartes)
 
-    for numero, item in _linhas(caminho, resultado):
+    for numero, item in _linhas(caminho, resultado, idioma):
         identificador = _texto(item.get("_id"))
         caixa = _texto(item.get("msg_box"))
         textos, anexos = [], []
@@ -210,7 +212,8 @@ def ler_mms(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizaca
             if tipo == TIPO_TEXTO_MMS:
                 textos.append(_texto(parte.get("text")))
             elif tipo and tipo != "application/smil":
-                nome = _texto(parte.get("name")) or _texto(parte.get("cl")) or "(sem nome)"
+                nome = (_texto(parte.get("name")) or _texto(parte.get("cl"))
+                        or traduzir("nm_sem_nome", idioma))
                 anexos.append(f"{nome} [{tipo}]")
         # Recebida: interessa quem enviou. Nas demais, para quem foi.
         procurados = (ENDERECO_MMS_DE,) if caixa == "1" else ENDERECOS_MMS_PARA
@@ -222,12 +225,12 @@ def ler_mms(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizaca
         resultado.registros.append(Registro(
             tipo="mms",
             campos={
-                "numero": ", ".join(numeros) or "(número não consta nos endereços do MMS)",
-                "direcao": _rotulo_do_codigo(caixa, CAIXAS_MMS),
+                "numero": ", ".join(numeros) or traduzir("ag_mms_sem_endereco", idioma),
+                "direcao": _rotulo_do_codigo(caixa, CAIXAS_MMS, idioma),
                 "assunto": _texto(item.get("sub")),
                 "conteudo": "\n".join(t for t in textos if t),
                 "anexo": "; ".join(anexos),
-                "lida": _lida(item.get("read")),
+                "lida": _lida(item.get("read"), idioma),
                 "identificador_no_aparelho": identificador,
             },
             # A data do MMS vem em SEGUNDOS; `momento_de_epoch` distingue pela grandeza.

@@ -37,6 +37,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from core.idioma import traduzir
 from core.normalizacao import (
     CAIXAS_MMS,
     ENDERECO_MMS_DE,
@@ -63,10 +64,10 @@ _MAGICA_ENTIDADE = b"Data"
 
 # Apresentação do número (CallLog.Calls.NUMBER_PRESENTATION).
 APRESENTACOES = {
-    1: "Identificado",
-    2: "Restrito pelo chamador",
-    3: "Desconhecido",
-    4: "Telefone público",
+    1: "bk_apres_identificado",
+    2: "bk_apres_restrito",
+    3: "bk_apres_desconhecido",
+    4: "bk_apres_publico",
 }
 
 
@@ -90,26 +91,23 @@ class ConteudoBackup:
         )
 
 
-def abrir(caminho: Path) -> ConteudoBackup:
+def abrir(caminho: Path, idioma=None) -> ConteudoBackup:
     """Abre um `.ab` em memória. Nunca levanta exceção: devolve o motivo."""
     try:
         bruto = Path(caminho).read_bytes()
     except OSError as erro:
-        return ConteudoBackup(motivo=f"o arquivo não pôde ser lido: {erro}")
+        return ConteudoBackup(motivo=traduzir("bk_arquivo_ilegivel", idioma, erro=erro))
 
     partes = bruto.split(b"\n", 4)
     if len(partes) < 5 or partes[0] != ASSINATURA:
-        return ConteudoBackup(motivo="o arquivo não tem a assinatura de backup do Android")
+        return ConteudoBackup(motivo=traduzir("bk_sem_assinatura", idioma))
 
     versao, comprimido, cifra = (p.decode("ascii", "replace") for p in partes[1:4])
     if cifra != "none":
         return ConteudoBackup(
             cifrado=True,
             versao=versao,
-            motivo=(
-                f"o backup está cifrado ({cifra}) — foi digitada uma senha na tela do "
-                "aparelho. O conteúdo NÃO foi lido, e nada se pode afirmar sobre ele"
-            ),
+            motivo=traduzir("bk_cifrado", idioma, cifra=cifra),
         )
 
     corpo = partes[4]
@@ -124,25 +122,18 @@ def abrir(caminho: Path) -> ConteudoBackup:
     except (zlib.error, tarfile.TarError, OSError, EOFError) as erro:
         return ConteudoBackup(
             versao=versao,
-            motivo=f"o conteúdo do backup está truncado ou corrompido: {erro}",
+            motivo=traduzir("bk_truncado", idioma, erro=erro),
         )
     return ConteudoBackup(legivel=True, versao=versao, membros=membros)
 
 
-VAZIO_NAO_E_AUSENCIA = (
-    "O backup do sistema foi aberto e não trouxe nenhum registro deste tipo. Quem "
-    "decide o que entra no backup é o agente do próprio Android, e a completude não "
-    "é verificável por esta via: NÃO se pode concluir que o aparelho não continha "
-    "esses dados."
-)
-
-
-def _resultado(tipo: str, arquivo: str, fuso) -> ResultadoNormalizacao:
+def _resultado(tipo: str, arquivo: str, fuso, idioma=None) -> ResultadoNormalizacao:
     return ResultadoNormalizacao(
         tipo=tipo,
         arquivo_de_origem=arquivo,
-        fuso_declarado=nome_do_fuso(fuso),
-        significado_do_vazio=VAZIO_NAO_E_AUSENCIA,
+        fuso_declarado=nome_do_fuso(fuso, idioma),
+        significado_do_vazio=traduzir("bk_vazio", idioma),
+        idioma=idioma,
     )
 
 
@@ -154,7 +145,8 @@ def _recusar(resultado: ResultadoNormalizacao, motivo: str) -> ResultadoNormaliz
     return resultado
 
 
-def _lotes_json(conteudo: ConteudoBackup, sufixo: str, resultado: ResultadoNormalizacao):
+def _lotes_json(conteudo: ConteudoBackup, sufixo: str, resultado: ResultadoNormalizacao,
+                idioma=None):
     """
     Entrega `(nome_do_membro, indice, objeto)` de cada mensagem dos lotes
     `NNNNNN_<sufixo>`. Lote que não abre vira descarte contado.
@@ -166,41 +158,44 @@ def _lotes_json(conteudo: ConteudoBackup, sufixo: str, resultado: ResultadoNorma
             itens = json.loads(zlib.decompress(conteudo.membros[nome]).decode("utf-8"))
         except (zlib.error, ValueError, UnicodeDecodeError) as erro:
             resultado.descartes.append(
-                Descarte(0, nome, f"lote do backup não pôde ser aberto: {erro}")
+                Descarte(0, nome, traduzir("bk_lote_ilegivel", idioma, erro=erro))
             )
             continue
         if not isinstance(itens, list):
-            resultado.descartes.append(Descarte(0, nome, "lote do backup fora do formato esperado"))
+            resultado.descartes.append(
+                Descarte(0, nome, traduzir("bk_lote_formato", idioma)))
             continue
         for indice, item in enumerate(itens, 1):
             if isinstance(item, dict):
                 yield nome, indice, item
             else:
                 resultado.descartes.append(
-                    Descarte(indice, f"{nome} item {indice}", "item do lote não é um registro")
+                    Descarte(indice, f"{nome} item {indice}",
+                             traduzir("bk_item_nao_registro", idioma))
                 )
 
 
-def _lida(valor) -> str:
-    return {"0": "Não", "1": "Sim"}.get(str(valor), "(não informado)")
+def _lida(valor, idioma=None) -> str:
+    chave = {"0": "nm_nao", "1": "nm_sim"}.get(str(valor), "nm_nao_informado")
+    return traduzir(chave, idioma)
 
 
-def ler_sms(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizacao:
+def ler_sms(caminho: Path, arquivo: str = "", fuso=None, idioma=None) -> ResultadoNormalizacao:
     """SMS a partir do backup de `com.android.providers.telephony`."""
-    resultado = _resultado("sms", arquivo, fuso)
-    conteudo = abrir(caminho)
+    resultado = _resultado("sms", arquivo, fuso, idioma)
+    conteudo = abrir(caminho, idioma)
     if not conteudo.legivel:
         return _recusar(resultado, conteudo.motivo)
 
-    for nome, indice, item in _lotes_json(conteudo, "_sms_backup", resultado):
+    for nome, indice, item in _lotes_json(conteudo, "_sms_backup", resultado, idioma):
         resultado.registros.append(
             Registro(
                 tipo="sms",
                 campos={
-                    "numero": item.get("address") or "(sem número)",
-                    "direcao": _rotulo_do_codigo(item.get("type"), TIPOS_SMS),
+                    "numero": item.get("address") or traduzir("nm_sem_numero", idioma),
+                    "direcao": _rotulo_do_codigo(item.get("type"), TIPOS_SMS, idioma),
                     "conteudo": item.get("body") or "",
-                    "lida": _lida(item.get("read")),
+                    "lida": _lida(item.get("read"), idioma),
                     "identificador_no_aparelho": "",
                 },
                 momento=momento_de_epoch(item.get("date"), fuso),
@@ -212,17 +207,17 @@ def ler_sms(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizaca
     return resultado
 
 
-def ler_mms(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizacao:
+def ler_mms(caminho: Path, arquivo: str = "", fuso=None, idioma=None) -> ResultadoNormalizacao:
     """
     MMS a partir do mesmo backup. Só texto e endereços: o agente do Android
     não inclui os anexos, e a coluna diz isso em vez de ficar vazia.
     """
-    resultado = _resultado("mms", arquivo, fuso)
-    conteudo = abrir(caminho)
+    resultado = _resultado("mms", arquivo, fuso, idioma)
+    conteudo = abrir(caminho, idioma)
     if not conteudo.legivel:
         return _recusar(resultado, conteudo.motivo)
 
-    for nome, indice, item in _lotes_json(conteudo, "_mms_backup", resultado):
+    for nome, indice, item in _lotes_json(conteudo, "_mms_backup", resultado, idioma):
         caixa = item.get("msg_box")
         enderecos = item.get("mms_addresses") or []
         procurado_de = str(caixa) == "1"
@@ -238,12 +233,12 @@ def ler_mms(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizaca
             Registro(
                 tipo="mms",
                 campos={
-                    "numero": ", ".join(numeros) or "(sem número)",
-                    "direcao": _rotulo_do_codigo(caixa, CAIXAS_MMS),
+                    "numero": ", ".join(numeros) or traduzir("nm_sem_numero", idioma),
+                    "direcao": _rotulo_do_codigo(caixa, CAIXAS_MMS, idioma),
                     "conteudo": item.get("mms_body") or "",
                     "assunto": item.get("sub") or "",
-                    "anexo": "(o backup do sistema não inclui anexos de MMS)",
-                    "lida": _lida(item.get("read")),
+                    "anexo": traduzir("bk_mms_sem_anexo", idioma),
+                    "lida": _lida(item.get("read"), idioma),
                     "identificador_no_aparelho": "",
                 },
                 momento=momento_de_epoch(item.get("date"), fuso),
@@ -346,10 +341,10 @@ def interpretar_chamada(valor: bytes) -> dict:
     return campos
 
 
-def ler_chamadas(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormalizacao:
+def ler_chamadas(caminho: Path, arquivo: str = "", fuso=None, idioma=None) -> ResultadoNormalizacao:
     """Registro de chamadas a partir do backup de `com.android.calllogbackup`."""
-    resultado = _resultado("chamada", arquivo, fuso)
-    conteudo = abrir(caminho)
+    resultado = _resultado("chamada", arquivo, fuso, idioma)
+    conteudo = abrir(caminho, idioma)
     if not conteudo.legivel:
         return _recusar(resultado, conteudo.motivo)
 
@@ -362,7 +357,7 @@ def ler_chamadas(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormal
             ):
                 if valor is None:
                     resultado.descartes.append(
-                        Descarte(indice, f"chave {chave}", "marcador de exclusão, sem dados")
+                        Descarte(indice, f"chave {chave}", traduzir("bk_exclusao", idioma))
                     )
                     continue
                 try:
@@ -370,21 +365,21 @@ def ler_chamadas(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormal
                 except (ValueError, struct.error) as erro:
                     resultado.descartes.append(
                         Descarte(indice, f"chave {chave}: {valor[:40].hex()}",
-                                 f"registro de chamada não compreendido: {erro}")
+                                 traduzir("bk_chamada_nao_compreendida", idioma, erro=erro))
                     )
                     continue
                 resultado.registros.append(
                     Registro(
                         tipo="chamada",
                         campos={
-                            "numero": campos["numero"] or "(sem número)",
+                            "numero": campos["numero"] or traduzir("nm_sem_numero", idioma),
                             # O backup não traz o nome: ele é resolvido pela
                             # agenda no aparelho, e não é gravado aqui.
-                            "contato": "(o backup não traz o nome do contato)",
-                            "direcao": _rotulo_do_codigo(campos["tipo"], TIPOS_CHAMADA),
+                            "contato": traduzir("bk_sem_nome_contato", idioma),
+                            "direcao": _rotulo_do_codigo(campos["tipo"], TIPOS_CHAMADA, idioma),
                             "duracao_segundos": str(campos["duracao"]),
                             "apresentacao": _rotulo_do_codigo(
-                                campos["apresentacao"], APRESENTACOES
+                                campos["apresentacao"], APRESENTACOES, idioma
                             ),
                             "linha_utilizada": campos["id_da_conta"] or "",
                             "identificador_no_aparelho": chave,
@@ -397,6 +392,6 @@ def ler_chamadas(caminho: Path, arquivo: str = "", fuso=None) -> ResultadoNormal
                 )
         except ValueError as erro:
             resultado.descartes.append(
-                Descarte(0, nome, f"leitura interrompida — {erro}; pode haver chamadas além deste ponto")
+                Descarte(0, nome, traduzir("bk_leitura_interrompida", idioma, erro=erro))
             )
     return resultado

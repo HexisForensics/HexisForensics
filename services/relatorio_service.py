@@ -460,7 +460,7 @@ class RelatorioService:
             artefato.presente = True
             artefato.sha256 = calcular_sha256(caminho)
             artefato.sha256_no_manifesto = hashes_selados.get(relativo, "")
-            artefato.resultado = ler_backup(caminho, relativo, fuso)
+            artefato.resultado = ler_backup(caminho, relativo, fuso, idioma)
             artefatos.append(artefato)
 
         artefatos.extend(
