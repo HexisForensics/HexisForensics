@@ -25,6 +25,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
+from .idioma import traduzir
+
 EXTENSOES_DE_IMAGEM = {".jpg", ".jpeg", ".heic", ".heif", ".dng"}
 
 # O EXIF de um HEIC pode estar depois dos metadados do contêiner; nos
@@ -184,14 +186,14 @@ def _texto_exif(valor) -> str:
     return ""
 
 
-def ler_dados_da_foto(caminho: Path) -> DadosDaFoto:
+def ler_dados_da_foto(caminho: Path, idioma=None) -> DadosDaFoto:
     """Lê o EXIF de uma imagem. Nunca levanta: o problema vem escrito."""
     dados_da_foto = DadosDaFoto()
     try:
         with open(caminho, "rb") as arquivo:
             dados = arquivo.read(LIMITE_DE_LEITURA)
     except OSError as erro:
-        dados_da_foto.problema = f"arquivo ilegível ({erro})"
+        dados_da_foto.problema = traduzir("geo_arquivo_ilegivel", idioma, erro=erro)
         return dados_da_foto
 
     tiff = _tiff_do_jpeg(dados) or _tiff_por_busca(dados)
@@ -215,7 +217,7 @@ def ler_dados_da_foto(caminho: Path) -> DadosDaFoto:
             return dados_da_foto
         gps = leitor.ifd(leitor.valor(ifd0[0x8825])[0])
     except (KeyError, IndexError, ValueError, TypeError, struct.error) as erro:
-        dados_da_foto.problema = f"EXIF malformado ({erro})"
+        dados_da_foto.problema = traduzir("geo_exif_malformado", idioma, erro=erro)
         return dados_da_foto
 
     if not (2 in gps and 4 in gps):
@@ -236,15 +238,15 @@ def ler_dados_da_foto(caminho: Path) -> DadosDaFoto:
             dados_da_foto.hora_gps_utc = (dia + timedelta(hours=h, minutes=m, seconds=s)).replace(
                 tzinfo=timezone.utc)
     except (IndexError, ValueError, struct.error) as erro:
-        dados_da_foto.problema = f"coordenada de GPS malformada ({erro})"
+        dados_da_foto.problema = traduzir("geo_coord_malformada", idioma, erro=erro)
         return dados_da_foto
 
     if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-        dados_da_foto.problema = f"coordenada fora do globo ({latitude}, {longitude})"
+        dados_da_foto.problema = traduzir("geo_coord_fora_globo", idioma,
+                                          lat=latitude, lon=longitude)
         return dados_da_foto
     if latitude == 0 and longitude == 0:
-        dados_da_foto.problema = (
-            "coordenada 0,0 — típica de câmera que gravou o campo sem ter sinal de GPS")
+        dados_da_foto.problema = traduzir("geo_coord_zero", idioma)
         return dados_da_foto
     dados_da_foto.latitude, dados_da_foto.longitude = latitude, longitude
     return dados_da_foto

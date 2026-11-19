@@ -339,7 +339,7 @@ def _normalizar(
                 Descarte(
                     numero_linha,
                     bloco[:200],
-                    "conteúdo antes do primeiro registro, fora do formato 'Row: N ...'",
+                    traduzir("nm_desc_antes_registro", idioma),
                 )
             )
             continue
@@ -347,7 +347,7 @@ def _normalizar(
         campos = _campos(bloco)
         if not campos:
             resultado.descartes.append(
-                Descarte(numero_linha, bloco[:200], "nenhum campo reconhecido no registro")
+                Descarte(numero_linha, bloco[:200], traduzir("nm_desc_sem_campos", idioma))
             )
             continue
         resultado.registros.append(
@@ -365,7 +365,7 @@ def _normalizar(
         # Havia conteúdo e nada foi reconhecido: é o sinal de que o formato
         # mudou. Melhor gritar aqui do que devolver "nenhuma mensagem".
         resultado.descartes.append(
-            Descarte(1, (texto or "").strip()[:200], "o conteúdo não segue o formato 'Row: N ...'")
+            Descarte(1, (texto or "").strip()[:200], traduzir("nm_desc_fora_formato", idioma))
         )
 
     return resultado

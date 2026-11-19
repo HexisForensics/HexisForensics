@@ -642,7 +642,7 @@ class RelatorioService:
 
         vistas, sem_gps, repetidas = set(), 0, 0
         for caminho, origem, selado in imagens:
-            dados = ler_dados_da_foto(caminho)
+            dados = ler_dados_da_foto(caminho, idi)
             if dados.problema:
                 resultado.descartes.append(Descarte(0, origem, dados.problema))
                 continue
