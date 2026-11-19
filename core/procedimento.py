@@ -144,14 +144,27 @@ class RegistroProcedimento:
         )
 
     def registrar_ambiente(self, versao_adb: Optional[str] = None) -> bool:
-        """Ferramenta, Python, sistema operacional, estação e versão do ADB."""
+        """Ferramenta, Python, sistema operacional, estação e versão do ADB.
+
+        Rótulos e o valor de 'origem' selam no idioma do caso; os demais
+        valores (versão, sistema, nó da estação) são dado e saem verbatim.
+        """
         ambiente = descrever_ambiente()
         if versao_adb:
             ambiente["adb"] = versao_adb
-        return self._anexar(
-            "ambiente",
-            [f"{chave}: {valor}" for chave, valor in ambiente.items()],
-        )
+        rotulos = {
+            "ferramenta": "amb_ferramenta", "origem": "amb_origem", "python": "amb_python",
+            "sistema": "amb_sistema", "arquitetura": "amb_arquitetura",
+            "estacao": "amb_estacao", "adb": "amb_adb",
+        }
+        origem_valor = {"código-fonte": "amb_origem_fonte", "instalador": "amb_origem_instalador"}
+        linhas = []
+        for chave, valor in ambiente.items():
+            rotulo = self._t(rotulos[chave]) if chave in rotulos else chave
+            if chave == "origem" and valor in origem_valor:
+                valor = self._t(origem_valor[valor])
+            linhas.append(f"{rotulo}: {valor}")
+        return self._anexar("ambiente", linhas)
 
     def registrar_relogio(self, resumo_relogio: str) -> bool:
         """

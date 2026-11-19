@@ -29,6 +29,17 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .idioma import traduzir
+
+
+def _perfil_no_idioma(perfil, idioma) -> str:
+    """Valor da competência (Perfil) no idioma do caso. Selado no método, lido
+    de volta como dado; a competência exigida é interpretação, não evidência."""
+    if perfil is None:
+        return ""
+    chave = {"DEFR": "perfil_defr", "DES": "perfil_des"}.get(getattr(perfil, "name", ""))
+    return traduzir(chave, idioma) if chave else getattr(perfil, "value", "")
+
 PASTA_METODO = "metodo"
 NOME_METODO = "metodo_declarado.txt"
 NOME_METODO_DADOS = "metodo_declarado.json"
@@ -128,7 +139,7 @@ def descrever(extratores, idioma=None) -> MetodoDeclarado:
             ModuloDeclarado(
                 identificador=getattr(extrator, "id", ""),
                 nome=nome,
-                perfil=getattr(perfil, "value", "") if perfil is not None else "",
+                perfil=_perfil_no_idioma(perfil, idioma),
                 limitacoes=list(limitacoes),
                 alteracoes=[(str(a), str(j)) for a, j in alteracoes],
             )
