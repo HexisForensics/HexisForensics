@@ -129,6 +129,10 @@ Other models tend to work by the same route, but were not verified.
 **Known limitation:** the agent app has not yet been verified on **Xiaomi, Redmi and
 POCO** devices. The full list of limitations is in the manual.
 
+The **detailed validation** of each module — function, test, result and device —
+is in [docs/VALIDACAO.md](docs/VALIDACAO.md) (in Portuguese); the full list of
+proven devices in [docs/APARELHOS_TESTADOS.md](docs/APARELHOS_TESTADOS.md).
+
 ## What the tool does not do
 
 It does not unlock devices, does not bypass passcodes, does not perform physical

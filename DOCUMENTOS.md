@@ -67,6 +67,22 @@ distribuído pelo canal do curso.
 
 ---
 
+## Mundo C — Documentação do repositório (Markdown)
+
+Não são PDFs de produto nem material de curso: é documentação versionada no
+próprio repositório, em Markdown, para leitura direta no GitHub. **Fonte e
+publicação** são o próprio arquivo no repositório (sem gerador, sem Release).
+
+| Documento | O que é | Local |
+|---|---|---|
+| **Relatório de Validação** | Aferição por módulo (função, procedimento de teste, resultado, aparelho/versão), no sentido da ISO/IEC 27041; cada linha lastreada num teste automatizado | `docs/VALIDACAO.md` |
+| **Aparelhos Testados** | Registro exaustivo dos aparelhos e versões em que a ferramenta foi provada | `docs/APARELHOS_TESTADOS.md` |
+| **Documentação de Desenvolvimento** | Arquitetura em três camadas e guia para quem programa | `docs/DESENVOLVIMENTO.md` |
+
+Esses documentos estão em **português** e são linkados pelos READMEs.
+
+---
+
 ## Fluxo de atualização de um documento de produto
 
 1. O texto novo (de quem escreve o conteúdo) chega **como texto**, nos idiomas
@@ -98,4 +114,7 @@ A versão de cada documento acompanha a da ferramenta (`core/versao.py`).
 - **Publicação na Release:** `v1.0.0`. Os **9 documentos de produto (3 × 3
   idiomas)** seguem publicados, cada um com seu `.sha256`. Os **3 manuais** foram
   republicados em 20/11 (capturas por idioma) via `gh release upload ... --clobber`;
-  os 6 guias permanecem como em 15/11.
+  os 6 guias permanecem como em 15/11. O instalador foi reconstruído (PT/ES/EN) e
+  o ZIP de código-fonte refeito, ambos republicados.
+- **Relatório de Validação:** criado `docs/VALIDACAO.md` (Mundo C), 18 módulos no
+  formato ISO/IEC 27041, linkado nos READMEs.

@@ -131,6 +131,10 @@ verificados. **Limitação conhecida:** o aplicativo agente ainda não foi
 verificado em aparelhos **Xiaomi, Redmi e POCO**. A lista completa de
 limitações está na apostila.
 
+A **validação detalhada** de cada módulo — função, teste, resultado e aparelho —
+está em [docs/VALIDACAO.md](docs/VALIDACAO.md); a lista exaustiva de aparelhos
+provados, em [docs/APARELHOS_TESTADOS.md](docs/APARELHOS_TESTADOS.md).
+
 ## O que a ferramenta não faz
 
 Não desbloqueia aparelho, não contorna senha, não faz extração física de

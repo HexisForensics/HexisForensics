@@ -130,6 +130,11 @@ Otros modelos tienden a funcionar por el mismo camino, pero no fueron verificado
 **Limitación conocida:** la aplicación agente aún no fue verificada en dispositivos
 **Xiaomi, Redmi y POCO**. La lista completa de limitaciones está en el manual.
 
+La **validación detallada** de cada módulo — función, prueba, resultado y
+dispositivo — está en [docs/VALIDACAO.md](docs/VALIDACAO.md) (en portugués); la
+lista exhaustiva de dispositivos probados, en
+[docs/APARELHOS_TESTADOS.md](docs/APARELHOS_TESTADOS.md).
+
 ## Lo que la herramienta no hace
 
 No desbloquea dispositivos, no sortea contraseñas, no hace extracción física de
