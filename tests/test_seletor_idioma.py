@@ -71,9 +71,12 @@ with tempfile.TemporaryDirectory() as td:
     try:
         dlg = TelaEntrada(carregar_branding())
         checar("a tela tem o seletor de idioma", hasattr(dlg, "combo_idioma"))
-        checar("o seletor lista PT e EN", dlg.combo_idioma.count() == 2)
+        codigos = [dlg.combo_idioma.itemData(i)
+                   for i in range(dlg.combo_idioma.count())]
+        checar("o seletor lista PT, EN e ES", codigos == ["pt", "en", "es"])
         checar("primeiro item é pt", dlg.combo_idioma.itemData(0) == "pt")
         checar("segundo item é en", dlg.combo_idioma.itemData(1) == "en")
+        checar("terceiro item é es", dlg.combo_idioma.itemData(2) == "es")
         checar("começa no idioma ativo (pt)",
                dlg.combo_idioma.itemData(dlg.combo_idioma.currentIndex()) == "pt")
 
