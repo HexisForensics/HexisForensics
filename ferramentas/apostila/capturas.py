@@ -7,7 +7,12 @@ mensagens inventados, numa pasta temporária) e grava a imagem em
 reais da estação. Rodar de novo depois de mudar a interface mantém a
 apostila igual à ferramenta.
 
-Uso:  py ferramentas/apostila/capturas.py
+Uso:  py ferramentas/apostila/capturas.py [pt|es|en]   (padrão: pt)
+
+O idioma escolhe o idioma da INTERFACE nas telas e grava em
+`capturas/<idioma>/`, para que cada manual (PT/ES/EN) embuta os seus
+próprios prints. O conteúdo fictício (mensagens, contatos) é dado e
+permanece como está — só o chrome da ferramenta muda de idioma.
 """
 
 from __future__ import annotations
@@ -27,7 +32,8 @@ from PySide6.QtCore import QPointF, QRectF, Qt, QTimer  # noqa: E402
 from PySide6.QtGui import QColor, QFont, QImage, QPainter  # noqa: E402
 from PySide6.QtWidgets import QApplication, QMessageBox  # noqa: E402
 
-DESTINO = Path(__file__).resolve().parent / "capturas"
+IDIOMA = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else "pt"
+DESTINO = Path(__file__).resolve().parent / "capturas" / IDIOMA
 
 
 def _foto(caminho: Path, rotulo: str, cor: str) -> None:
@@ -95,8 +101,10 @@ def _montar_caso_ficticio(raiz: Path) -> Path:
 
 
 def main() -> None:
-    DESTINO.mkdir(exist_ok=True)
-    app = QApplication(sys.argv)
+    DESTINO.mkdir(parents=True, exist_ok=True)
+    from core.idioma import definir_idioma
+    definir_idioma(IDIOMA)  # idioma da INTERFACE nas capturas
+    app = QApplication(sys.argv[:1])  # não repassa o idioma ao Qt
     app.setFont(QFont("Segoe UI", 9))
 
     from services import sessao_service

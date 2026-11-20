@@ -46,7 +46,7 @@ from services import identidade_pdf as identidade  # noqa: E402
 from services.extraction_service import listar_extratores  # noqa: E402
 
 AQUI = Path(__file__).resolve().parent
-CAPTURAS = AQUI / "capturas"
+CAPTURAS = AQUI / "capturas" / "en"
 CELULAR = AQUI / "celular"
 SAIDA = AQUI / "saida" / "User_Manual_Hexis_Forensics_EN.pdf"
 

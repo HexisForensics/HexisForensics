@@ -81,16 +81,21 @@ A versão de cada documento acompanha a da ferramenta (`core/versao.py`).
 
 ---
 
-## Estado atual (2026-11-15)
+## Estado atual (2026-11-20)
 
-- **Guia de Extração Rápida (PT/ES/EN):** atualizado com a **Ficha do Aparelho**;
-  o PT recebeu também o aviso legal e a seção de instalação (alinhado ao ES/EN).
-  Os três em 2 páginas. **Feito.**
-- **Apostila / Manual (PT/ES/EN):** atualizada com a Ficha do Aparelho (cap. 1, 9,
-  10 e glossário), **nos três idiomas**. **Feito.**
-- **Guia de Prática com Emulador (PT/ES/EN):** sem alteração pendente conhecida.
-- **Publicação na Release:** **completa** em `v1.0.0` (15/11). Os **9 documentos
-  de produto (3 documentos × 3 idiomas)** estão publicados, **cada um com seu
-  `.sha256`** — apostila/manual, guia de extração rápida e guia de prática com
-  emulador, nos três idiomas. Publicado via `gh release upload ... --clobber`
-  (o `gh` foi instalado e autenticado nesta estação).
+- **Interface em espanhol (es.json):** **concluída** (2291/2291) e validada no
+  emulador. Isso tornou possível a correção abaixo das capturas de tela.
+- **Capturas de tela por idioma:** `capturas.py` passou a receber o idioma
+  (`py capturas.py pt|es|en`) e gravar em `capturas/<idioma>/`, com a INTERFACE
+  no idioma pedido. Cada manual embute os seus próprios prints — o ES/EN
+  deixaram de mostrar telas em português. O conteúdo fictício (mensagens,
+  contatos) é dado e permanece como está. Os 6 guias são texto puro, sem prints.
+- **Apostila / Manual (PT/ES/EN):** regerada 20/11 com as capturas no idioma de
+  cada um. Os três são equivalentes: mesmo conteúdo, mesmo layout, tudo (texto e
+  telas) no idioma do documento. **Feito.**
+- **Guia de Extração Rápida (PT/ES/EN) e Guia de Prática com Emulador (PT/ES/EN):**
+  texto puro, já equivalentes; sem alteração nesta rodada.
+- **Publicação na Release:** `v1.0.0`. Os **9 documentos de produto (3 × 3
+  idiomas)** seguem publicados, cada um com seu `.sha256`. Os **3 manuais** foram
+  republicados em 20/11 (capturas por idioma) via `gh release upload ... --clobber`;
+  os 6 guias permanecem como em 15/11.
