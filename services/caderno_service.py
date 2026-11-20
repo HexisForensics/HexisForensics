@@ -34,7 +34,7 @@ from pathlib import Path
 
 from core.aparelho import ler_caracteristicas
 from core.operador import ler_da_aquisicao as ler_operador_da_aquisicao
-from core.desfecho import ler_desfecho
+from core.desfecho import ler_desfecho, rotulo_de_ressalva
 from core.hashing import (
     PREFIXO_CONFERENCIA,
     calcular_sha256,
@@ -328,7 +328,8 @@ def _corpo_desfecho(pasta_aquisicao: Path) -> str:
     for modulo in desfecho.modulos:
         detalhe = escapar(modulo.mensagem)
         if modulo.ressalvas:
-            itens = "".join(f"<li>{escapar(r)}</li>" for r in modulo.ressalvas)
+            itens = "".join(f"<li>{escapar(rotulo_de_ressalva(r, idi))}</li>"
+                            for r in modulo.ressalvas)
             detalhe += f"<ul>{itens}</ul>"
         linhas.append([escapar(modulo.nome),
                        f"<b>{escapar(modulo.rotulo_no_idioma(idi))}</b>", detalhe])

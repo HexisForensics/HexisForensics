@@ -17,6 +17,7 @@ from typing import Optional
 from reportlab.platypus import Paragraph, Spacer
 
 from core.ficha import montar_ficha
+from core.desfecho import rotulo_de_ressalva
 from core.idioma import traduzir
 from services import blocos_pdf as blocos
 from services import identidade_pdf as identidade
@@ -79,10 +80,11 @@ def gerar(pasta_aquisicao: Path, destino: Optional[Path] = None) -> DocumentoGer
             historia.append(Spacer(1, 12))
             historia.append(Paragraph(traduzir("fha_ressalvas_pdf"), e["subsecao"]))
             for nome, chaves in ficha.ressalvas:
+                motivos = ", ".join(rotulo_de_ressalva(c) for c in chaves)
                 historia.append(
                     Paragraph(
                         f"• {identidade.escapar(nome)}: "
-                        f"{identidade.escapar(', '.join(chaves))}",
+                        f"{identidade.escapar(motivos)}",
                         e["esquerda"],
                     )
                 )

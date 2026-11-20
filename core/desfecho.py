@@ -51,6 +51,25 @@ _CHAVE_ROTULO = {
     FALHA: "df_rotulo_falha",
 }
 
+# Motivos de ressalva: a CHAVE é a sentinela estável (services.extraction_service
+# .CHAVES_RESSALVA) usada pela lógica; o rótulo que o leitor vê é por idioma.
+# Chave sem rótulo cai no próprio texto, para nunca ocultar uma ressalva nova.
+_CHAVE_ROTULO_RESSALVA = {
+    "acesso_negado": "res_acesso_negado",
+    "arquivos_pulados_nuvem": "res_arquivos_pulados_nuvem",
+    "campos_nao_apurados": "res_campos_nao_apurados",
+    "copia_incompleta": "res_copia_incompleta",
+    "itens_fora_do_alcance": "res_itens_fora_do_alcance",
+    "restauracao_pendente": "res_restauracao_pendente",
+}
+
+
+def rotulo_de_ressalva(chave: str, idioma=None) -> str:
+    """O motivo de ressalva legível no idioma do documento; a chave crua
+    quando não houver rótulo (sentinela nova nunca desaparece do documento)."""
+    chave_catalogo = _CHAVE_ROTULO_RESSALVA.get(chave)
+    return traduzir(chave_catalogo, idioma) if chave_catalogo else chave
+
 
 @dataclass
 class ModuloExecutado:

@@ -25,6 +25,7 @@ from reportlab.platypus import KeepTogether, Paragraph, Spacer, Table, TableStyl
 
 from core.aparelho import IDENTIFICADORES_GENERICOS
 from core.categorias import nome_no_idioma as nome_categoria_no_idioma
+from core.desfecho import rotulo_de_ressalva
 from core.idioma import traduzir
 from core.operador import NAO_DECLARADO
 from core.protocolos import (
@@ -304,7 +305,8 @@ def bloco_desfecho(dossie: Dossie, largura: float) -> list:
     for modulo in desfecho.modulos:
         detalhe = escapar(modulo.mensagem)
         if modulo.ressalvas:
-            detalhe += "".join(f"<br/>• {escapar(r)}" for r in modulo.ressalvas)
+            detalhe += "".join(f"<br/>• {escapar(rotulo_de_ressalva(r))}"
+                               for r in modulo.ressalvas)
         linhas.append([escapar(modulo.nome), f"<b>{escapar(modulo.rotulo)}</b>", detalhe])
     return [
         Paragraph(escapar(desfecho.resumo), e["corpo"]),

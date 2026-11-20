@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import List, Tuple
 
 from core.aparelho import ler_caracteristicas
-from core.desfecho import NOME_DESFECHO, PASTA_DESFECHO, ler_desfecho
+from core.desfecho import NOME_DESFECHO, PASTA_DESFECHO, ler_desfecho, rotulo_de_ressalva
 from core.idioma import traduzir
 
 # Marcador canônico em PT, mantido para quem importa a constante (testes) e
@@ -204,7 +204,8 @@ def render_texto(ficha: FichaDoAparelho) -> str:
     if ficha.ressalvas:
         linhas += ["", "-" * LARGURA, traduzir("fha_ressalvas_txt")]
         for nome, chaves in ficha.ressalvas:
-            linhas.append(f"  • {nome}: {', '.join(chaves)}")
+            motivos = ", ".join(rotulo_de_ressalva(c) for c in chaves)
+            linhas.append(f"  • {nome}: {motivos}")
 
     linhas += [
         "",

@@ -92,9 +92,14 @@ class Operador:
             return [traduzir("op_nao_declarado", idioma)]
         # Com sessão aberta por senha, o registro diz EXATAMENTE isso — e não
         # "autenticado" nem "verificado": senha emprestada também entra.
+        # A frase de autenticação é texto canônico (duas únicas: sessão por
+        # senha, ou conta de teste do Forensic Admin), não dado do usuário:
+        # traduz-se como molde no idioma do selo, escolhida pelo papel.
         primeira = (
             [traduzir("op_operador", idioma, nome=self.nome.strip()),
-             traduzir("op_acesso", idioma, valor=self.autenticacao.strip())]
+             traduzir("op_acesso", idioma,
+                      valor=traduzir("op_autenticacao_teste" if self.de_teste
+                                     else "op_autenticacao", idioma))]
             if self.autenticacao.strip() else
             [traduzir("op_declarado", idioma, nome=self.nome.strip())]
         )
