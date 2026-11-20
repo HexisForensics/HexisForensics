@@ -1,0 +1,12 @@
+# Binários: nunca sofrem conversão de fim de linha nem diff de texto.
+# Protege os deliverables com hash fixado (PDFs, instalador) e as imagens de
+# corrupção por autocrlf em estações com configuração diferente.
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.ico   binary
+*.zip   binary
+*.exe   binary
+*.apk   binary
+*.icns  binary
