@@ -2337,5 +2337,11 @@
   "rl_ok": "Reaposição de lacre registrada como complemento da aquisição {aquisicao}.",
   "gc_btn_relacre": "Reaposição de lacre",
   "gc_tt_relacre": "Registrar o novo lacre aposto após a perícia (complemento, com foto)",
-  "gc_relacre_titulo": "Reaposição de lacre"
+  "gc_relacre_titulo": "Reaposição de lacre",
+  "bl_reaposicao_titulo": "Reaposição de lacre (complemento)",
+  "bl_reaposicao_numero": "Novo lacre: {numero}",
+  "bl_reaposicao_data": "relacrado em {valor}",
+  "bl_reaposicao_por": "por {valor}",
+  "bl_reaposicao_foto_legenda": "Foto {n} — novo lacre {numero}<br/>SHA-256: {sha}",
+  "bl_reaposicao_foto_ausente": "Foto do novo lacre {numero} não encontrada."
 }

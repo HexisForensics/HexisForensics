@@ -14,6 +14,7 @@ seu SHA-256 anotado.
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
 from dataclasses import dataclass
 from datetime import datetime
@@ -70,6 +71,21 @@ def registrar_reaposicao(pasta_aquisicao: Path, dados: dict) -> ResultadoReaposi
         sha = hashlib.sha256(destino.read_bytes()).hexdigest()
     except OSError as erro:
         return ResultadoReaposicao(False, erro=str(erro))
+
+    # Registro em JSON, ao lado da foto: é o que os documentos (laudo,
+    # relatório) leem para mostrar a reaposição — dado canônico, não texto
+    # traduzido, para não depender do idioma do complemento.
+    registro = {
+        "aquisicao": pasta_aquisicao.name,
+        "numero": numero,
+        "data": str(dados.get("data", "") or "").strip(),
+        "por": str(dados.get("por", "") or "").strip(),
+        "registro": str(dados.get("registro", "") or "").strip(),
+        "foto": destino.name,
+        "sha256": sha,
+    }
+    (pasta_fotos / (destino.stem + ".json")).write_text(
+        json.dumps(registro, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def opcional(chave, chave_catalogo):
         valor = str(dados.get(chave, "") or "").strip()

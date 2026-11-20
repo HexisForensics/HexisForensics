@@ -109,6 +109,20 @@ def bloco_peca(dossie: Dossie, largura: float, sem_caracteristicas: str = "") ->
     else:
         elementos.append(Paragraph(traduzir("bl_peca_sem_cadeia"), e["corpo"]))
 
+    if dossie.reaposicoes:
+        elementos.append(Paragraph(traduzir("bl_reaposicao_titulo"), e["subsecao"]))
+        for rea in dossie.reaposicoes:
+            texto = traduzir("bl_reaposicao_numero", numero=escapar(rea.get("numero", "")))
+            extras = []
+            if rea.get("data"):
+                extras.append(traduzir("bl_reaposicao_data", valor=escapar(rea["data"])))
+            if rea.get("por"):
+                por = rea["por"] + (f" ({rea['registro']})" if rea.get("registro") else "")
+                extras.append(traduzir("bl_reaposicao_por", valor=escapar(por)))
+            if extras:
+                texto += " — " + ", ".join(extras)
+            elementos.append(Paragraph(texto, e["corpo"]))
+
     elementos.append(Paragraph(traduzir("bl_peca_apurado"), e["subsecao"]))
     pares = list(dossie.apuradas)
     # O nome genérico ("celular_android") é dado quando nenhum aparelho
@@ -138,11 +152,13 @@ def bloco_peca(dossie: Dossie, largura: float, sem_caracteristicas: str = "") ->
 
 def bloco_fotos(dossie: Dossie, largura: float) -> list:
     e = estilos()
-    if not dossie.fotos:
+    if not dossie.fotos and not dossie.reaposicoes:
         return [Paragraph(traduzir("bl_fotos_nenhuma"), e["corpo"])]
 
     celulas = []
-    for indice, foto in enumerate(dossie.fotos, 1):
+    indice = 0
+    for foto in dossie.fotos:
+        indice += 1
         imagem = imagem_ajustada(foto, largura / 2 - 14, 190)
         sha = escapar(dossie.hashes.get(
             foto.relative_to(dossie.pasta).as_posix(), traduzir("bl_fotos_fora_manifesto")))
@@ -155,6 +171,23 @@ def bloco_fotos(dossie: Dossie, largura: float) -> list:
             celulas.append([Paragraph(
                 traduzir("bl_fotos_ilegivel", n=indice, nome=escapar(foto.name)), e["alerta"]
             ), legenda])
+        else:
+            celulas.append([imagem, Spacer(1, 3), legenda])
+
+    # A foto do novo lacre (reaposição) vem depois, fora do selo da aquisição.
+    for rea in dossie.reaposicoes:
+        indice += 1
+        foto = rea.get("foto")
+        legenda = Paragraph(
+            traduzir("bl_reaposicao_foto_legenda", n=indice,
+                     numero=escapar(rea.get("numero", "")), sha=escapar(rea.get("sha256", ""))),
+            e["mono_pequeno"],
+        )
+        imagem = imagem_ajustada(foto, largura / 2 - 14, 190) if foto else None
+        if imagem is None:
+            celulas.append([Paragraph(
+                traduzir("bl_reaposicao_foto_ausente", numero=escapar(rea.get("numero", ""))),
+                e["alerta"]), legenda])
         else:
             celulas.append([imagem, Spacer(1, 3), legenda])
 

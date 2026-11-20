@@ -2337,5 +2337,11 @@
   "rl_ok": "Reaposición de precinto registrada como complemento de la adquisición {aquisicao}.",
   "gc_btn_relacre": "Reaposición de precinto",
   "gc_tt_relacre": "Registrar el nuevo precinto aplicado tras la pericia (complemento, con foto)",
-  "gc_relacre_titulo": "Reaposición de precinto"
+  "gc_relacre_titulo": "Reaposición de precinto",
+  "bl_reaposicao_titulo": "Reaposición de precinto (complemento)",
+  "bl_reaposicao_numero": "Nuevo precinto: {numero}",
+  "bl_reaposicao_data": "reprecintado el {valor}",
+  "bl_reaposicao_por": "por {valor}",
+  "bl_reaposicao_foto_legenda": "Foto {n} — nuevo precinto {numero}<br/>SHA-256: {sha}",
+  "bl_reaposicao_foto_ausente": "Foto del nuevo precinto {numero} no encontrada."
 }

@@ -90,6 +90,10 @@ class Dossie:
     peca_por_chave: Dict[str, str] = field(default_factory=dict)
     tem_cadeia_de_custodia: bool = False
     fotos: List[Path] = field(default_factory=list)
+    # Reaposições de lacre (complemento): foto do novo lacre e seus dados,
+    # fora do selo da aquisição. Cada item: {numero, data, por, registro,
+    # sha256, foto (Path ou None)}.
+    reaposicoes: List[dict] = field(default_factory=list)
 
     # O que a extração APUROU do próprio dispositivo.
     apuradas: List[Tuple[str, str]] = field(default_factory=list)
@@ -269,6 +273,34 @@ def _ler_cadeia(dossie: Dossie) -> None:
         )
 
 
+def _ler_reaposicoes(dossie: Dossie) -> None:
+    """Reaposições de lacre desta aquisição: lê os registros JSON em
+    `<caso>/reaposicoes/`, com a foto do novo lacre. É complemento, fora do
+    selo — o documento mostra as duas fotos (recebida e novo lacre)."""
+    import json
+    from services.relacre_service import PASTA_REAPOSICOES
+
+    pasta = pasta_do_caso(dossie.pasta) / PASTA_REAPOSICOES
+    if not pasta.is_dir():
+        return
+    for arq in sorted(pasta.glob("*.json")):
+        try:
+            reg = json.loads(arq.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if reg.get("aquisicao") != dossie.pasta.name:
+            continue
+        foto = pasta / str(reg.get("foto", ""))
+        dossie.reaposicoes.append({
+            "numero": reg.get("numero", ""),
+            "data": reg.get("data", ""),
+            "por": reg.get("por", ""),
+            "registro": reg.get("registro", ""),
+            "sha256": reg.get("sha256", ""),
+            "foto": foto if foto.is_file() else None,
+        })
+
+
 def _ler_selo(dossie: Dossie) -> None:
     dossie.manifesto = localizar_manifesto(dossie.pasta)
     if dossie.manifesto is None:
@@ -308,6 +340,7 @@ def montar_dossie(pasta_aquisicao: Path) -> Dossie:
 
     _ler_registro(dossie)
     _ler_cadeia(dossie)
+    _ler_reaposicoes(dossie)
     _ler_selo(dossie)
 
     dossie.apuradas = ler_caracteristicas(pasta).em_pares(dossie.idioma)

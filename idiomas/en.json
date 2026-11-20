@@ -2337,5 +2337,11 @@
   "rl_ok": "Seal reapplication recorded as a complement to acquisition {aquisicao}.",
   "gc_btn_relacre": "Seal reapplication",
   "gc_tt_relacre": "Register the new seal applied after the examination (complement, with photo)",
-  "gc_relacre_titulo": "Seal reapplication"
+  "gc_relacre_titulo": "Seal reapplication",
+  "bl_reaposicao_titulo": "Seal reapplication (complement)",
+  "bl_reaposicao_numero": "New seal: {numero}",
+  "bl_reaposicao_data": "resealed on {valor}",
+  "bl_reaposicao_por": "by {valor}",
+  "bl_reaposicao_foto_legenda": "Photo {n} — new seal {numero}<br/>SHA-256: {sha}",
+  "bl_reaposicao_foto_ausente": "Photo of new seal {numero} not found."
 }

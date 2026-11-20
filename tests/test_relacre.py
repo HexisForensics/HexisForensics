@@ -63,5 +63,15 @@ with tempfile.TemporaryDirectory() as td:
     r3 = relacre_service.registrar_reaposicao(aq, {"numero": "111", "foto": None})
     checar("sem foto e FALHA", not r3.sucesso and r3.erro)
 
+    print("\n[4] O dossie (laudo/relatorio) enxerga a reaposicao e a foto")
+    from services.dossie_service import montar_dossie
+    dossie = montar_dossie(aq)
+    checar("ha uma reaposicao no dossie", len(dossie.reaposicoes) == 1)
+    rea = dossie.reaposicoes[0] if dossie.reaposicoes else {}
+    checar("com o numero do novo lacre", rea.get("numero") == "000987")
+    checar("e a foto do novo lacre resolvida",
+           rea.get("foto") is not None and Path(rea["foto"]).is_file())
+    checar("e o SHA-256 da foto", bool(rea.get("sha256")))
+
 print("\n" + ("TODOS OS TESTES PASSARAM" if not falhas else f"{len(falhas)} FALHA(S): {falhas}"))
 sys.exit(1 if falhas else 0)
