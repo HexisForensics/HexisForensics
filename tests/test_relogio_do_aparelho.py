@@ -59,6 +59,15 @@ checar("formato antigo, como no CASO_004",
        ler_desvio_registrado("Relogio ... | Desvio: 46588884s atrasado") == SAMSUNG)
 checar("antigo adiantado", ler_desvio_registrado("Desvio: 12s adiantado") == 12)
 checar("sem desvio", ler_desvio_registrado("Desvio: nenhum") == 0)
+# Caso selado em espanhol: o rótulo sai "Desviación:" e o texto em ES. O valor
+# vem da âncora numérica (universal); os termos antigos vêm por robustez.
+checar("ES formato atual (Desviación)",
+       ler_desvio_registrado("Reloj del dispositivo: ... | Desviación: 539 días atrasado (-46588884 s)") == SAMSUNG)
+checar("ES antigo adelantado", ler_desvio_registrado("Desviación: 12s adelantado") == 12)
+checar("ES antigo retrasado", ler_desvio_registrado("Desviación: 30s retrasado") == -30)
+checar("ES sem desvio (ninguno)", ler_desvio_registrado("Desviación: ninguno") == 0)
+checar("EN formato atual (Deviation)",
+       ler_desvio_registrado("Device clock: ... | Deviation: 12 min behind (-720 s)") == -720)
 checar("relógio ilegível: desconhecido, não zero",
        ler_desvio_registrado("Relogio do aparelho: NAO FOI POSSIVEL LER (desvio desconhecido).")
        is None)

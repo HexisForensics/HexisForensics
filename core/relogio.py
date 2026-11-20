@@ -76,23 +76,30 @@ def ler_desvio_registrado(texto_do_registro: str) -> Optional[int]:
     Entende o formato atual ("... (-46588884 s)") e o anterior
     ("46588884s atrasado"). Relógio não lido, ou linha ausente: `None`.
     """
-    # O rótulo da linha sai no idioma do caso ("Desvio:"/"Deviation:"); a
-    # âncora que de fato lê o valor é o número em segundos, que é universal.
+    # O rótulo da linha sai no idioma do caso ("Desvio:" / "Deviation:" /
+    # "Desviación:"); a âncora que de fato lê o valor é o número em segundos,
+    # que é universal. Os termos do formato antigo (só PT/EN já existiram)
+    # vêm nos três idiomas por robustez.
+    ROTULOS = ("Desvio:", "Deviation:", "Desviación:")
+    ADIANTADO = ("adiantado", "ahead", "adelantado")
+    SEM_DESVIO = ("nenhum", "none", "ninguno")
     for linha in texto_do_registro.splitlines():
-        if "Desvio:" in linha:
-            trecho = linha.split("Desvio:", 1)[1]
-        elif "Deviation:" in linha:
-            trecho = linha.split("Deviation:", 1)[1]
-        else:
+        trecho = None
+        for rotulo in ROTULOS:
+            if rotulo in linha:
+                trecho = linha.split(rotulo, 1)[1]
+                break
+        if trecho is None:
             continue
         atual = re.search(r"\(([+-]?\d+) s\)", trecho)
         if atual:
             return int(atual.group(1))
-        antigo = re.search(r"(\d+)s (adiantado|atrasado|ahead|behind)", trecho)
+        antigo = re.search(
+            r"(\d+)s (adiantado|atrasado|ahead|behind|adelantado|retrasado)", trecho)
         if antigo:
             valor = int(antigo.group(1))
-            return valor if antigo.group(2) in ("adiantado", "ahead") else -valor
-        if trecho.strip().startswith(("nenhum", "none")):
+            return valor if antigo.group(2) in ADIANTADO else -valor
+        if trecho.strip().startswith(SEM_DESVIO):
             return 0
     return None
 

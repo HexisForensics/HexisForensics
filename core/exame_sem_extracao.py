@@ -153,7 +153,8 @@ class ExameSemExtracao(BaseExtractor):
         cliente = self.client or IOSClient()
         linhas, publicos = cliente.sondar()
         if not publicos:
-            marcadores = ("RECUSADA", "FALHOU", "REFUSED", "FAILED")
+            marcadores = ("RECUSADA", "FALHOU", "REFUSED", "FAILED",
+                          "RECHAZADA", "FALLÓ")
             recusa = next((l for l in linhas if any(m in l for m in marcadores)), "")
             if recusa:
                 return linhas, self._t("esx_ios_nao_permitiu", recusa=recusa.strip())
@@ -167,7 +168,8 @@ class ExameSemExtracao(BaseExtractor):
             "build_ios": publicos.get("BuildVersion", ""),
             "udid": publicos.get("UniqueDeviceID", ""),
         })
-        confia = any("JÁ confia" in l or "ALREADY trusts" in l for l in linhas)
+        confia = any("JÁ confia" in l or "ALREADY trusts" in l or "YA confía" in l
+                     for l in linhas)
         detectado = self._t("esx_ios_detectado",
                             modelo=publicos.get('ProductType') or self._t("esx_ios_modelo_nao_informado"),
                             versao=publicos.get('ProductVersion', '?'))

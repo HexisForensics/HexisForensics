@@ -131,6 +131,19 @@ with tempfile.TemporaryDirectory() as temporario:
            "não permitiu a comunicação" in resultado.mensagem
            and "PasswordProtected" in resultado.mensagem)
 
+    # Sondagem de um caso cujo client fala espanhol: o marcador de recusa sai
+    # "RECHAZADA", e _sondar_ios precisa reconhecê-lo como recusa (senão cairia
+    # em "sem resposta" e o detalhe do erro se perderia).
+    class IPhoneRecusaES:
+        def sondar(self):
+            return ["listado de dispositivos: 1 iPhone(s) visible(s)",
+                    "sesión sin emparejamiento: RECHAZADA — PasswordProtected"], {}
+    pasta = criar_pasta_aquisicao(raiz, "CASO_NEG", "iOS", datetime(2026, 10, 24, 9, 5))
+    resultado = ExameSemExtracao(Plataforma.IOS, BLOQUEADO, client=IPhoneRecusaES()).executar(pasta)
+    checar("recusa de sessão em espanhol (RECHAZADA) é reconhecida como recusa",
+           "não permitiu a comunicação" in resultado.mensagem
+           and "PasswordProtected" in resultado.mensagem)
+
     # -----------------------------------------------------------------------
     print("\n[2] Pelo caminho de toda aquisição: registro, selo e laudo negativo")
     # -----------------------------------------------------------------------
