@@ -156,7 +156,7 @@ def contenido():
                "user folder: updating the tool never reaches the acquisitions. On the first run, "
                "create your examiner profile and save the recovery code.")
     h += caixa("<b>Have at hand before you start:</b> a USB data cable (a charge-only cable will "
-               "not work) · the seal number · the device for two photos (front and back) · the "
+               "not work) · the seal number · the device for one photo (as received, with the seal) · the "
                "scanned authorization document · your examiner profile created in the tool.")
 
     h += faixa("ANDROID")
@@ -188,7 +188,9 @@ def contenido():
         "<b>Iniciar Extração</b> (start extraction) → confirm the examiner → read <b>Método e "
         "limitações</b> → <b>Ciente — Prosseguir</b>.",
         "Case: new or existing (a case gathers several devices) → Authorization: attach the "
-        "document → Device: make, model, seal and the two photos.",
+        "document → Device: make, model, receipt (when/who), seal and one photo of the item as "
+        "received. The new seal, after the examination, is added via Seal reapplication in the "
+        "Cases Manager.",
         "Wait for the extraction-finished message. Do not close the tool in the middle: the "
         "acquisition would be left without a seal. To stop, use <b>Cancelar</b>.",
     ]))

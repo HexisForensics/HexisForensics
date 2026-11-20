@@ -186,8 +186,9 @@ def content():
         "<b>Iniciar Extração</b> (start extraction) > confirm the examiner > read <b>Método e "
         "limitações</b> > <b>Ciente — Prosseguir</b>.",
         "<b>Case:</b> create a new case and make <b>practice</b> explicit in the name (e.g. "
-        "PRACTICE-001). <b>Never mix it with a real case.</b> Fill device, seal and the photos "
-        "with fictitious data.",
+        "PRACTICE-001). <b>Never mix it with a real case.</b> Fill device, receipt, seal and one "
+        "photo (fictitious). After the examination, practice <b>Seal reapplication</b> in the "
+        "Cases Manager, with the new-seal photo.",
     ], reiniciar=True))
 
     h.append(etapa("E. Select the modules and extract"))

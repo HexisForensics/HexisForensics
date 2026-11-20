@@ -182,8 +182,9 @@ def conteudo():
         "<b>Iniciar Extração</b> > confirme o examinador > leia <b>Método e limitações</b> > "
         "<b>Ciente — Prosseguir</b>.",
         "<b>Caso:</b> crie um caso novo e deixe <b>treino</b> explícito no nome (p. ex. "
-        "TREINO-001). <b>Nunca misture com caso real.</b> Preencha dispositivo, lacre e as fotos "
-        "com dados fictícios.",
+        "TREINO-001). <b>Nunca misture com caso real.</b> Preencha dispositivo, recebimento, "
+        "lacre e <b>uma foto</b> (fictícios). Depois do exame, pratique a <b>Reaposição de "
+        "lacre</b> no Gerenciador, com a foto do novo lacre.",
     ], reiniciar=True))
 
     h.append(etapa("E. Marcar os módulos e extrair"))

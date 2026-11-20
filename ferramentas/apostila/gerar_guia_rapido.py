@@ -184,8 +184,8 @@ def pagina_android():
                "recuperação</b>.")
 
     h += caixa("<b>Tenha em mãos antes de começar:</b> cabo USB de <b>dados</b> (cabo só de "
-               "carga não serve) · número do <b>lacre</b> · a peça para <b>duas fotos</b> "
-               "(frente e verso) · o documento de <b>autorização</b> digitalizado · o seu "
+               "carga não serve) · número do <b>lacre</b> · a peça para <b>uma foto</b> "
+               "(como recebida, com o lacre) · o documento de <b>autorização</b> digitalizado · o seu "
                "perfil de examinador criado na ferramenta.")
 
     h += faixa("ANDROID")
@@ -222,8 +222,9 @@ def pagina_android():
         "<b>Iniciar Extração</b> > confirme o examinador > leia <b>Método e limitações</b> > "
         "<b>Ciente — Prosseguir</b>.",
         "<b>Caso</b>: novo ou existente (um caso reúne vários aparelhos) > <b>Autorização</b>: "
-        "anexe o documento > <b>Dispositivo</b>: marca, modelo, <b>lacre</b> e as <b>duas "
-        "fotos</b>.",
+        "anexe o documento > <b>Dispositivo</b>: marca, modelo, <b>recebimento</b> "
+        "(quando/quem), <b>lacre</b> e <b>uma foto</b> da peça como recebida. O <b>novo "
+        "lacre</b>, após o exame, entra pela <b>Reaposição de lacre</b> no Gerenciador.",
         "Aguarde até a mensagem de extração finalizada. <b>Não feche a ferramenta</b> no "
         "meio: a aquisição ficaria sem lacre. Para parar, use <b>Cancelar</b>.",
     ]))

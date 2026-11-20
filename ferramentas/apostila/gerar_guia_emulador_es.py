@@ -188,8 +188,9 @@ def contenido():
         "<b>Iniciar Extração</b> (iniciar extracción) > confirme el examinador > lea <b>Método e "
         "limitações</b> > <b>Ciente — Prosseguir</b>.",
         "<b>Caso:</b> cree un caso nuevo y deje <b>práctica</b> explícito en el nombre (p. ej. "
-        "PRACTICA-001). <b>Nunca lo mezcle con un caso real.</b> Complete dispositivo, precinto y "
-        "las fotos con datos ficticios.",
+        "PRACTICA-001). <b>Nunca lo mezcle con un caso real.</b> Complete dispositivo, recepción, "
+        "precinto y una foto (ficticios). Tras el examen, practique la <b>Reaposición de "
+        "precinto</b> en el Gestor, con la foto del nuevo precinto.",
     ], reiniciar=True))
 
     h.append(etapa("E. Marcar los módulos y extraer"))

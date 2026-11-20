@@ -154,7 +154,7 @@ def contenido():
                "usuario de Windows: actualizar la herramienta nunca alcanza las adquisiciones. En el "
                "primer inicio, cree su perfil de examinador y guarde el código de recuperación.")
     h += caixa("<b>Tenga a mano antes de empezar:</b> cable USB de datos (un cable solo de carga no "
-               "sirve) · número del precinto (lacre) · el dispositivo para dos fotos (frente y dorso) · "
+               "sirve) · número del precinto (lacre) · el dispositivo para una foto (como recibido, con el precinto) · "
                "el documento de autorización escaneado · su perfil de examinador creado en la herramienta.")
 
     h += faixa("ANDROID")
@@ -185,7 +185,9 @@ def contenido():
         "<b>Iniciar Extração</b> (iniciar extracción) → confirme el examinador → lea <b>Método e "
         "limitações</b> → <b>Ciente — Prosseguir</b>.",
         "Caso: nuevo o existente (un caso reúne varios dispositivos) → Autorización: adjunte el "
-        "documento → Dispositivo: marca, modelo, precinto y las dos fotos.",
+        "documento → Dispositivo: marca, modelo, recepción (cuándo/quién), precinto y una foto "
+        "de la pieza como recibida. El nuevo precinto, tras el examen, entra por la Reaposición "
+        "de precinto en el Gestor de Casos.",
         "Espere hasta el mensaje de extracción finalizada. No cierre la herramienta en el medio: la "
         "adquisición quedaría sin precinto. Para detener, use <b>Cancelar</b>.",
     ]))
