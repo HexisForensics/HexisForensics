@@ -65,7 +65,7 @@ cada dado foi obtido e entregar documentos que se sustentam sozinhos.
    resultado tem de ser idêntico a:
 
    ```
-   710d60bb70b63e84b4426bbc8ed91a1edaede692d7e7be15c54ffb718356e2f9
+   48c4138700d0a6f2adf6523f60d55bc89b11ca982f26061f087e5b42c3e95b7f
    ```
 
    Se um só caractere diferir, **não execute** o arquivo. O mesmo valor está no

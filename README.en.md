@@ -65,7 +65,7 @@ documents that stand on their own.
    result must be identical to:
 
    ```
-   710d60bb70b63e84b4426bbc8ed91a1edaede692d7e7be15c54ffb718356e2f9
+   48c4138700d0a6f2adf6523f60d55bc89b11ca982f26061f087e5b42c3e95b7f
    ```
 
    If a single character differs, **do not run** the file. The same value is in
