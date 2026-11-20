@@ -67,14 +67,31 @@ class DeviceInfoDialog(QDialog):
         self.campo_estado = QLineEdit()
         self.campo_estado.setPlaceholderText(traduzir("di_ph_estado"))
 
+        # Recebimento da peça (cadeia de custódia): quando e por quem.
+        self.campo_recebido_em = QLineEdit()
+        self.campo_recebido_em.setPlaceholderText(traduzir("di_ph_recebido_em"))
+
+        self.campo_recebido_por = QLineEdit()
+        self.campo_recebido_por.setPlaceholderText(traduzir("di_ph_recebido_por"))
+
+        self.campo_recebido_por_registro = QLineEdit()
+        self.campo_recebido_por_registro.setPlaceholderText(traduzir("di_ph_recebido_por_registro"))
+
         self.campo_lacre = QLineEdit()
         self.campo_lacre.setPlaceholderText(traduzir("di_ph_lacre"))
 
+        # Lacre aposto após romper o original para realizar a perícia.
+        self.campo_lacre_novo = QLineEdit()
+        self.campo_lacre_novo.setPlaceholderText(traduzir("di_ph_lacre_novo"))
 
         form.addRow(traduzir("di_label_marca"), self.campo_marca_modelo)
         form.addRow(traduzir("di_label_cor"), self.campo_cor)
         form.addRow(traduzir("di_label_estado"), self.campo_estado)
+        form.addRow(traduzir("di_label_recebido_em"), self.campo_recebido_em)
+        form.addRow(traduzir("di_label_recebido_por"), self.campo_recebido_por)
+        form.addRow(traduzir("di_label_recebido_por_registro"), self.campo_recebido_por_registro)
         form.addRow(traduzir("di_label_lacre"), self.campo_lacre)
+        form.addRow(traduzir("di_label_lacre_novo"), self.campo_lacre_novo)
 
         layout.addLayout(form)
 
@@ -172,6 +189,10 @@ class DeviceInfoDialog(QDialog):
             "marca_modelo": self.campo_marca_modelo.text().strip(),
             "cor": self.campo_cor.text().strip(),
             "estado": self.campo_estado.text().strip(),
+            "recebido_em": self.campo_recebido_em.text().strip(),
+            "recebido_por": self.campo_recebido_por.text().strip(),
+            "recebido_por_registro": self.campo_recebido_por_registro.text().strip(),
             "lacre": self.campo_lacre.text().strip(),
+            "lacre_novo": self.campo_lacre_novo.text().strip(),
             "fotos": self.caminhos_fotos,
         }

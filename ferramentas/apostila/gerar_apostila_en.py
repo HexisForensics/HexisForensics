@@ -748,9 +748,11 @@ def conteudo() -> list:
               "<b>Authorization</b>: attach the document that authorizes access to the data. "
               "Continuing without attaching is allowed, but it is recorded that there was no "
               "document in sight.",
-              "<b>Device and chain of custody</b>: make and model, color, condition, <b>seal "
-              "number</b> (required) and at least <b>two photographs</b> of the item (front and "
-              "back).",
+              "<b>Device and chain of custody</b>: make and model, color, condition, the "
+              "<b>date and time of receipt</b> and <b>who received the item</b> (name and "
+              "functional ID), the <b>seal number</b> (required) and, after breaking the "
+              "original for the examination, the <b>new seal</b> applied; plus at least "
+              "<b>two photographs</b> of the item (front and back).",
               "The extraction begins. Follow it through the console and the status column of "
               "each module.",
           ]),

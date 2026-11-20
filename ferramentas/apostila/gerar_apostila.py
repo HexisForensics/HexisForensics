@@ -727,8 +727,10 @@ def conteudo() -> list:
               "Prosseguir sem anexar é permitido, mas fica registrado que não havia "
               "documento à vista.",
               "<b>Dispositivo e cadeia de custódia</b>: marca e modelo, cor, estado, "
-              "<b>número do lacre</b> (obrigatório) e pelo menos <b>duas fotografias</b> da "
-              "peça (frente e verso).",
+              "a <b>data e hora do recebimento</b> e <b>quem recebeu a peça</b> (nome e "
+              "registro funcional), o <b>número do lacre</b> (obrigatório) e, após romper o "
+              "original para a perícia, o <b>novo lacre</b> aposto; mais pelo menos "
+              "<b>duas fotografias</b> da peça (frente e verso).",
               "A extração começa. Acompanhe pelo console e pela coluna de status de cada "
               "módulo.",
           ]),

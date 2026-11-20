@@ -752,9 +752,11 @@ def conteudo() -> list:
               "<b>Autorización</b>: adjunte el documento que autoriza el acceso a los datos. "
               "Continuar sin adjuntar está permitido, pero queda registrado que no había "
               "documento a la vista.",
-              "<b>Dispositivo y cadena de custodia</b>: marca y modelo, color, estado, "
-              "<b>número del sello</b> (obligatorio) y al menos <b>dos fotografías</b> de la "
-              "pieza (anverso y reverso).",
+              "<b>Dispositivo y cadena de custodia</b>: marca y modelo, color, estado, la "
+              "<b>fecha y hora de recepción</b> y <b>quién recibió la pieza</b> (nombre e "
+              "identificación funcional), el <b>número del sello</b> (obligatorio) y, tras "
+              "romper el original para la pericia, el <b>nuevo sello</b> aplicado; además de "
+              "al menos <b>dos fotografías</b> de la pieza (anverso y reverso).",
               "La extracción comienza. Siga por la consola y por la columna de estado de cada "
               "módulo.",
           ]),

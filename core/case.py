@@ -65,7 +65,11 @@ CAMPOS_DO_DISPOSITIVO = (
     ("marca_modelo", "Equipamento"),
     ("cor", "Cor"),
     ("estado", "Estado"),
+    ("recebido_em", "Recebido em"),
+    ("recebido_por", "Recebido por"),
+    ("recebido_por_registro", "Registro funcional do recebedor"),
     ("lacre", "Lacre"),
+    ("lacre_novo", "Novo lacre (reaposição para perícia)"),
 )
 
 NAO_INFORMADO = "não informado"
@@ -82,7 +86,11 @@ _CHAVE_DE_TRADUCAO = {
     "marca_modelo": "sl_campo_equipamento",
     "cor": "sl_campo_cor",
     "estado": "sl_campo_estado",
+    "recebido_em": "sl_campo_recebido_em",
+    "recebido_por": "sl_campo_recebido_por",
+    "recebido_por_registro": "sl_campo_recebido_por_registro",
     "lacre": "sl_campo_lacre",
+    "lacre_novo": "sl_campo_lacre_novo",
 }
 
 
