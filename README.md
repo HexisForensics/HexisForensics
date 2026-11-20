@@ -20,6 +20,9 @@ Não é preciso conta no GitHub.</p>
   🧪 <a href="docs/Guia_de_Pratica_com_Emulador.pdf">Guia de Prática com Emulador</a>
 </p>
 
+> ℹ️ **A interface e os documentos gerados estão disponíveis em português, espanhol e inglês.**
+> O idioma é escolhido na tela de entrada, e cada perícia fica selada no idioma escolhido ao criá-la.
+
 ---
 
 ## O que é

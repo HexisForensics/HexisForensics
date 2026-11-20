@@ -20,9 +20,9 @@ No hace falta cuenta en GitHub.</p>
   🧪 <a href="docs/Guia_Practica_Emulador_Hexis_Forensics_ES.pdf">Guía de Práctica con Emulador</a>
 </p>
 
-> ℹ️ **El programa y los documentos que genera (informes y laudo) están en portugués.**
-> Esta documentación en español explica cómo operarlo; los nombres de los botones
-> se citan en portugués, como aparecen en la interfaz.
+> ℹ️ **El programa y los documentos que genera (informes e Informe Pericial) están disponibles en español.**
+> El idioma se elige en la pantalla de entrada, y cada pericia queda sellada en el idioma
+> elegido al crearla. También están disponibles portugués e inglés.
 
 ---
 

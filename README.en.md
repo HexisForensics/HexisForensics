@@ -20,9 +20,9 @@ No GitHub account required.</p>
   🧪 <a href="docs/Practice_Guide_Emulator_Hexis_Forensics_EN.pdf">Emulator Practice Guide</a>
 </p>
 
-> ℹ️ **The program and the documents it generates (reports and the expert report) are in Portuguese.**
-> This English documentation explains how to operate it; the names of the buttons are
-> quoted in Portuguese, as they appear in the interface.
+> ℹ️ **The program and the documents it generates (reports and the Forensic Examination Report) are available in English.**
+> The language is chosen on the entry screen, and each examination is sealed in the language
+> selected when it was created. Portuguese and Spanish are also available.
 
 ---
 

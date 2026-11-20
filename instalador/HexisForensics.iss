@@ -45,9 +45,12 @@ ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
 Name: "ptbr"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
+Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
+Name: "en"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "atalhodesktop"; Description: "Criar atalho na Área de Trabalho"; GroupDescription: "Atalhos:"
+; Textos padrao do Inno, traduzidos automaticamente para cada idioma do assistente.
+Name: "atalhodesktop"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Dirs]
 Name: "{%USERPROFILE}\HexisForensics-Casos"
