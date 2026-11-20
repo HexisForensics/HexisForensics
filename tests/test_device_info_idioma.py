@@ -34,11 +34,13 @@ igual("placeholder estado", dlg.campo_estado.placeholderText(),
 igual("botão salvar", dlg.botao_ok.text(), "Salvar / Confirmar")
 igual("botão cancelar", dlg.botao_cancelar.text(), "Cancelar")
 igual("rótulo das fotos (molde com min/max)", dlg.rotulo_fotos.text(),
-      "<b>Fotografias da peça</b> (2 obrigatórias, por exemplo frente e verso; até 10):")
+      "<b>Fotografia da peça</b> (1 obrigatória: a peça como recebida, com o lacre "
+      "original; até 10). A foto do novo lacre é anexada na reaposição:")
 
-igual("fotos obrigatórias (molde)", traduzir("di_fotos_obrigatorias", min=2, n=1),
-      "Anexe 2 fotografias da peça (por exemplo, frente e verso): elas documentam o "
-      "estado em que o dispositivo foi recebido. Há 1 anexada(s).")
+igual("fotos obrigatórias (molde)", traduzir("di_fotos_obrigatorias", min=1, n=0),
+      "Anexe ao menos 1 fotografia da peça como recebida (com o lacre original): "
+      "documenta o estado em que o dispositivo chegou. A foto do novo lacre entra na "
+      "reaposição, após a perícia. Há 0 anexada(s).")
 
 print("\n" + ("TODOS OS TESTES PASSARAM" if not falhas else f"{len(falhas)} FALHA(S): {falhas}"))
 sys.exit(1 if falhas else 0)

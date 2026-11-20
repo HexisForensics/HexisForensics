@@ -37,6 +37,7 @@ from .case_dialog import CaseDialog
 from .chave_dialog import ChaveDialog
 from .conversas_dialog import ConversasDialog
 from .entrega_dialog import EntregaDialog
+from .relacre_dialog import RelacreDialog
 from .material_widget import MaterialWidget
 from .visualizador_pdf import abrir_pdf
 from .device_info_dialog import DeviceInfoDialog
@@ -49,7 +50,7 @@ from services.case_service import (
     gravar_protocolos_respondidos,
     ler_cadeia_custodia,
 )
-from services import ficha_service, laudo_service, relatorio_extracao_service, sessao_service
+from services import ficha_service, laudo_service, relacre_service, relatorio_extracao_service, sessao_service
 from services.idioma import traduzir
 from services.decifragem_service import (
     decifrar_backup_ios,
@@ -205,6 +206,11 @@ class CasesManagerDialog(QDialog):
         self.botao_decifrar.setToolTip(traduzir("gc_tt_decifrar"))
         self.botao_decifrar.clicked.connect(self._decifrar_whatsapp)
 
+        self.botao_relacre = QPushButton(traduzir("gc_btn_relacre"))
+        self.botao_relacre.setEnabled(False)
+        self.botao_relacre.setToolTip(traduzir("gc_tt_relacre"))
+        self.botao_relacre.clicked.connect(self._registrar_relacre)
+
         # Grade de três colunas, na ordem do trabalho: o caso; o conteúdo
         # (decifrar, ler, escolher conversas); os documentos; e o Laudo, que
         # é o produto final, sozinho na última linha. Em linhas soltas de dois
@@ -221,7 +227,8 @@ class CasesManagerDialog(QDialog):
         for botao, linha, coluna in disposicao:
             grade.addWidget(botao, linha, coluna)
         grade.addWidget(self.botao_ficha, 2, 0)
-        grade.addWidget(self.botao_laudo_pericial, 2, 1, 1, 2)
+        grade.addWidget(self.botao_relacre, 2, 1)
+        grade.addWidget(self.botao_laudo_pericial, 3, 0, 1, 3)
         for coluna in range(3):
             grade.setColumnStretch(coluna, 1)
         layout_det.addLayout(grade)
@@ -243,7 +250,7 @@ class CasesManagerDialog(QDialog):
         """Liga ou desliga, juntos, os botões que dependem de uma aquisição escolhida."""
         self.botao_relatorio.setEnabled(habilitar)
         for nome in ("botao_relatorio_extracao", "botao_ficha", "botao_laudo_pericial",
-                     "botao_decifrar", "botao_conversas"):
+                     "botao_decifrar", "botao_conversas", "botao_relacre"):
             botao = getattr(self, nome, None)
             if botao is not None:
                 botao.setEnabled(habilitar)
@@ -272,6 +279,24 @@ class CasesManagerDialog(QDialog):
             QMessageBox.warning(self, traduzir("gc_aviso"), traduzir("gc_selecione_aquisicao"))
             return
         ConversasDialog(pasta_aquisicao, parent=self).exec()
+
+    def _registrar_relacre(self) -> None:
+        pasta_aquisicao = self._aquisicao_selecionada()
+        if pasta_aquisicao is None:
+            QMessageBox.warning(self, traduzir("gc_aviso"), traduzir("gc_selecione_aquisicao"))
+            return
+        dialogo = RelacreDialog(parent=self)
+        if not dialogo.exec():
+            return
+        self.setCursor(Qt.WaitCursor)
+        try:
+            resultado = relacre_service.registrar_reaposicao(pasta_aquisicao, dialogo.dados())
+        finally:
+            self.unsetCursor()
+        if not resultado.sucesso:
+            QMessageBox.critical(self, traduzir("gc_relacre_titulo"), resultado.erro)
+            return
+        QMessageBox.information(self, traduzir("gc_relacre_titulo"), resultado.mensagem)
 
     def _decifrar_whatsapp(self) -> None:
         pasta_aquisicao = self._aquisicao_selecionada()

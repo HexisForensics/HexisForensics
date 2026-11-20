@@ -2,11 +2,10 @@
 Diálogo de identificação do dispositivo recebido para exame: descrição da
 peça, número do lacre e fotografias.
 
-São exigidos o lacre, que liga a peça física ao registro, e DUAS
-fotografias, que documentam o estado em que ela foi recebida — frente e
-verso, lado a lado no relatório. Já foram exigidas quatro; era exagero, e
-fazia o examinador anexar imagem qualquer para destravar a tela.
-Fotografias adicionais continuam aceitas.
+São exigidos o lacre, que liga a peça física ao registro, e UMA fotografia,
+que documenta o estado em que a peça foi recebida, com o lacre original. A
+segunda foto — a do NOVO lacre — é feita na REAPOSIÇÃO, depois da perícia, e
+entra como complemento. Fotografias adicionais continuam aceitas.
 """
 
 from __future__ import annotations
@@ -37,7 +36,7 @@ class DeviceInfoDialog(QDialog):
     Diálogo modal para preencher características do aparelho, lacre e gerenciar fotos.
     """
 
-    MINIMO_DE_FOTOS = 2
+    MINIMO_DE_FOTOS = 1
     MAXIMO_DE_FOTOS = 10
 
     def __init__(self, parent=None, modo_edicao: bool = False):
@@ -80,10 +79,6 @@ class DeviceInfoDialog(QDialog):
         self.campo_lacre = QLineEdit()
         self.campo_lacre.setPlaceholderText(traduzir("di_ph_lacre"))
 
-        # Lacre aposto após romper o original para realizar a perícia.
-        self.campo_lacre_novo = QLineEdit()
-        self.campo_lacre_novo.setPlaceholderText(traduzir("di_ph_lacre_novo"))
-
         form.addRow(traduzir("di_label_marca"), self.campo_marca_modelo)
         form.addRow(traduzir("di_label_cor"), self.campo_cor)
         form.addRow(traduzir("di_label_estado"), self.campo_estado)
@@ -91,7 +86,6 @@ class DeviceInfoDialog(QDialog):
         form.addRow(traduzir("di_label_recebido_por"), self.campo_recebido_por)
         form.addRow(traduzir("di_label_recebido_por_registro"), self.campo_recebido_por_registro)
         form.addRow(traduzir("di_label_lacre"), self.campo_lacre)
-        form.addRow(traduzir("di_label_lacre_novo"), self.campo_lacre_novo)
 
         layout.addLayout(form)
 
@@ -193,6 +187,5 @@ class DeviceInfoDialog(QDialog):
             "recebido_por": self.campo_recebido_por.text().strip(),
             "recebido_por_registro": self.campo_recebido_por_registro.text().strip(),
             "lacre": self.campo_lacre.text().strip(),
-            "lacre_novo": self.campo_lacre_novo.text().strip(),
             "fotos": self.caminhos_fotos,
         }

@@ -728,9 +728,11 @@ def conteudo() -> list:
               "documento à vista.",
               "<b>Dispositivo e cadeia de custódia</b>: marca e modelo, cor, estado, "
               "a <b>data e hora do recebimento</b> e <b>quem recebeu a peça</b> (nome e "
-              "registro funcional), o <b>número do lacre</b> (obrigatório) e, após romper o "
-              "original para a perícia, o <b>novo lacre</b> aposto; mais pelo menos "
-              "<b>duas fotografias</b> da peça (frente e verso).",
+              "registro funcional), o <b>número do lacre</b> (obrigatório) e <b>uma "
+              "fotografia</b> da peça como recebida, com o lacre original. O <b>novo lacre</b>, "
+              "aposto só depois de romper o original para a perícia, é registrado ao final, "
+              "pela <b>Reaposição de lacre</b> no Gerenciador de Casos — com a foto do novo "
+              "lacre, como complemento, sem tocar no selo da aquisição.",
               "A extração começa. Acompanhe pelo console e pela coluna de status de cada "
               "módulo.",
           ]),

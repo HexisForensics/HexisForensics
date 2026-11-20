@@ -750,9 +750,11 @@ def conteudo() -> list:
               "document in sight.",
               "<b>Device and chain of custody</b>: make and model, color, condition, the "
               "<b>date and time of receipt</b> and <b>who received the item</b> (name and "
-              "functional ID), the <b>seal number</b> (required) and, after breaking the "
-              "original for the examination, the <b>new seal</b> applied; plus at least "
-              "<b>two photographs</b> of the item (front and back).",
+              "functional ID), the <b>seal number</b> (required) and <b>one photograph</b> of "
+              "the item as received, with the original seal. The <b>new seal</b>, applied only "
+              "after breaking the original for the examination, is registered at the end, via "
+              "<b>Seal reapplication</b> in the Cases Manager — with the new-seal photo, as a "
+              "complement, without touching the acquisition seal.",
               "The extraction begins. Follow it through the console and the status column of "
               "each module.",
           ]),

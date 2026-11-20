@@ -754,9 +754,11 @@ def conteudo() -> list:
               "documento a la vista.",
               "<b>Dispositivo y cadena de custodia</b>: marca y modelo, color, estado, la "
               "<b>fecha y hora de recepción</b> y <b>quién recibió la pieza</b> (nombre e "
-              "identificación funcional), el <b>número del sello</b> (obligatorio) y, tras "
-              "romper el original para la pericia, el <b>nuevo sello</b> aplicado; además de "
-              "al menos <b>dos fotografías</b> de la pieza (anverso y reverso).",
+              "identificación funcional), el <b>número del precinto</b> (obligatorio) y <b>una "
+              "fotografía</b> de la pieza como recibida, con el precinto original. El <b>nuevo "
+              "precinto</b>, aplicado solo tras romper el original para la pericia, se registra "
+              "al final, mediante la <b>Reaposición de precinto</b> en el Gestor de Casos — con "
+              "la foto del nuevo precinto, como complemento, sin tocar el precinto de la adquisición.",
               "La extracción comienza. Siga por la consola y por la columna de estado de cada "
               "módulo.",
           ]),

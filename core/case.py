@@ -69,7 +69,6 @@ CAMPOS_DO_DISPOSITIVO = (
     ("recebido_por", "Recebido por"),
     ("recebido_por_registro", "Registro funcional do recebedor"),
     ("lacre", "Lacre"),
-    ("lacre_novo", "Novo lacre (reaposição para perícia)"),
 )
 
 NAO_INFORMADO = "não informado"
@@ -90,7 +89,6 @@ _CHAVE_DE_TRADUCAO = {
     "recebido_por": "sl_campo_recebido_por",
     "recebido_por_registro": "sl_campo_recebido_por_registro",
     "lacre": "sl_campo_lacre",
-    "lacre_novo": "sl_campo_lacre_novo",
 }
 
 
