@@ -99,7 +99,7 @@ class BugreportExtractor(AndroidExtractor):
         tamanho = caminho.stat().st_size
         hash_arquivo = calcular_sha256(caminho)
         (pasta / f"{caminho.name}.sha256").write_text(
-            f"{hash_arquivo} *{caminho.name}\n", encoding="utf-8"
+            f"{hash_arquivo} *{caminho.name}\n", encoding="utf-8", newline="\n"
         )
         self.progresso(100)
 
