@@ -1187,7 +1187,40 @@ def conteudo() -> list:
           ]
 
     # =====================================================================
-    h += capitulo(12, "Problemas comuns", "O que fazer quando algo não sai como esperado.")
+    h += capitulo(12, "Boas práticas",
+                  "Cuidados que preservam a evidência e protegem o operador, do recebimento "
+                  "do aparelho até a extração.")
+    h += [secao("Olhar já é mexer: não navegue no aparelho vivo"),
+          p("A maior ameaça à prova num celular quase nunca é o adulterador — é o dedo "
+            "curioso. No WhatsApp e nos mensageiros, <b>abrir só para dar uma olhada já altera "
+            "o estado</b>, mesmo sem intenção. Quem quer a prova “exatamente como viu” só "
+            "consegue isso de um jeito: <b>não mexendo</b>."),
+          p("Ao navegar num aparelho ligado e desbloqueado, basta olhar para:"),
+          itens([
+              "marcar mensagens como <b>lidas</b> (tique azul) e <b>avisar a outra ponta</b>;",
+              "disparar o <b>“online / visto por último”</b>, entregando que o aparelho está sendo examinado;",
+              "<b>consumir mensagens temporárias ou de “ver uma vez”</b>, que somem para sempre;",
+              "<b>apagar, arquivar ou encaminhar</b> por um deslize do dedo;",
+              "<b>baixar mídia</b> e mudar as datas de acesso dos arquivos.",
+          ]),
+          secao("O procedimento certo"),
+          passos([
+              "<b>Isole o aparelho da rede</b> assim que recebê-lo: modo avião ou bolsa de "
+              "bloqueio (Faraday). Evita sincronização, apagamento remoto e novas mensagens "
+              "mudando o estado.",
+              "<b>Não navegue</b> pelos aplicativos no aparelho vivo. Toda consulta ao conteúdo "
+              "vem depois, sobre a <b>cópia extraída</b>.",
+              "Encaminhe para a <b>extração</b>: é ela que <b>congela</b> o estado como foi "
+              "recebido e o sela com hash.",
+          ]),
+          caixa("atencao", "O método não existe para desconfiar do operador honesto — existe "
+                "para <b>protegê-lo dele mesmo</b>. A extração transforma o “do jeito que vi” em "
+                "algo <b>demonstrável</b>; o dedo nervoso faz o contrário. Toda alteração "
+                "inevitável no aparelho é registrada e justificada no procedimento."),
+          ]
+
+    # =====================================================================
+    h += capitulo(13, "Problemas comuns", "O que fazer quando algo não sai como esperado.")
     for titulo, texto in (
         ("O aparelho aparece como “não autorizado”",
          "Desbloqueie a tela e aceite <b>Permitir depuração USB</b>. Se a pergunta não "
@@ -1243,7 +1276,7 @@ def conteudo() -> list:
         h += [sub(titulo), p(texto)]
 
     # =====================================================================
-    h += capitulo(13, "Glossário", "Termos usados na ferramenta e nesta apostila.")
+    h += capitulo(14, "Glossário", "Termos usados na ferramenta e nesta apostila.")
     h += [tabela_simples(["Termo", "Significado"], [
         ["ADB", "Android Debug Bridge, a ferramenta de depuração do Android."],
         ["Aquisição", "Uma extração de um aparelho, gravada numa pasta lacrada dentro do caso."],

@@ -1226,7 +1226,42 @@ def conteudo() -> list:
           ]
 
     # =====================================================================
-    h += capitulo(12, "Common problems", "What to do when something does not go as expected.")
+    h += capitulo(12, "Best practices",
+                  "Precautions that preserve the evidence and protect the operator, from "
+                  "receiving the device to the extraction.")
+    h += [secao("Looking is already touching: do not browse the live device"),
+          p("The biggest threat to the evidence on a phone is almost never the tamperer — it "
+            "is the curious finger. In WhatsApp and other messengers, <b>opening it just to "
+            "take a look already changes the state</b>, even without intent. Whoever wants the "
+            "evidence “exactly as they saw it” gets that in one way only: <b>by not touching "
+            "it</b>."),
+          p("Browsing a powered-on, unlocked device, merely looking can:"),
+          itens([
+              "mark messages as <b>read</b> (blue ticks) and <b>notify the other end</b>;",
+              "trigger <b>“online / last seen”</b>, revealing that the device is being examined;",
+              "<b>consume disappearing or “view once” messages</b>, which are gone for good;",
+              "<b>delete, archive or forward</b> with a slip of the finger;",
+              "<b>download media</b> and change the files’ access times.",
+          ]),
+          secao("The right procedure"),
+          passos([
+              "<b>Isolate the device from the network</b> as soon as you receive it: airplane "
+              "mode or a shielding (Faraday) bag. This prevents syncing, remote wiping and new "
+              "messages changing the state.",
+              "<b>Do not browse</b> the apps on the live device. Every look at the content "
+              "happens later, over the <b>extracted copy</b>.",
+              "Send it to <b>extraction</b>: that is what <b>freezes</b> the state as it was "
+              "received and seals it with a hash.",
+          ]),
+          caixa("atencao", "The method does not exist to distrust the honest operator — it "
+                "exists to <b>protect them from themselves</b>. Extraction turns “the way I saw "
+                "it” into something <b>demonstrable</b>; the nervous finger does the opposite. "
+                "Every unavoidable change to the device is recorded and justified in the "
+                "procedure."),
+          ]
+
+    # =====================================================================
+    h += capitulo(13, "Common problems", "What to do when something does not go as expected.")
     for titulo, texto in (
         ("The device shows as “not authorized”",
          "Unlock the screen and accept <b>Allow USB debugging</b>. If the question does not "
@@ -1282,7 +1317,7 @@ def conteudo() -> list:
         h += [sub(titulo), p(texto)]
 
     # =====================================================================
-    h += capitulo(13, "Glossary", "Terms used in the tool and in this manual.")
+    h += capitulo(14, "Glossary", "Terms used in the tool and in this manual.")
     h += [tabela_simples(["Term", "Meaning"], [
         ["ADB", "Android Debug Bridge, Android's debugging tool."],
         ["Acquisition", "An extraction from a device, written to a sealed folder inside the "
