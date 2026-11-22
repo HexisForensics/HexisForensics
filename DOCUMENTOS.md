@@ -115,7 +115,12 @@ A versão de cada documento acompanha a da ferramenta (`core/versao.py`).
   nota do aviso de cabeçalho. Operacionaliza a conferência externa destravada no
   Windows. Os 3 manuais foram regerados e republicados na Release.
 - **Guia de Extração Rápida (PT/ES/EN) e Guia de Prática com Emulador (PT/ES/EN):**
-  texto puro, já equivalentes; sem alteração nesta rodada.
+  texto puro, já equivalentes. Em 22/11 o Guia de Extração Rápida ES/EN teve só o
+  termo da Ficha alinhado à UI (ver abaixo); o de Emulador não mudou.
+- **Termo "Ficha do Aparelho" alinhado à UI no ES/EN (22/11):** o manual e o guia
+  rápido traziam "Device Fact Sheet" (resíduo) e mantinham o termo em PT. Passou a
+  ser traduzido em tudo, igual à interface: EN **Device Information Sheet**, ES
+  **Ficha del Dispositivo**. PT segue "Ficha do Aparelho". 4 PDFs republicados.
 - **Publicação na Release:** `v1.0.0`. Os **9 documentos de produto (3 × 3
   idiomas)** seguem publicados, cada um com seu `.sha256`. Os **3 manuais** foram
   republicados em 22/11 (seção da conferência por `sha256sum -c`) via

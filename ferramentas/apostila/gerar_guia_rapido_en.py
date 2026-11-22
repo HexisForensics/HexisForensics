@@ -244,7 +244,7 @@ def contenido():
          "Click the relevant conversations → Gerar PDF das selecionadas. Check in the window title that the acquisition is the right one."],
         ["Relatório de Extração (Extraction Report)",
          "The procedure: item, photos, method, outcome of each module and hashes."],
-        ["Ficha do Aparelho (Device Fact Sheet)",
+        ["Device Information Sheet",
          "Quick-read cover, at case level: lock state on receipt, IMEI, ICCID, number, carrier, "
          "security state and outcome, each field with its sealed source. Not obtained = "
          "<b>NÃO APURADO</b>, never “does not exist on the device”."],

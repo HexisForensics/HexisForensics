@@ -431,7 +431,7 @@ def conteudo() -> list:
           itens([
               "<b>Extraction Report.</b> Timeline of the procedure, environment, modules, "
               "outcome and the hash manifest.",
-              "<b>Ficha do Aparelho (Device Fact Sheet).</b> Quick-read cover: lock state on "
+              "<b>Device Information Sheet.</b> Quick-read cover: lock state on "
               "receipt, IMEI, ICCID, number, carrier, security state and outcome, each field "
               "with its sealed source. Whatever the collection did not reach is shown as "
               "NÃO APURADO.",
@@ -1041,7 +1041,7 @@ def conteudo() -> list:
           tabela_simples(["Document", "What it is for"], [
               ["<b>Extraction Report</b>", "Timeline of the procedure, environment, modules, "
                "outcome and the hash manifest."],
-              ["<b>Ficha do Aparelho</b>", "Quick-read cover: lock state on receipt, IMEI, "
+              ["<b>Device Information Sheet</b>", "Quick-read cover: lock state on receipt, IMEI, "
                "ICCID, number, carrier, security state and outcome, each field with its sealed "
                "source. Not obtained = <b>NÃO APURADO</b>, never absence of the data on the "
                "device."],
@@ -1052,7 +1052,7 @@ def conteudo() -> list:
               ["<b>Expert Report</b>", "The final document, signed by the session's examiner."],
           ], [0.3, 0.7]),
           Spacer(1, 8),
-          p("The rule of the <b>Ficha do Aparelho</b> is: it opens with what the collection "
+          p("The rule of the <b>Device Information Sheet</b> is: it opens with what the collection "
             "obtained; the caveat comes after, not in its place. <b>NÃO APURADO</b> never means "
             "the data does not exist on the device — only that the collection, within its "
             "limits, did not reach it (chapter 9)."),
@@ -1168,7 +1168,7 @@ def conteudo() -> list:
           tabela_simples(["Case folder", "Content"], [
               ["<b>&lt;platform&gt;_&lt;date&gt;_&lt;time&gt;</b>", "The sealed acquisition. "
                "Never rewritten."],
-              ["<b>documentos</b>", "Extraction Report, Ficha do Aparelho, Expert Report, "
+              ["<b>documentos</b>", "Extraction Report, Device Information Sheet, Expert Report, "
                "Conversations."],
               ["<b>relatorios</b>", "Content Reports (CSV, HTML, PDF)."],
               ["<b>decifrados</b>", "Decrypted backups, with their provenance."],
@@ -1293,10 +1293,10 @@ def conteudo() -> list:
          "one in which iOS includes the call log."],
         ["crypt15", "The format of WhatsApp's encrypted backup."],
         ["EXIF", "Data the camera records inside the photo: date, camera and, sometimes, GPS."],
-        ["Ficha do Aparelho (Device Fact Sheet)", "A derived quick-read document, at case level, "
+        ["Device Information Sheet", "A derived quick-read document, at case level, "
          "gathering lock state on receipt, IMEI, ICCID, number, carrier, security state and "
          "outcome, each field with its sealed source."],
-        ["NÃO APURADO", "The Ficha do Aparelho's mark for a field the collection did not reach. "
+        ["NÃO APURADO", "The Device Information Sheet's mark for a field the collection did not reach. "
          "It never means the data is absent from the device."],
         ["GPS (UTC)", "The time of the satellites recorded with the coordinate; independent of "
          "the device's clock."],
