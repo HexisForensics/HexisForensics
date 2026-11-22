@@ -1164,6 +1164,28 @@ def conteudo() -> list:
             "adquisición contra su manifiesto y graba el resultado de la verificación (ninguna "
             "verificación borra otra)."),
           figura("21_cadeia_custodia", "Verificación de integridad.", altura_max=9 * cm),
+          secao("Verificación independiente, por quien no tiene la herramienta"),
+          p("El <b>manifesto_hashes.txt</b> y los archivos <b>.sha256</b> se graban en el formato "
+            "estándar de <b>sha256sum</b> — el mismo que usan las herramientas forenses. Así un "
+            "tercero (el juzgado, la defensa, otra institución) verifica la adquisición <b>sin "
+            "instalar ni confiar en Hexis</b>: la verificación usa una herramienta universal, no "
+            "la nuestra. Es lo que da fuerza al sello fuera de esta herramienta."),
+          p("En Linux o macOS el <b>sha256sum</b> ya viene en el sistema. En Windows acompaña a "
+            "<b>Git</b> (en <b>C:\\Program Files\\Git\\usr\\bin</b>): use <b>Git Bash</b>."),
+          passos([
+              "Abra la terminal (<b>Git Bash</b> en Windows) <b>dentro de la carpeta de la "
+              "adquisición</b> — la que contiene el <b>manifesto_hashes.txt</b>.",
+              "Escriba <b>sha256sum -c manifesto_hashes.txt</b> y pulse Enter.",
+              "Cada archivo íntegro aparece con <b>: OK</b>. Cualquier <b>: FAILED</b> señala un "
+              "archivo alterado desde la recolección.",
+          ]),
+          caixa("nota", "El encabezado del manifiesto (título y fecha) no tiene hash, así que "
+                "<b>sha256sum</b> avisa <b>“WARNING: N lines are improperly formatted”</b>. Es "
+                "esperado y no es una falla: ignora el encabezado y verifica las líneas de hash. "
+                "Lo que importa es que no aparezca ningún <b>FAILED</b>."),
+          p("Para verificar por separado un archivo sellado aislado — por ejemplo la imagen "
+            "física y el <b>.sha256</b> a su lado — vale el mismo comando: "
+            "<b>sha256sum -c &lt;archivo&gt;.sha256</b>."),
           secao("Dónde queda cada cosa"),
           tabela_simples(["Carpeta del caso", "Contenido"], [
               ["<b>&lt;plataforma&gt;_&lt;fecha&gt;_&lt;hora&gt;</b>", "La adquisición sellada. "

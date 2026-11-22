@@ -97,7 +97,7 @@ A versão de cada documento acompanha a da ferramenta (`core/versao.py`).
 
 ---
 
-## Estado atual (2026-11-20)
+## Estado atual (2026-11-22)
 
 - **Interface em espanhol (es.json):** **concluída** (2291/2291) e validada no
   emulador. Isso tornou possível a correção abaixo das capturas de tela.
@@ -109,12 +109,18 @@ A versão de cada documento acompanha a da ferramenta (`core/versao.py`).
 - **Apostila / Manual (PT/ES/EN):** regerada 20/11 com as capturas no idioma de
   cada um. Os três são equivalentes: mesmo conteúdo, mesmo layout, tudo (texto e
   telas) no idioma do documento. **Feito.**
+- **Conferência independente por `sha256sum -c` (22/11):** o Capítulo 10 ganhou,
+  nos três idiomas, a seção que ensina um terceiro a conferir a aquisição com o
+  `sha256sum -c` (nativo no Linux/macOS; via Git Bash no Windows), incluindo a
+  nota do aviso de cabeçalho. Operacionaliza a conferência externa destravada no
+  Windows. Os 3 manuais foram regerados e republicados na Release.
 - **Guia de Extração Rápida (PT/ES/EN) e Guia de Prática com Emulador (PT/ES/EN):**
   texto puro, já equivalentes; sem alteração nesta rodada.
 - **Publicação na Release:** `v1.0.0`. Os **9 documentos de produto (3 × 3
   idiomas)** seguem publicados, cada um com seu `.sha256`. Os **3 manuais** foram
-  republicados em 20/11 (capturas por idioma) via `gh release upload ... --clobber`;
-  os 6 guias permanecem como em 15/11. O instalador foi reconstruído (PT/ES/EN) e
-  o ZIP de código-fonte refeito, ambos republicados.
+  republicados em 22/11 (seção da conferência por `sha256sum -c`) via
+  `gh release upload ... --clobber`; os 6 guias permanecem como em 15/11. O
+  instalador foi reconstruído (PT/ES/EN) e o ZIP de código-fonte refeito, ambos
+  republicados.
 - **Relatório de Validação:** criado `docs/VALIDACAO.md` (Mundo C), 18 módulos no
   formato ISO/IEC 27041, linkado nos READMEs.

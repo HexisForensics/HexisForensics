@@ -1141,6 +1141,29 @@ def conteudo() -> list:
             "acquisition against its manifest and records the result of the check (no check "
             "erases another)."),
           figura("21_cadeia_custodia", "Integrity check.", altura_max=9 * cm),
+          secao("Independent check, by someone without the tool"),
+          p("The <b>manifesto_hashes.txt</b> file and the <b>.sha256</b> files are written in "
+            "the standard <b>sha256sum</b> format — the same one forensic tools use. This lets a "
+            "third party (the court, the defense, another institution) check the acquisition "
+            "<b>without installing or trusting Hexis</b>: the verification uses a universal "
+            "tool, not ours. This is what gives the seal force outside this tool."),
+          p("On Linux or macOS, <b>sha256sum</b> already ships with the system. On Windows it "
+            "comes with <b>Git</b> (in <b>C:\\Program Files\\Git\\usr\\bin</b>): use <b>Git "
+            "Bash</b>."),
+          passos([
+              "Open the terminal (<b>Git Bash</b> on Windows) <b>inside the acquisition "
+              "folder</b> — the one that contains <b>manifesto_hashes.txt</b>.",
+              "Type <b>sha256sum -c manifesto_hashes.txt</b> and press Enter.",
+              "Each intact file shows <b>: OK</b>. Any <b>: FAILED</b> points to a file changed "
+              "since collection.",
+          ]),
+          caixa("nota", "The manifest header (title and date) has no hash, so <b>sha256sum</b> "
+                "warns <b>“WARNING: N lines are improperly formatted”</b>. This is expected and "
+                "is not a failure: it ignores the header and checks the hash lines. What matters "
+                "is that no <b>FAILED</b> appears."),
+          p("To check a single sealed file on its own — for example the physical image and the "
+            "<b>.sha256</b> next to it — the same command applies: "
+            "<b>sha256sum -c &lt;file&gt;.sha256</b>."),
           secao("Where each thing lives"),
           tabela_simples(["Case folder", "Content"], [
               ["<b>&lt;platform&gt;_&lt;date&gt;_&lt;time&gt;</b>", "The sealed acquisition. "

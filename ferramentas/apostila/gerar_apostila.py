@@ -1105,6 +1105,28 @@ def conteudo() -> list:
           p("Na barra lateral, <b>Cadeia de Custódia</b> confere uma aquisição contra o seu "
             "manifesto e grava o resultado da conferência (nenhuma conferência apaga outra)."),
           figura("21_cadeia_custodia", "Conferência de integridade.", altura_max=9 * cm),
+          secao("Conferência independente, por quem não tem a ferramenta"),
+          p("O <b>manifesto_hashes.txt</b> e os arquivos <b>.sha256</b> são gravados no formato "
+            "padrão do <b>sha256sum</b> — o mesmo que ferramentas periciais usam. Com isso um "
+            "terceiro (o juízo, a defesa, outra instituição) confere a aquisição <b>sem "
+            "instalar nem confiar no Hexis</b>: a verificação usa uma ferramenta universal, não "
+            "a nossa. É o que dá força ao lacre fora desta ferramenta."),
+          p("Em Linux ou macOS o <b>sha256sum</b> já vem no sistema. No Windows ele acompanha o "
+            "<b>Git</b> (em <b>C:\\Program Files\\Git\\usr\\bin</b>): use o <b>Git Bash</b>."),
+          passos([
+              "Abra o terminal (<b>Git Bash</b> no Windows) <b>dentro da pasta da aquisição</b> — "
+              "a que contém o <b>manifesto_hashes.txt</b>.",
+              "Digite <b>sha256sum -c manifesto_hashes.txt</b> e tecle Enter.",
+              "Cada arquivo íntegro aparece com <b>: OK</b>. Qualquer <b>: FAILED</b> aponta um "
+              "arquivo alterado desde a coleta.",
+          ]),
+          caixa("nota", "O cabeçalho do manifesto (título e data) não tem hash, então o "
+                "<b>sha256sum</b> avisa <b>“WARNING: N lines are improperly formatted”</b>. "
+                "É esperado e não é falha: ele ignora o cabeçalho e confere as linhas de hash. "
+                "O que importa é não aparecer nenhum <b>FAILED</b>."),
+          p("Para conferir à parte um arquivo lacrado isolado — por exemplo a imagem física e o "
+            "<b>.sha256</b> ao lado dela — vale o mesmo comando: "
+            "<b>sha256sum -c &lt;arquivo&gt;.sha256</b>."),
           secao("Onde fica cada coisa"),
           tabela_simples(["Pasta do caso", "Conteúdo"], [
               ["<b>&lt;plataforma&gt;_&lt;data&gt;_&lt;hora&gt;</b>", "A aquisição lacrada. Nunca "
