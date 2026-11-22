@@ -1056,7 +1056,7 @@ class AndroidExtractor(BaseExtractor):
 
             linhas_hash = [f"{valor} *{nome}" for nome, valor in aquisicao.hashes.items()]
             (pasta / f"{rotulo}.sha256").write_text(
-                "\n".join(linhas_hash) + "\n", encoding="utf-8"
+                "\n".join(linhas_hash) + "\n", encoding="utf-8", newline="\n"
             )
 
             if aquisicao.arquivos_na_origem is None:

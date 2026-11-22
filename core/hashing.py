@@ -66,10 +66,14 @@ def gravar_hash_avulso(caminho_arquivo: Path, hash_hex: str, algoritmo: str = "s
 
     Serve para que a integridade de uma aquisição específica possa ser
     conferida isoladamente, sem depender do manifesto consolidado da pasta.
+
+    A quebra de linha é sempre LF (`newline="\n"`). No Windows, o modo texto
+    trocaria `\n` por `\r\n`, e o `sha256sum -c` leria o `\r` como parte do
+    nome do arquivo: "FAILED open or read" num arquivo íntegro.
     """
     caminho_arquivo = Path(caminho_arquivo)
     caminho_hash = caminho_arquivo.with_name(caminho_arquivo.name + f".{algoritmo}")
-    caminho_hash.write_text(f"{hash_hex} *{caminho_arquivo.name}\n", encoding="utf-8")
+    caminho_hash.write_text(f"{hash_hex} *{caminho_arquivo.name}\n", encoding="utf-8", newline="\n")
     return caminho_hash
 
 
@@ -238,7 +242,10 @@ def gerar_manifesto(
     from core.idioma import traduzir
     idi = idioma_para_selar(pasta_alvo)
 
-    with open(caminho_manifesto, "w", encoding="utf-8") as manifesto:
+    # `newline="\n"`: o manifesto sai com LF em qualquer sistema. Com o padrão
+    # do modo texto, no Windows cada linha terminava em `\r\n` e o
+    # `sha256sum -c` acusava todos os arquivos como ilegíveis ('nome'$'\r').
+    with open(caminho_manifesto, "w", encoding="utf-8", newline="\n") as manifesto:
         manifesto.write("=" * 58 + "\n")
         manifesto.write(traduzir("sl_man_titulo", idi) + "\n")
         manifesto.write("=" * 58 + "\n")
