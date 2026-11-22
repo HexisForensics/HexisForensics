@@ -109,6 +109,12 @@ A versão de cada documento acompanha a da ferramenta (`core/versao.py`).
 - **Apostila / Manual (PT/ES/EN):** regerada 20/11 com as capturas no idioma de
   cada um. Os três são equivalentes: mesmo conteúdo, mesmo layout, tudo (texto e
   telas) no idioma do documento. **Feito.**
+- **Capítulo "Boas práticas" (22/11):** novo Capítulo 12 (PT/ES/EN) com a seção
+  "olhar já é mexer: não navegue no aparelho vivo" — o que o manuseio do aparelho
+  ligado altera (lido, visto por último, mensagem temporária, apagar/encaminhar,
+  baixar mídia) e o procedimento certo (isolar → não navegar → extração que
+  congela e sela). Inserido antes de "Problemas comuns" para não quebrar
+  referências cruzadas; Problemas→13, Glossário→14. 3 manuais republicados.
 - **Conferência independente por `sha256sum -c` (22/11):** o Capítulo 10 ganhou,
   nos três idiomas, a seção que ensina um terceiro a conferir a aquisição com o
   `sha256sum -c` (nativo no Linux/macOS; via Git Bash no Windows), incluindo a
