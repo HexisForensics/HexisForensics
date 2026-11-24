@@ -175,6 +175,19 @@ def diagnostico_sim(conteudo: str, idioma: str = None) -> Tuple[str, str]:
     return nota_numero, nota_iccid
 
 
+def sim_verificado_ausente(conteudo: str) -> bool:
+    """
+    `True` quando a leitura de `dumpsys isub` RESPONDEU e mostra todos os
+    slots de SIM como ABSENT — a ausência de chip foi *verificada*, não
+    presumida. Distingue "não há SIM" (achado) de "não consegui ler"
+    (recusa): só devolve `True` havendo estado de slot e todos ABSENT. Sem
+    estado de slot (leitura vazia/recusada), devolve `False` — não se afirma
+    ausência que não se verificou.
+    """
+    estados = re.findall(r"mSimState\[\d+\]=(\w+)", conteudo or "")
+    return bool(estados) and all(estado == "ABSENT" for estado in estados)
+
+
 @registrar_extrator
 class IdentificacaoExtractor(AndroidExtractor):
     id = "android_identificacao"
@@ -207,16 +220,18 @@ class IdentificacaoExtractor(AndroidExtractor):
         imei, vias_registradas = self._coletar_imei(pasta)
         self.progresso(50)
 
-        coletados = self._coletar_telefonia(pasta)
+        coletados, leituras_ok = self._coletar_telefonia(pasta)
         self.progresso(85)
 
         iccid, numero = "", ""
         nota_numero, nota_iccid = "", ""
+        sim_ausente = False
         caminho_sim = pasta / "assinante_sim.txt"
         if caminho_sim.is_file():
             conteudo_sim = caminho_sim.read_text(encoding="utf-8", errors="ignore")
             iccid, numero = extrair_identificadores_sim(conteudo_sim)
             nota_numero, nota_iccid = diagnostico_sim(conteudo_sim, self._idi_selo)
+            sim_ausente = sim_verificado_ausente(conteudo_sim)
 
         contas = self._extrair_contas(pasta / "contas_cadastradas.txt")
         self._gravar_resumo(
@@ -241,35 +256,85 @@ class IdentificacaoExtractor(AndroidExtractor):
         if estruturados:
             gravar_identificacao(pasta_caso, estruturados)
 
+        # Uma leitura que RESPONDEU determina o estado, mesmo quando o estado é
+        # "nada": "nenhuma conta cadastrada" e "SIM ausente" são ACHADOS, não
+        # recusas. Distinguir "não há" de "não consegui ler" é o que impede o
+        # módulo de afirmar uma recusa que não houve — o vício que um Xiaomi
+        # Android 14 (sem SIM, sem conta, IMEI recusado pelo SO) expôs: o
+        # módulo lia contas e SIM com sucesso e, ainda assim, concluía
+        # "nenhum identificador — acesso negado", escondendo o achado real.
+        leu_contas = leituras_ok.get("contas_cadastradas.txt", False)
+        leu_sim = leituras_ok.get("assinante_sim.txt", False)
+        determinou_identificacao = bool(
+            imei or iccid or numero or contas or leu_contas or leu_sim
+        )
+
         detalhes = {
             "imei": imei or "",
             "iccid": iccid,
             "numero_telefone": numero,
             "vias_de_leitura_tentadas": vias_registradas,
             "contas_encontradas": len(contas),
+            "contas_lidas": leu_contas,
+            "sim_ausente": sim_ausente,
             "arquivos_gerados": coletados,
         }
 
         if imei:
             self.log(self._t("lg_concluido", valor=self._t("lg_id_imei_ok", imei=imei)))
             mensagem = self._t("lg_id_msg_ok", imei=imei, n=len(contas))
-        else:
-            # Não obter o IMEI é limitação conhecida do Android sem root, e
-            # precisa aparecer como ressalva — não pode passar por sucesso liso.
-            detalhes["acesso_negado"] = True
-            self.log(self._t("lg_ressalva", valor=self._t("lg_id_imei_ressalva")))
-            self.registrar_decisao(
-                pasta_caso,
-                self._t("lg_id_decisao"),
-                self._justificar_ausencia_do_imei(vias_registradas),
-            )
-            mensagem = self._t("lg_id_msg_ressalva", n=len(contas))
+            self.log(self._t("lg_id_contas_localizadas", n=len(contas)))
+            return ResultadoExtracao(True, mensagem, caminho_saida=pasta, detalhes=detalhes)
 
-        if not contas and not imei:
+        # IMEI ausente é limitação conhecida (Android 10+ recusa o shell). A
+        # decisão e o motivo REAL ficam registrados. Isso NÃO é recusa de
+        # acesso ao módulo — o IMEI é um campo que não se apurou.
+        self.log(self._t("lg_ressalva", valor=self._t("lg_id_imei_ressalva")))
+        self.registrar_decisao(
+            pasta_caso,
+            self._t("lg_id_decisao"),
+            self._justificar_ausencia_do_imei(vias_registradas),
+        )
+
+        if not determinou_identificacao:
+            # Nenhuma via respondeu: só aqui nada foi apurado e o acesso, de
+            # fato, não se obteve. É o único caso de falha do módulo.
+            detalhes["acesso_negado"] = True
             return ResultadoExtracao(False, self._t("lg_id_nada"), pasta, detalhes)
 
+        # Algo foi determinado (contas — mesmo zero —, SIM — mesmo ausente —,
+        # ICCID ou número). O IMEI é o único campo não apurado: ressalva
+        # honesta, sem presumir recusa do que foi lido com sucesso.
+        detalhes["campos_nao_apurados"] = ["imei"]
+        mensagem = self._t(
+            "lg_id_msg_sem_imei",
+            fatos=self._frase_de_fatos(numero, iccid, sim_ausente, contas, leu_contas),
+        )
         self.log(self._t("lg_id_contas_localizadas", n=len(contas)))
         return ResultadoExtracao(True, mensagem, caminho_saida=pasta, detalhes=detalhes)
+
+    def _frase_de_fatos(
+        self, numero: str, iccid: str, sim_ausente: bool, contas: List[str], leu_contas: bool
+    ) -> str:
+        """
+        Lista, em uma frase, o que FOI determinado — para a mensagem do
+        desfecho não esconder o achado atrás da ausência do IMEI. Um estado
+        lido como vazio (SIM ausente, nenhuma conta) é achado e entra aqui.
+        """
+        fatos = []
+        if numero:
+            fatos.append(self._t("lg_id_fato_numero", numero=numero))
+        if iccid:
+            fatos.append(self._t("lg_id_fato_iccid"))
+        elif sim_ausente:
+            fatos.append(self._t("lg_id_fato_sim_ausente"))
+        if contas:
+            fatos.append(self._t("lg_id_fato_contas", n=len(contas)))
+        elif leu_contas:
+            fatos.append(self._t("lg_id_fato_contas_zero"))
+        if not fatos:
+            fatos.append(self._t("lg_id_fato_estado_lido"))
+        return "; ".join(fatos)
 
     def _detectar_sdk(self) -> Optional[int]:
         """
@@ -348,8 +413,17 @@ class IdentificacaoExtractor(AndroidExtractor):
         # validação no resumo.
         return None, vias_registradas
 
-    def _coletar_telefonia(self, pasta: Path) -> List[str]:
+    def _coletar_telefonia(self, pasta: Path) -> Tuple[List[str], dict]:
+        """
+        Coleta os dumps de telefonia/contas, preservando a saída bruta.
+
+        Devolve também, por arquivo, se a leitura RESPONDEU (comando bem
+        sucedido com saída não vazia). Esse sinal é o que separa "o aparelho
+        disse que não há" de "não consegui perguntar" — sem ele, o módulo
+        confundia ausência verificada com recusa de acesso.
+        """
         gerados = []
+        leituras_ok = {}
         for nome_arquivo, argumentos in COLETAS_TELEFONIA.items():
             if self.cancelado:
                 break
@@ -357,7 +431,8 @@ class IdentificacaoExtractor(AndroidExtractor):
             conteudo = resultado.stdout or f"(sem saída) {resultado.motivo_falha}"
             (pasta / nome_arquivo).write_text(conteudo, encoding="utf-8")
             gerados.append(nome_arquivo)
-        return gerados
+            leituras_ok[nome_arquivo] = bool(resultado.sucesso and (resultado.stdout or "").strip())
+        return gerados, leituras_ok
 
     @staticmethod
     def _extrair_contas(caminho: Path) -> List[str]:

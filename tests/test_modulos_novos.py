@@ -187,7 +187,12 @@ with tempfile.TemporaryDirectory() as td:
     pasta_caso = Path(td)
     resultado = montar(IdentificacaoExtractor, ADBSemImei()).executar(pasta_caso)
     checar("IMEI nao obtido nao e inventado", resultado.detalhes["imei"] == "")
-    checar("IMEI nao obtido vira ressalva, nao sucesso liso", resultado.detalhes.get("acesso_negado") is True)
+    # Com ICCID, numero e conta lidos, o IMEI recusado e um CAMPO nao apurado
+    # -- nao uma recusa de acesso ao modulo (que afirmaria falha no que foi
+    # lido). Ressalva honesta, nao sucesso liso, sem presumir recusa.
+    checar("IMEI nao obtido vira ressalva de campo nao apurado, nao sucesso liso",
+           resultado.detalhes.get("campos_nao_apurados") == ["imei"]
+           and not resultado.detalhes.get("acesso_negado"))
     checar("contas continuam sendo coletadas", resultado.detalhes["contas_encontradas"] == 1)
     # O defeito que esta correcao resolve: com o IMEI recusado, o ICCID e o
     # numero que o SIM entregou ainda tem de chegar ao registro estruturado.

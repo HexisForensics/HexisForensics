@@ -264,6 +264,107 @@ with tempfile.TemporaryDirectory() as td:
     checar("em API 33 a restricao do Android 10 E citada", "API 29" in justificativa)
 
 # ---------------------------------------------------------------------------
+print("\n[2b] Ausencia verificada de SIM/conta e ACHADO, nao recusa de acesso")
+# Defeito exposto pelo primeiro Xiaomi (Redmi 12C, Android 14, sem root, sem
+# chip, sem conta Google): o IMEI e recusado pelo SO, mas as contas e o SIM
+# SAO lidos com sucesso -- e o resultado e "nenhuma conta" e "SIM ausente".
+# O modulo concluia falha / "nenhum identificador -- acesso negado", afirmando
+# uma recusa que nao houve e escondendo o achado real. E a mesma familia:
+# a ferramenta afirmando coisa que nao verificou.
+# ---------------------------------------------------------------------------
+# Parcel de excecao SEM razao legivel (Android 14 recusa o IMEI ao shell sem
+# expor o motivo): nenhum digito, nenhum motivo.
+PARCEL_SEM_RAZAO = "Result: Parcel(\tfffffffc ffffffff 00000000  '............')"
+
+# dumpsys account que RESPONDEU: zero contas de usuario (so authenticators).
+CONTAS_ZERO = (
+    "User UserInfo{0:Proprietario:4c13}:\n"
+    "  Accounts: 0\n\n"
+    "  RegisteredServicesCache: 2 services\n"
+    "    ServiceInfo: AuthenticatorDescription {type=com.google}, uid 10144\n"
+    "    ServiceInfo: AuthenticatorDescription {type=com.xiaomi}, uid 10188\n"
+)
+
+# dumpsys isub que RESPONDEU: ambos os slots ABSENT -> ausencia verificada.
+SIM_AUSENTE = (
+    "SubscriptionManagerService:\n"
+    "Active modem count=2\n\n"
+    "mSimState[0]=ABSENT\n"
+    "mSimState[1]=ABSENT\n\n"
+    "Active subscriptions:\n\n"
+    "All subscriptions:\n"
+)
+
+
+class ADBXiaomiA14(ADBSemFind):
+    """Xiaomi Android 14 sem root: IMEI recusado, SIM e contas lidos (vazios)."""
+
+    def executar_detalhado(self, argumentos, timeout=None, vincular_serial=True):
+        if "iphonesubinfo" in argumentos:
+            return ResultadoComando(0, PARCEL_SEM_RAZAO, "")
+        if "account" in argumentos:
+            return ResultadoComando(0, CONTAS_ZERO, "")
+        if "isub" in argumentos:
+            return ResultadoComando(0, SIM_AUSENTE, "")
+        if "telephony.registry" in argumentos:
+            return ResultadoComando(0, "last known state:\n  Phone Id=0\n", "")
+        if "users" in argumentos:
+            return ResultadoComando(0, "Users:\n\tUserInfo{0:Proprietario:4c13} running\n", "")
+        return ResultadoComando(0, "", "")
+
+    def executar(self, argumentos, timeout=None, vincular_serial=True):
+        if "ro.build.version.sdk" in argumentos:
+            return "34"
+        return self.executar_detalhado(argumentos).stdout
+
+
+with tempfile.TemporaryDirectory() as td:
+    xiaomi = montar(IdentificacaoExtractor, ADBXiaomiA14())
+    r = xiaomi.executar(Path(td))
+    det = r.detalhes or {}
+
+    checar("SIM/conta lidos como vazios NAO e falha do modulo", r.sucesso is True)
+    checar(
+        "NAO conclui 'nenhum identificador pode ser obtido'",
+        "Nenhum identificador" not in r.mensagem,
+    )
+    checar(
+        "NAO marca acesso_negado ao modulo (contas e SIM foram lidos)",
+        not det.get("acesso_negado"),
+    )
+    checar(
+        "o IMEI entra como campo NAO APURADO, nao como recusa de acesso",
+        det.get("campos_nao_apurados") == ["imei"],
+    )
+    checar("a ausencia de SIM e registrada como achado verificado", det.get("sim_ausente") is True)
+    checar("a leitura de contas respondeu (0 contas e achado)", det.get("contas_lidas") is True)
+    checar("a mensagem exibe o achado do SIM ausente", "SIM ausente" in r.mensagem)
+    checar("a mensagem exibe o achado de nenhuma conta", "nenhuma conta" in r.mensagem)
+
+
+class ADBMudo(ADBSemFind):
+    """Nada responde: nenhuma via de identificacao devolve dado."""
+
+    def executar_detalhado(self, argumentos, timeout=None, vincular_serial=True):
+        return ResultadoComando(0, "", "")
+
+    def executar(self, argumentos, timeout=None, vincular_serial=True):
+        if "ro.build.version.sdk" in argumentos:
+            return "34"
+        return ""
+
+
+with tempfile.TemporaryDirectory() as td:
+    mudo = montar(IdentificacaoExtractor, ADBMudo())
+    r = mudo.executar(Path(td))
+    det = r.detalhes or {}
+
+    checar("quando NADA responde, o modulo falha honestamente", r.sucesso is False)
+    checar("so entao a falha e atribuida a acesso negado", det.get("acesso_negado") is True)
+    checar("a falha real NAO inventa campo nao apurado", "campos_nao_apurados" not in det)
+    checar("a falha real diz 'nenhum identificador'", "Nenhum identificador" in r.mensagem)
+
+# ---------------------------------------------------------------------------
 print("\n[3] Aparelho que some no meio nao e problema de cabo")
 # ---------------------------------------------------------------------------
 class ADBVinculadoQueSumiu:
