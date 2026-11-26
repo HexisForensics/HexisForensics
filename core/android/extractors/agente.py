@@ -288,10 +288,41 @@ class AgenteExtractor(AndroidExtractor):
             detalhes["acesso_negado"] = True
 
         if not obtidos:
+            # Nenhum registro obtido. É preciso distinguir AUSÊNCIA VERIFICADA
+            # (provedor respondeu, sem erro: zero registros é achado) de RECUSA
+            # (erro ou sem resposta). Tratar as duas como falha esconde o
+            # achado — o mesmo defeito da Identificação corrigido para o Xiaomi,
+            # exposto aqui pelo primeiro aparelho VAZIO em que o agente rodou
+            # (Moto G9 Plus, Android 11): os quatro provedores responderam, sem
+            # erro, com zero registros, e o módulo chamava isso de "recusa".
+            if nao_removido:
+                # Agente que ficou no aparelho é falha em voz alta, qualquer que
+                # seja o desfecho da leitura.
+                return ResultadoExtracao(
+                    False,
+                    self._t("lg_ag_sem_registro") + complemento
+                    + self._t("lg_ag_recusa_nao_ausencia") + nao_removido,
+                    pasta, detalhes,
+                )
+            if not recusados:
+                # Todas as fontes responderam, sem erro, com zero registros:
+                # ausência VERIFICADA. É achado, não falha — e não é recusa.
+                # O dado obtido é o estado confirmado dos provedores.
+                self.log(self._t("lg_concluido",
+                                 valor=self._t("lg_ag_ausencia_log", lista=", ".join(vazios))))
+                return ResultadoExtracao(
+                    True,
+                    self._t("lg_ag_ausencia_verificada", lista=", ".join(vazios))
+                    + self._t("lg_ag_desinstalado_conferido"),
+                    pasta, detalhes,
+                )
+            # Parte respondeu vazio e parte recusou (ou tudo recusou): a recusa
+            # deixa incerteza real. Ressalva (acesso_negado) quando ao menos uma
+            # fonte respondeu; falha honesta quando NADA respondeu.
             return ResultadoExtracao(
-                False,
+                bool(vazios),
                 self._t("lg_ag_sem_registro") + complemento
-                + self._t("lg_ag_recusa_nao_ausencia") + nao_removido,
+                + self._t("lg_ag_recusa_nao_ausencia"),
                 pasta, detalhes,
             )
         if nao_removido:

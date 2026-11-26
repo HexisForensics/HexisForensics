@@ -67,14 +67,15 @@ ARQUIVOS_DO_APARELHO = {
 }
 
 
-def estado(recusadas=()):
+def estado(recusadas=(), vazias=()):
     fontes = []
     for nome in ("contatos", "chamadas", "sms", "mms", "mms_partes", "mms_enderecos"):
         recusada = nome in recusadas
+        vazia = nome in vazias  # provedor respondeu, sem erro, zero registros
         conteudo = ARQUIVOS_DO_APARELHO[nome + ".jsonl"]
         fontes.append({
             "nome": nome, "uri": "content://" + nome,
-            "registros": 0 if recusada else conteudo.count(b"\n{") + conteudo.startswith(b"{"),
+            "registros": 0 if (recusada or vazia) else conteudo.count(b"\n{") + conteudo.startswith(b"{"),
             "provedor_respondeu": not recusada,
             "erro": "java.lang.SecurityException: Permission Denial" if recusada else None,
         })
@@ -85,12 +86,13 @@ class AparelhoDeMentira:
     serial = "SERIAL-TESTE"
 
     def __init__(self, recusa_instalacao=False, nunca_conclui=False, nao_desinstala=False,
-                 recusadas=(), tudo_vazio=False):
+                 recusadas=(), vazias=(), tudo_vazio=False):
         self.instalado = False
         self.recusa_instalacao = recusa_instalacao
         self.nunca_conclui = nunca_conclui
         self.nao_desinstala = nao_desinstala
         self.recusadas = recusadas
+        self.vazias = vazias
         self.tudo_vazio = tudo_vazio
         self.executou = False
         self.comandos = []
@@ -104,8 +106,9 @@ class AparelhoDeMentira:
                 for fonte in dados["fontes"]:
                     fonte["registros"] = 0
                 return json.dumps(dados).encode("utf-8")
-            return estado(self.recusadas)
-        if self.tudo_vazio or nome[: -len(".jsonl")] in self.recusadas:
+            return estado(self.recusadas, self.vazias)
+        base = nome[: -len(".jsonl")]
+        if self.tudo_vazio or base in self.recusadas or base in self.vazias:
             return b""
         return ARQUIVOS_DO_APARELHO[nome]
 
@@ -241,9 +244,34 @@ with tempfile.TemporaryDirectory() as tmp:
     checar("tudo recusado e FALHA, nunca sucesso", not resultado.sucesso)
     checar("e o agente foi removido mesmo assim", not aparelho.instalado)
 
+    # O primeiro aparelho VAZIO em que o agente rodou (Moto G9 Plus, Android 11,
+    # sem dados) provou que provedor que RESPONDE sem registro e AUSENCIA
+    # VERIFICADA, nao falha. Tratar ausencia verificada como recusa e o defeito
+    # da familia (o mesmo da Identificacao no Xiaomi). O estado real do caso:
+    # contatos/chamadas/sms/mms com provedor_respondeu=true, erro=null, 0 reg.
     resultado, aparelho, pasta = rodar(tmp, "vazio", tudo_vazio=True)
-    checar("provedores respondendo vazio: FALHA, dizendo que responderam sem registro",
-           not resultado.sucesso and "respondeu sem registro" in resultado.mensagem)
+    checar("provedores respondendo vazio e AUSENCIA VERIFICADA, nao falha",
+           resultado.sucesso)
+    checar("a mensagem diz ausencia verificada e NAO invoca recusa",
+           "ausência verificada" in resultado.mensagem
+           and "não é ausência" not in resultado.mensagem)
+    checar("nao marca acesso_negado nem ressalva quando ninguem recusou",
+           not resultado.detalhes.get("acesso_negado")
+           and not indica_ressalva(resultado.detalhes))
+    checar("e o agente foi desinstalado e conferido",
+           not aparelho.instalado and "remoção foi conferida" in resultado.mensagem)
+
+    # Misto: parte respondeu vazio, parte recusou, nada obtido. A recusa deixa
+    # incerteza real -> RESSALVA (nao falha lisa, porque houve resposta; nao
+    # sucesso limpo, porque houve recusa).
+    resultado, aparelho, pasta = rodar(tmp, "misto",
+                                       recusadas=("sms", "mms"),
+                                       vazias=("contatos", "chamadas"))
+    checar("misto vazio+recusa e RESSALVA, nao falha lisa",
+           resultado.sucesso and resultado.detalhes.get("acesso_negado") is True
+           and indica_ressalva(resultado.detalhes))
+    checar("a mensagem distingue o recusado do que respondeu vazio",
+           "RECUSADO" in resultado.mensagem and "respondeu sem registro" in resultado.mensagem)
 
     # -----------------------------------------------------------------------
     print("\n[4] Falha no meio: o agente e removido de qualquer jeito")

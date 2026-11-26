@@ -1484,6 +1484,8 @@
   "lg_ag_vazio_parte": "o provedor respondeu sem registro: {lista}",
   "lg_ag_sem_registro": "O agente foi executado, mas nenhum registro foi obtido.",
   "lg_ag_recusa_nao_ausencia": " Recusa não é ausência de dado no aparelho.",
+  "lg_ag_ausencia_verificada": "O agente foi executado com acesso concedido e os provedores responderam: não havia registros de {lista} no aparelho no momento da coleta — ausência verificada, não recusa.",
+  "lg_ag_ausencia_log": "ausência verificada — {lista} sem registros, com os provedores respondendo e acesso concedido",
   "lg_ag_obtido_parcial": "Dados obtidos pelo agente: {lista}.",
   "lg_ag_concluido_log": "Agente: {lista}.",
   "lg_ag_obtido_ok": "Dados obtidos pelo aplicativo agente: {lista}.",

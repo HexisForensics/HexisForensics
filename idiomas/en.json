@@ -1484,6 +1484,8 @@
   "lg_ag_vazio_parte": "the provider answered with no record: {lista}",
   "lg_ag_sem_registro": "The agent ran, but no record was obtained.",
   "lg_ag_recusa_nao_ausencia": " A refusal is not absence of data on the device.",
+  "lg_ag_ausencia_verificada": "The agent ran with access granted and the providers answered: there were no {lista} records on the device at the time of collection — verified absence, not a refusal.",
+  "lg_ag_ausencia_log": "verified absence — {lista} with no records, the providers having answered with access granted",
   "lg_ag_obtido_parcial": "Data obtained by the agent: {lista}.",
   "lg_ag_concluido_log": "Agent: {lista}.",
   "lg_ag_obtido_ok": "Data obtained by the agent app: {lista}.",
